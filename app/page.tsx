@@ -393,7 +393,7 @@ export default function InvoiceWorkspace() {
             </div>
           </div>
 
-          <div className="mt-3 grid min-h-0 flex-1 gap-3 xl:grid-cols-[minmax(380px,0.78fr)_minmax(0,1.5fr)]">
+          <div className="mt-3 grid min-h-[620px] flex-1 gap-3 xl:grid-cols-[minmax(380px,0.78fr)_minmax(0,1.5fr)]">
             {/* List */}
             <ul className="flex max-h-[420px] min-h-0 flex-col gap-2 overflow-y-auto pr-1 xl:max-h-none">
               {list.map((i, idx) => {
@@ -423,7 +423,7 @@ export default function InvoiceWorkspace() {
             </ul>
 
             {/* Detail */}
-            <article className="relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7A69F6] via-[#5F4BEA] to-[#4636C9] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.3)]">
+            <article className="relative flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7A69F6] via-[#5F4BEA] to-[#4636C9] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.3)]">
               {inv ? (<>
               <div aria-hidden="true" className="jm-drift pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#B8F24A]/20 blur-3xl" />
               <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-white/15 blur-3xl" />
