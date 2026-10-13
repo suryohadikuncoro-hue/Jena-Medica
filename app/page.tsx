@@ -32,8 +32,8 @@ const invoices: Invoice[] = [
 ];
 
 const nav = [
-  { label: "Dashboard", icon: "home" }, { label: "Penjualan", icon: "receipt" }, { label: "Pembelian", icon: "bag" },
-  { label: "Persediaan", icon: "box" }, { label: "Piutang", icon: "wallet" }, { label: "Keuangan", icon: "chart" },
+  { label: "Dashboard", icon: "home" }, { label: "Penjualan", icon: "receipt" }, { label: "Master data", icon: "box" },
+  { label: "Pembelian", icon: "bag" }, { label: "Persediaan", icon: "box" }, { label: "Piutang", icon: "wallet" }, { label: "Keuangan", icon: "chart" },
 ];
 const detailTabs = ["Detail barang", "Pembayaran", "Pengiriman", "Aktivitas", "Catatan"];
 const quickTabs = ["Semua", "Belum lunas", "Lunas", "Retur"] as const;
@@ -340,6 +340,11 @@ export default function InvoiceWorkspace() {
           <nav aria-label="Navigasi utama" className="mx-auto flex min-w-0 gap-1 overflow-x-auto rounded-full bg-[#14172B] p-1">
             {nav.map((n) => {
               const active = n.label === "Penjualan";
+              if (n.label === "Master data") return (
+                <a key={n.label} href="/master-data" className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${ring} text-slate-300 hover:bg-white/10`}>
+                  <Icon name={n.icon} size={15} /><span className="hidden lg:inline">{n.label}</span>
+                </a>
+              );
               return (
                 <button key={n.label} type="button" aria-current={active ? "page" : undefined} onClick={() => !active && notify(`Modul ${n.label}`)}
                   className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${ring} ${active ? "bg-[#5B45F0] text-white shadow-[0_4px_14px_rgba(91,69,240,.55)]" : "text-slate-300 hover:bg-white/10"}`}>
