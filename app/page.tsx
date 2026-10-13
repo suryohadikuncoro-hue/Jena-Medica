@@ -177,7 +177,7 @@ function AgingGauge() {
   }));
   return (
     <div className="flex h-[64px] items-center gap-3">
-      <svg viewBox="0 0 120 64" className="h-[64px] w-[120px] shrink-0 drop-shadow-[0_3px_5px_rgba(59,130,246,.22)]" role="img" aria-label="62% belum jatuh tempo">
+      <svg viewBox="0 0 120 64" className="h-[64px] w-[120px] shrink-0 drop-shadow-[0_3px_5px_rgba(59,130,246,.22)]" role="img" aria-label="Ringkasan nilai jatuh tempo faktur belum lunas">
         <defs>{arcs.map((x, i) => <linearGradient key={i} id={`ag${i}`} x1="0" x2="1" y1="0" y2="0"><stop offset="0" stopColor={x.a} /><stop offset="1" stopColor={x.b} /></linearGradient>)}</defs>
         {arcs.map((x, i) => {
           const d = `M${60 - x.r} 62 A${x.r} ${x.r} 0 0 1 ${60 + x.r} 62`;
