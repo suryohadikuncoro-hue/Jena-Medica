@@ -35,12 +35,14 @@ export default function FinanceReportsPage() {
   const [amount, setAmount] = useState("");
   const [notice, setNotice] = useState("");
 
-  const visibleCash = useMemo(() => cashEntries.filter((entry) =>
-    (period === "Semua periode" || entry.date.endsWith(period.split(" ")[1]) && entry.date.includes(period.split(" ")[0])) &&
+  const periodCash = useMemo(() => cashEntries.filter((entry) =>
+    period === "Semua periode" || (entry.date.endsWith(period.split(" ")[1]) && entry.date.includes(period.split(" ")[0]))
+  ), [cashEntries, period]);
+  const visibleCash = useMemo(() => periodCash.filter((entry) =>
     `${entry.id} ${entry.description} ${entry.category} ${entry.type}`.toLowerCase().includes(search.trim().toLowerCase())
-  ), [cashEntries, period, search]);
-  const cashIn = visibleCash.filter((e) => e.type === "Masuk").reduce((sum, e) => sum + e.amount, 0);
-  const cashOut = visibleCash.filter((e) => e.type === "Keluar").reduce((sum, e) => sum + e.amount, 0);
+  ), [periodCash, search]);
+  const cashIn = periodCash.filter((e) => e.type === "Masuk").reduce((sum, e) => sum + e.amount, 0);
+  const cashOut = periodCash.filter((e) => e.type === "Keluar").reduce((sum, e) => sum + e.amount, 0);
   const netCashflow = cashIn - cashOut;
   const outstandingAR = 31700000;
   const outstandingAP = seedPayables.reduce((sum, p) => sum + Math.max(0, p.amount - p.paid), 0);
