@@ -290,14 +290,17 @@ export default function InvoiceWorkspace() {
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(""), 2600); return () => clearTimeout(t); }, [toast]);
   const notify = (label: string) => setToast(`${label} — prototipe, belum ada transaksi yang diproses.`);
 
-  const list = useMemo(() => invoices.filter((i) => {
+  const filteredInvoices = useMemo(() => invoices.filter((i) => {
     const q = search.trim().toLowerCase();
     return (!q || `${i.id} ${i.customer} ${i.code} ${i.status}`.toLowerCase().includes(q))
-      && (quick === "Semua" || (quick === "Belum lunas" && isUnpaid(i)) || (quick === "Lunas" && i.status === "Lunas") || (quick === "Retur" && i.status === "Retur"))
       && (status === "Semua status" || i.status === status)
       && (customer === "Semua pelanggan" || i.customer === customer)
       && (period === "Semua periode" || invoiceMonth(i.date) === periodKey(period));
-  }), [search, quick, status, customer, period]);
+  }), [search, status, customer, period]);
+
+  const list = useMemo(() => filteredInvoices.filter((i) =>
+    quick === "Semua" || (quick === "Belum lunas" && isUnpaid(i)) || (quick === "Lunas" && i.status === "Lunas") || (quick === "Retur" && i.status === "Retur")
+  ), [filteredInvoices, quick]);
 
   const inv = list.find((i) => i.id === selectedId) ?? list[0] ?? null;
   const paid = inv?.status === "Lunas";
@@ -305,8 +308,8 @@ export default function InvoiceWorkspace() {
     + (status !== "Semua status" || quick !== "Semua" ? 1 : 0)
     + (period !== "Okt 2026" ? 1 : 0)
     + (search.trim() ? 1 : 0);
-  const reset = () => { setQuick("Semua"); setStatus("Semua status"); setCustomer("Semua pelanggan"); setSearch(""); setPeriod("Okt 2026"); setSelectedId(invoices[0].id); };
-  const count = (t: (typeof quickTabs)[number]) => t === "Semua" ? invoices.length : invoices.filter((i) => (t === "Belum lunas" ? isUnpaid(i) : i.status === t)).length;
+  const reset = () => { setQuick("Semua"); setStatus("Semua status"); setCustomer("Semua pelanggan"); setSearch(""); setPeriod("Okt 2026"); setSelectedId(invoices[0].id); setTab(detailTabs[0]); };
+  const count = (t: (typeof quickTabs)[number]) => t === "Semua" ? filteredInvoices.length : filteredInvoices.filter((i) => (t === "Belum lunas" ? isUnpaid(i) : i.status === t)).length;
   const shortDate = (d: string) => d.split(" ").slice(0, 2).join(" ");
 
   return (
@@ -524,7 +527,7 @@ export default function InvoiceWorkspace() {
               </>) : (
                 <div className="relative flex min-h-[240px] flex-1 flex-col items-center justify-center text-center">
                   <p className="text-lg font-semibold">Tidak ada faktur untuk filter ini</p>
-                  <p className="mt-1 max-w-sm text-sm text-white/75">Pilih cabang, periode, status, atau kata kunci lain untuk melihat faktur.</p>
+                  <p className="mt-1 max-w-sm text-sm text-white/75">Ubah filter atau kata kunci untuk melihat faktur.</p>
                   <button type="button" onClick={reset} className={`mt-4 rounded-full bg-white px-5 py-2 text-sm font-semibold text-[#4636C9] ${ring}`}>Reset filter</button>
                 </div>
               )}
