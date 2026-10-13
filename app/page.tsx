@@ -8,7 +8,7 @@ type Tone = "amber" | "green" | "blue" | "red";
 type Status = "Menunggu pembayaran" | "Terkirim" | "Lunas" | "Retur" | "Diproses";
 type Line = { product: string; batch: string; qty: string; price: string; subtotal: string };
 type Invoice = {
-  id: string; date: string; due: string; customer: string; code: string; branch: string; amount: number;
+  id: string; date: string; due: string; customer: string; code: string; amount: number;
   status: Status; tone: Tone; shipping: string; shippingTone: Tone; lines: Line[];
 };
 
@@ -16,18 +16,18 @@ const L = (product: string, batch: string, qty: string, price: string, subtotal:
 const AMX = "Amoxicillin 500 mg", PCM = "Paracetamol 500 mg", VTC = "Vitamin C 500 mg", OMP = "Omeprazole 20 mg";
 
 const invoices: Invoice[] = [
-  { id: "INV-2026-0148", date: "13 Okt 2026", due: "27 Okt 2026", customer: "Apotek Sehat Sentosa", code: "AP0001", branch: "Lamongan", amount: 12450000, status: "Menunggu pembayaran", tone: "amber", shipping: "Belum dikirim", shippingTone: "blue", lines: [
+  { id: "INV-2026-0148", date: "13 Okt 2026", due: "27 Okt 2026", customer: "Apotek Sehat Sentosa", code: "AP0001", amount: 12450000, status: "Menunggu pembayaran", tone: "amber", shipping: "Belum dikirim", shippingTone: "blue", lines: [
     L(AMX, "AMX-26041", "240 strip", "Rp 15.000", "Rp 3.600.000"), L(PCM, "PCM-26018", "300 box", "Rp 12.500", "Rp 3.750.000"),
     L(VTC, "VTC-26027", "150 box", "Rp 22.000", "Rp 3.300.000"), L(OMP, "OMP-26011", "60 box", "Rp 30.000", "Rp 1.800.000") ] },
-  { id: "INV-2026-0147", date: "13 Okt 2026", due: "28 Okt 2026", customer: "Klinik Medika Utama", code: "KMU001", branch: "Gresik", amount: 8750000, status: "Terkirim", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
+  { id: "INV-2026-0147", date: "13 Okt 2026", due: "28 Okt 2026", customer: "Klinik Medika Utama", code: "KMU001", amount: 8750000, status: "Terkirim", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
     L(PCM, "PCM-26018", "200 box", "Rp 12.500", "Rp 2.500.000"), L(VTC, "VTC-26027", "125 box", "Rp 22.000", "Rp 2.750.000"), L(OMP, "OMP-26011", "100 box", "Rp 35.000", "Rp 3.500.000") ] },
-  { id: "INV-2026-0146", date: "12 Okt 2026", due: "27 Okt 2026", customer: "RS Anugerah", code: "RSA003", branch: "Lamongan", amount: 6120000, status: "Lunas", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
+  { id: "INV-2026-0146", date: "12 Okt 2026", due: "27 Okt 2026", customer: "RS Anugerah", code: "RSA003", amount: 6120000, status: "Lunas", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
     L(AMX, "AMX-26041", "200 strip", "Rp 15.000", "Rp 3.000.000"), L(PCM, "PCM-26018", "120 box", "Rp 12.500", "Rp 1.500.000"), L(VTC, "VTC-26027", "60 box", "Rp 27.000", "Rp 1.620.000") ] },
-  { id: "INV-2026-0145", date: "11 Okt 2026", due: "26 Okt 2026", customer: "Apotek Kencana", code: "APK004", branch: "Gresik", amount: 7320000, status: "Menunggu pembayaran", tone: "amber", shipping: "Terkirim", shippingTone: "green", lines: [
+  { id: "INV-2026-0145", date: "11 Okt 2026", due: "26 Okt 2026", customer: "Apotek Kencana", code: "APK004", amount: 7320000, status: "Menunggu pembayaran", tone: "amber", shipping: "Terkirim", shippingTone: "green", lines: [
     L(OMP, "OMP-26011", "100 box", "Rp 30.000", "Rp 3.000.000"), L(VTC, "VTC-26027", "120 box", "Rp 22.000", "Rp 2.640.000"), L(PCM, "PCM-26018", "134 box", "Rp 12.537", "Rp 1.680.000") ] },
-  { id: "INV-2026-0144", date: "10 Okt 2026", due: "24 Okt 2026", customer: "Klinik Bina Sehat", code: "KBS006", branch: "Lamongan", amount: 5680000, status: "Terkirim", tone: "green", shipping: "Dalam pengiriman", shippingTone: "blue", lines: [
+  { id: "INV-2026-0144", date: "10 Okt 2026", due: "24 Okt 2026", customer: "Klinik Bina Sehat", code: "KBS006", amount: 5680000, status: "Terkirim", tone: "green", shipping: "Dalam pengiriman", shippingTone: "blue", lines: [
     L(VTC, "VTC-26027", "100 box", "Rp 22.000", "Rp 2.200.000"), L(OMP, "OMP-26011", "60 box", "Rp 30.000", "Rp 1.800.000"), L(AMX, "AMX-26041", "112 strip", "Rp 15.000", "Rp 1.680.000") ] },
-  { id: "INV-2026-0143", date: "9 Okt 2026", due: "23 Okt 2026", customer: "Apotek Mitra Husada", code: "AMH008", branch: "Gresik", amount: 4590000, status: "Retur", tone: "red", shipping: "Selesai", shippingTone: "green", lines: [
+  { id: "INV-2026-0143", date: "9 Okt 2026", due: "23 Okt 2026", customer: "Apotek Mitra Husada", code: "AMH008", amount: 4590000, status: "Retur", tone: "red", shipping: "Selesai", shippingTone: "green", lines: [
     L(PCM, "PCM-26018", "160 box", "Rp 12.500", "Rp 2.000.000"), L(VTC, "VTC-26027", "80 box", "Rp 22.000", "Rp 1.760.000"), L(OMP, "OMP-26011", "26 box", "Rp 31.923", "Rp 830.000") ] },
 ];
 
@@ -274,7 +274,6 @@ export default function InvoiceWorkspace() {
   const [quick, setQuick] = useState<(typeof quickTabs)[number]>("Semua");
   const [tab, setTab] = useState(detailTabs[0]);
   const [search, setSearch] = useState("");
-  const [branch, setBranch] = useState("Semua cabang");
   const [customer, setCustomer] = useState("Semua pelanggan");
   const [status, setStatus] = useState("Semua status");
   const [period, setPeriod] = useState("Okt 2026");
@@ -289,18 +288,16 @@ export default function InvoiceWorkspace() {
       && (quick === "Semua" || (quick === "Belum lunas" && isUnpaid(i)) || (quick === "Lunas" && i.status === "Lunas") || (quick === "Retur" && i.status === "Retur"))
       && (status === "Semua status" || i.status === status)
       && (customer === "Semua pelanggan" || i.customer === customer)
-      && (branch === "Semua cabang" || i.branch === branch)
       && (period === "Semua periode" || invoiceMonth(i.date) === periodKey(period));
-  }), [search, quick, status, customer, branch, period]);
+  }), [search, quick, status, customer, period]);
 
   const inv = list.find((i) => i.id === selectedId) ?? list[0] ?? null;
   const paid = inv?.status === "Lunas";
   const activeFilters = (customer !== "Semua pelanggan" ? 1 : 0)
     + (status !== "Semua status" || quick !== "Semua" ? 1 : 0)
-    + (branch !== "Semua cabang" ? 1 : 0)
     + (period !== "Okt 2026" ? 1 : 0)
     + (search.trim() ? 1 : 0);
-  const reset = () => { setQuick("Semua"); setStatus("Semua status"); setCustomer("Semua pelanggan"); setBranch("Semua cabang"); setSearch(""); setPeriod("Okt 2026"); setSelectedId(invoices[0].id); };
+  const reset = () => { setQuick("Semua"); setStatus("Semua status"); setCustomer("Semua pelanggan"); setSearch(""); setPeriod("Okt 2026"); setSelectedId(invoices[0].id); };
   const count = (t: (typeof quickTabs)[number]) => t === "Semua" ? invoices.length : invoices.filter((i) => (t === "Belum lunas" ? isUnpaid(i) : i.status === t)).length;
   const shortDate = (d: string) => d.split(" ").slice(0, 2).join(" ");
 
@@ -356,9 +353,8 @@ export default function InvoiceWorkspace() {
         </section>
 
         {/* Filters */}
-        <section aria-label="Filter faktur" className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[auto_1fr_1fr_0.8fr_1fr_1.3fr]">
+        <section aria-label="Filter faktur" className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[auto_1fr_0.8fr_1fr_1.3fr]">
           <div className="flex h-10 items-center gap-3 px-2 text-sm font-semibold">Filter aktif<span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#14172B] text-xs text-white">{activeFilters}</span></div>
-          <Select label="Cabang" value={branch} onChange={setBranch} options={["Semua cabang", "Lamongan", "Gresik"]} />
           <Select label="Pelanggan" value={customer} onChange={setCustomer} options={["Semua pelanggan", ...invoices.map((i) => i.customer)]} />
           <Select label="Periode" value={period} onChange={setPeriod} options={["Okt 2026", "Sep 2026", "Agu 2026", "Semua periode"]} />
           <Select label="Status" value={status} onChange={setStatus} options={["Semua status", "Menunggu pembayaran", "Terkirim", "Lunas", "Retur", "Diproses"]} />
