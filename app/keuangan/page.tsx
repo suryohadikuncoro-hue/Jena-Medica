@@ -68,6 +68,7 @@ export default function FinanceReportsPage() {
         <header className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2.5"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#B8F24A] text-lg font-extrabold">J</span><div><p className="text-sm font-bold">Jena Medical Center</p><p className="text-[11px] text-[#5E6488]">Distribusi alat & obat medis</p></div></div>
           <nav className="ml-auto flex max-w-full gap-1 overflow-x-auto rounded-full bg-[#14172B] p-1" aria-label="Navigasi utama">
+            <Link href="/dashboard" className={`rounded-full px-4 py-2 text-[13px] text-slate-300 hover:bg-white/10 ${focus}`}>Dashboard</Link>
             <Link href="/" className={`rounded-full px-4 py-2 text-[13px] text-slate-300 hover:bg-white/10 ${focus}`}>Penjualan</Link>
             <Link href="/master-data" className={`rounded-full px-4 py-2 text-[13px] text-slate-300 hover:bg-white/10 ${focus}`}>Master data</Link>
             <Link href="/operasional" className={`rounded-full px-4 py-2 text-[13px] text-slate-300 hover:bg-white/10 ${focus}`}>Operasional</Link>
