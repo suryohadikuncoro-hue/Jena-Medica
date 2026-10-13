@@ -8,7 +8,7 @@ type Tone = "amber" | "green" | "blue" | "red";
 type Status = "Menunggu pembayaran" | "Terkirim" | "Lunas" | "Retur" | "Diproses";
 type Line = { product: string; batch: string; qty: string; price: string; subtotal: string };
 type Invoice = {
-  id: string; date: string; due: string; customer: string; code: string; amount: number;
+  id: string; date: string; due: string; customer: string; code: string; branch: string; amount: number;
   status: Status; tone: Tone; shipping: string; shippingTone: Tone; lines: Line[];
 };
 
@@ -16,18 +16,18 @@ const L = (product: string, batch: string, qty: string, price: string, subtotal:
 const AMX = "Amoxicillin 500 mg", PCM = "Paracetamol 500 mg", VTC = "Vitamin C 500 mg", OMP = "Omeprazole 20 mg";
 
 const invoices: Invoice[] = [
-  { id: "INV-2026-0148", date: "13 Okt 2026", due: "27 Okt 2026", customer: "Apotek Sehat Sentosa", code: "AP0001", amount: 12450000, status: "Menunggu pembayaran", tone: "amber", shipping: "Belum dikirim", shippingTone: "blue", lines: [
+  { id: "INV-2026-0148", date: "13 Okt 2026", due: "27 Okt 2026", customer: "Apotek Sehat Sentosa", code: "AP0001", branch: "Lamongan", amount: 12450000, status: "Menunggu pembayaran", tone: "amber", shipping: "Belum dikirim", shippingTone: "blue", lines: [
     L(AMX, "AMX-26041", "240 strip", "Rp 15.000", "Rp 3.600.000"), L(PCM, "PCM-26018", "300 box", "Rp 12.500", "Rp 3.750.000"),
     L(VTC, "VTC-26027", "150 box", "Rp 22.000", "Rp 3.300.000"), L(OMP, "OMP-26011", "60 box", "Rp 30.000", "Rp 1.800.000") ] },
-  { id: "INV-2026-0147", date: "13 Okt 2026", due: "28 Okt 2026", customer: "Klinik Medika Utama", code: "KMU001", amount: 8750000, status: "Terkirim", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
+  { id: "INV-2026-0147", date: "13 Okt 2026", due: "28 Okt 2026", customer: "Klinik Medika Utama", code: "KMU001", branch: "Gresik", amount: 8750000, status: "Terkirim", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
     L(PCM, "PCM-26018", "200 box", "Rp 12.500", "Rp 2.500.000"), L(VTC, "VTC-26027", "125 box", "Rp 22.000", "Rp 2.750.000"), L(OMP, "OMP-26011", "100 box", "Rp 35.000", "Rp 3.500.000") ] },
-  { id: "INV-2026-0146", date: "12 Okt 2026", due: "27 Okt 2026", customer: "RS Anugerah", code: "RSA003", amount: 6120000, status: "Lunas", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
+  { id: "INV-2026-0146", date: "12 Okt 2026", due: "27 Okt 2026", customer: "RS Anugerah", code: "RSA003", branch: "Lamongan", amount: 6120000, status: "Lunas", tone: "green", shipping: "Terkirim", shippingTone: "green", lines: [
     L(AMX, "AMX-26041", "200 strip", "Rp 15.000", "Rp 3.000.000"), L(PCM, "PCM-26018", "120 box", "Rp 12.500", "Rp 1.500.000"), L(VTC, "VTC-26027", "60 box", "Rp 27.000", "Rp 1.620.000") ] },
-  { id: "INV-2026-0145", date: "11 Okt 2026", due: "26 Okt 2026", customer: "Apotek Kencana", code: "APK004", amount: 7320000, status: "Menunggu pembayaran", tone: "amber", shipping: "Terkirim", shippingTone: "green", lines: [
+  { id: "INV-2026-0145", date: "11 Okt 2026", due: "26 Okt 2026", customer: "Apotek Kencana", code: "APK004", branch: "Gresik", amount: 7320000, status: "Menunggu pembayaran", tone: "amber", shipping: "Terkirim", shippingTone: "green", lines: [
     L(OMP, "OMP-26011", "100 box", "Rp 30.000", "Rp 3.000.000"), L(VTC, "VTC-26027", "120 box", "Rp 22.000", "Rp 2.640.000"), L(PCM, "PCM-26018", "134 box", "Rp 12.537", "Rp 1.680.000") ] },
-  { id: "INV-2026-0144", date: "10 Okt 2026", due: "24 Okt 2026", customer: "Klinik Bina Sehat", code: "KBS006", amount: 5680000, status: "Terkirim", tone: "green", shipping: "Dalam pengiriman", shippingTone: "blue", lines: [
+  { id: "INV-2026-0144", date: "10 Okt 2026", due: "24 Okt 2026", customer: "Klinik Bina Sehat", code: "KBS006", branch: "Lamongan", amount: 5680000, status: "Terkirim", tone: "green", shipping: "Dalam pengiriman", shippingTone: "blue", lines: [
     L(VTC, "VTC-26027", "100 box", "Rp 22.000", "Rp 2.200.000"), L(OMP, "OMP-26011", "60 box", "Rp 30.000", "Rp 1.800.000"), L(AMX, "AMX-26041", "112 strip", "Rp 15.000", "Rp 1.680.000") ] },
-  { id: "INV-2026-0143", date: "9 Okt 2026", due: "23 Okt 2026", customer: "Apotek Mitra Husada", code: "AMH008", amount: 4590000, status: "Retur", tone: "red", shipping: "Selesai", shippingTone: "green", lines: [
+  { id: "INV-2026-0143", date: "9 Okt 2026", due: "23 Okt 2026", customer: "Apotek Mitra Husada", code: "AMH008", branch: "Gresik", amount: 4590000, status: "Retur", tone: "red", shipping: "Selesai", shippingTone: "green", lines: [
     L(PCM, "PCM-26018", "160 box", "Rp 12.500", "Rp 2.000.000"), L(VTC, "VTC-26027", "80 box", "Rp 22.000", "Rp 1.760.000"), L(OMP, "OMP-26011", "26 box", "Rp 31.923", "Rp 830.000") ] },
 ];
 
@@ -37,6 +37,10 @@ const nav = [
 ];
 const detailTabs = ["Detail barang", "Pembayaran", "Pengiriman", "Aktivitas", "Catatan"];
 const quickTabs = ["Semua", "Belum lunas", "Lunas", "Retur"] as const;
+const isUnpaid = (invoice: Invoice) => invoice.status === "Menunggu pembayaran" || invoice.status === "Terkirim" || invoice.status === "Diproses";
+const monthNumber: Record<string, string> = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06", Jul: "07", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12" };
+const invoiceMonth = (date: string) => { const [, month, year] = date.split(" "); return `${year}-${monthNumber[month] ?? "00"}`; };
+const periodKey = (period: string) => { const [month, year] = period.split(" "); return `${year}-${monthNumber[month] ?? "00"}`; };
 
 /* ───────────────────────── Helpers ───────────────────────── */
 
@@ -282,16 +286,22 @@ export default function InvoiceWorkspace() {
   const list = useMemo(() => invoices.filter((i) => {
     const q = search.trim().toLowerCase();
     return (!q || `${i.id} ${i.customer} ${i.code} ${i.status}`.toLowerCase().includes(q))
-      && (quick === "Semua" || (quick === "Belum lunas" && i.status === "Menunggu pembayaran") || i.status === quick)
+      && (quick === "Semua" || (quick === "Belum lunas" && isUnpaid(i)) || (quick === "Lunas" && i.status === "Lunas") || (quick === "Retur" && i.status === "Retur"))
       && (status === "Semua status" || i.status === status)
-      && (customer === "Semua pelanggan" || i.customer === customer);
-  }), [search, quick, status, customer]);
+      && (customer === "Semua pelanggan" || i.customer === customer)
+      && (branch === "Semua cabang" || i.branch === branch)
+      && (period === "Semua periode" || invoiceMonth(i.date) === periodKey(period));
+  }), [search, quick, status, customer, branch, period]);
 
-  const inv = invoices.find((i) => i.id === selectedId) ?? invoices[0];
-  const paid = inv.status === "Lunas";
-  const activeFilters = (customer !== "Semua pelanggan" ? 1 : 0) + (status !== "Semua status" || quick !== "Semua" ? 1 : 0) + (branch !== "Semua cabang" ? 1 : 0);
-  const reset = () => { setQuick("Semua"); setStatus("Semua status"); setCustomer("Semua pelanggan"); setBranch("Semua cabang"); setSearch(""); setPeriod("Okt 2026"); };
-  const count = (t: (typeof quickTabs)[number]) => t === "Semua" ? invoices.length : invoices.filter((i) => (t === "Belum lunas" ? i.status === "Menunggu pembayaran" : i.status === t)).length;
+  const inv = list.find((i) => i.id === selectedId) ?? list[0] ?? null;
+  const paid = inv?.status === "Lunas";
+  const activeFilters = (customer !== "Semua pelanggan" ? 1 : 0)
+    + (status !== "Semua status" || quick !== "Semua" ? 1 : 0)
+    + (branch !== "Semua cabang" ? 1 : 0)
+    + (period !== "Okt 2026" ? 1 : 0)
+    + (search.trim() ? 1 : 0);
+  const reset = () => { setQuick("Semua"); setStatus("Semua status"); setCustomer("Semua pelanggan"); setBranch("Semua cabang"); setSearch(""); setPeriod("Okt 2026"); setSelectedId(invoices[0].id); };
+  const count = (t: (typeof quickTabs)[number]) => t === "Semua" ? invoices.length : invoices.filter((i) => (t === "Belum lunas" ? isUnpaid(i) : i.status === t)).length;
   const shortDate = (d: string) => d.split(" ").slice(0, 2).join(" ");
 
   return (
@@ -350,7 +360,7 @@ export default function InvoiceWorkspace() {
           <div className="flex h-10 items-center gap-3 px-2 text-sm font-semibold">Filter aktif<span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#14172B] text-xs text-white">{activeFilters}</span></div>
           <Select label="Cabang" value={branch} onChange={setBranch} options={["Semua cabang", "Lamongan", "Gresik"]} />
           <Select label="Pelanggan" value={customer} onChange={setCustomer} options={["Semua pelanggan", ...invoices.map((i) => i.customer)]} />
-          <Select label="Periode" value={period} onChange={setPeriod} options={["Okt 2026", "Sep 2026", "Agu 2026"]} />
+          <Select label="Periode" value={period} onChange={setPeriod} options={["Okt 2026", "Sep 2026", "Agu 2026", "Semua periode"]} />
           <Select label="Status" value={status} onChange={setStatus} options={["Semua status", "Menunggu pembayaran", "Terkirim", "Lunas", "Retur", "Diproses"]} />
           <label className="flex h-10 items-center gap-2 rounded-full border border-[#E6E6F5] bg-white px-4 text-[#8A8FB0] focus-within:border-[#5B45F0]">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor faktur" aria-label="Cari faktur" className="min-w-0 flex-1 bg-transparent text-[13px] text-[#14172F] outline-none placeholder:text-[#8A8FB0]" />
@@ -383,7 +393,7 @@ export default function InvoiceWorkspace() {
             {/* List */}
             <ul className="flex max-h-[420px] min-h-0 flex-col gap-2 overflow-y-auto pr-1 xl:max-h-none">
               {list.map((i, idx) => {
-                const sel = i.id === inv.id;
+                const sel = i.id === inv?.id;
                 return (
                   <li key={i.id} className="jm-rise" style={{ animationDelay: `${450 + idx * 70}ms` }}>
                     <button type="button" aria-pressed={sel} onClick={() => { setSelectedId(i.id); setTab(detailTabs[0]); }}
@@ -410,6 +420,7 @@ export default function InvoiceWorkspace() {
 
             {/* Detail */}
             <article className="relative flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7A69F6] via-[#5F4BEA] to-[#4636C9] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.3)]">
+              {inv ? (<>
               <div aria-hidden="true" className="jm-drift pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#B8F24A]/20 blur-3xl" />
               <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-white/15 blur-3xl" />
               <div key={inv.id} className="jm-swap relative flex min-h-0 flex-1 flex-col">
@@ -506,6 +517,13 @@ export default function InvoiceWorkspace() {
                 </div>
               </div>
               </div>
+              </>) : (
+                <div className="relative flex min-h-[240px] flex-1 flex-col items-center justify-center text-center">
+                  <p className="text-lg font-semibold">Tidak ada faktur untuk filter ini</p>
+                  <p className="mt-1 max-w-sm text-sm text-white/75">Pilih cabang, periode, status, atau kata kunci lain untuk melihat faktur.</p>
+                  <button type="button" onClick={reset} className={`mt-4 rounded-full bg-white px-5 py-2 text-sm font-semibold text-[#4636C9] ${ring}`}>Reset filter</button>
+                </div>
+              )}
             </article>
           </div>
         </section>
