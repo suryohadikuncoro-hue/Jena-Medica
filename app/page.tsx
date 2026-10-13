@@ -312,7 +312,7 @@ export default function InvoiceWorkspace() {
   return (
     <main className="bg-[#ECEBFA] [background-image:radial-gradient(900px_circle_at_8%_0%,rgba(122,105,246,.2),transparent_60%),radial-gradient(700px_circle_at_96%_100%,rgba(184,242,74,.18),transparent_55%)] p-3 text-[#14172F] xl:h-screen xl:overflow-y-auto" style={{ fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" }}>
       <style>{FX}</style>
-      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 rounded-[32px] bg-[#F8F8FF]/90 p-4 shadow-[0_24px_80px_rgba(62,50,160,.14)] ring-1 ring-white/80 backdrop-blur-xl xl:h-[calc(100vh-24px)] xl:min-h-[640px]">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 rounded-[32px] bg-[#F8F8FF]/90 p-4 shadow-[0_24px_80px_rgba(62,50,160,.14)] ring-1 ring-white/80 backdrop-blur-xl xl:h-auto xl:min-h-[calc(100vh-24px)]">
 
         {/* Header */}
         <header className="flex shrink-0 items-center gap-3">
@@ -423,7 +423,7 @@ export default function InvoiceWorkspace() {
             </ul>
 
             {/* Detail */}
-            <article className="relative flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-[28px] bg-gradient-to-br from-[#7A69F6] via-[#5F4BEA] to-[#4636C9] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.3)]">
+            <article className="relative flex min-h-[620px] min-w-0 flex-col rounded-[28px] bg-gradient-to-br from-[#7A69F6] via-[#5F4BEA] to-[#4636C9] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,.3)]">
               {inv ? (<>
               <div aria-hidden="true" className="jm-drift pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#B8F24A]/20 blur-3xl" />
               <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-white/15 blur-3xl" />
