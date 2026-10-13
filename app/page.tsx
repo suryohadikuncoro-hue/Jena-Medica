@@ -141,7 +141,6 @@ function useCountUp(target: number, ms = 1000) {
 
 const MONTHS = ["Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt"];
 const smooth = (pts: number[][]) => pts.reduce((d, p, i) => (i === 0 ? `M${p[0]} ${p[1]}` : `${d} C${(pts[i - 1][0] + p[0]) / 2} ${pts[i - 1][1]} ${(pts[i - 1][0] + p[0]) / 2} ${p[1]} ${p[0]} ${p[1]}`), "");
-const HEX = "[clip-path:polygon(25%_5%,75%_5%,100%_50%,75%_95%,25%_95%,0_50%)]";
 
 /** Kartu label mengambang, seperti label "Option 01" di referensi. */
 function Chip({ color, label, value }: { color: string; label: string; value: string }) {
