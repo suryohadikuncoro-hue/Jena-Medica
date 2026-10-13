@@ -41,6 +41,21 @@ const isUnpaid = (invoice: Invoice) => invoice.status === "Menunggu pembayaran" 
 const monthNumber: Record<string, string> = { Jan: "01", Feb: "02", Mar: "03", Apr: "04", Mei: "05", Jun: "06", Jul: "07", Agu: "08", Sep: "09", Okt: "10", Nov: "11", Des: "12" };
 const invoiceMonth = (date: string) => { const [, month, year] = date.split(" "); return `${year}-${monthNumber[month] ?? "00"}`; };
 const periodKey = (period: string) => { const [month, year] = period.split(" "); return `${year}-${monthNumber[month] ?? "00"}`; };
+const parseInvoiceDate = (date: string) => {
+  const [day, month, year] = date.split(" ");
+  return new Date(Number(year), Number(monthNumber[month] ?? "01") - 1, Number(day));
+};
+const sampleReferenceDate = invoices.reduce((latest, invoice) => {
+  const current = parseInvoiceDate(invoice.date);
+  return current > latest ? current : latest;
+}, parseInvoiceDate(invoices[0].date));
+const unpaidAmount = invoices.filter(isUnpaid).reduce((total, invoice) => total + invoice.amount, 0);
+const dueSoonAmount = invoices.filter(isUnpaid).filter((invoice) => {
+  const daysUntilDue = (parseInvoiceDate(invoice.due).getTime() - sampleReferenceDate.getTime()) / 86400000;
+  return daysUntilDue >= 0 && daysUntilDue <= 30;
+}).reduce((total, invoice) => total + invoice.amount, 0);
+const sampleMonthSales = invoices.filter((invoice) => invoiceMonth(invoice.date) === "2026-10")
+  .reduce((total, invoice) => total + invoice.amount, 0);
 
 /* ───────────────────────── Helpers ───────────────────────── */
 
@@ -240,9 +255,9 @@ function TargetDonut() {
   );
 }
 
-function Kpi({ label, value, unit, delta, good, icon, iconTone, delay = 0, children }: { label: string; value: string; unit?: string; delta: string; good: boolean; icon: string; iconTone: string; delay?: number; children: ReactNode }) {
+function Kpi({ label, value, unit, delta, good, icon, iconTone, delay = 0, children }: { label: string; value: string; unit?: string; delta?: string; good?: boolean; icon: string; iconTone: string; delay?: number; children: ReactNode }) {
   const v = useCountUp(Number(value.replace(/\D/g, "")));
-  const shown = value.startsWith("Rp") ? money(Math.round(v)) : String(Math.round(v));
+  const shown = value === "—" ? "—" : value.startsWith("Rp") ? money(Math.round(v)) : String(Math.round(v));
   return (
     <article
       onMouseMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`); e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`); }}
@@ -252,7 +267,7 @@ function Kpi({ label, value, unit, delta, good, icon, iconTone, delay = 0, child
         <div className="min-w-0">
           <p className="text-[13px] text-[#5E6488]">{label}</p>
           <p className="mt-1 break-words text-2xl font-semibold leading-tight tracking-tight tabular-nums">{shown}{unit && <span className="ml-1 text-base font-normal text-[#8A8FB0]">{unit}</span>}</p>
-          <p className="mt-0.5 text-xs"><span className={`font-semibold ${good ? "text-emerald-600" : "text-rose-500"}`}>{delta}</span> <span className="text-[#8A8FB0]">dari bulan lalu</span></p>
+          {delta && <p className="mt-0.5 text-xs"><span className={`font-semibold ${delta === "Belum tersedia" ? "text-[#8A8FB0]" : good ? "text-emerald-600" : "text-rose-500"}`}>{delta}</span>{delta !== "Belum tersedia" && <span className="text-[#8A8FB0]"> dari bulan lalu</span>}</p>}
         </div>
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110 ${iconTone}`}><Icon name={icon} size={16} /></span>
       </div>
@@ -347,6 +362,7 @@ export default function InvoiceWorkspace() {
             <div>
               <h1 className="text-[28px] font-semibold leading-none tracking-tight">Faktur penjualan</h1>
               <p className="mt-1 text-[13px] text-[#5E6488]">Kelola dan pantau semua faktur di satu tempat.</p>
+              <p className="mt-1 text-[11px] text-[#8A8FB0]">Data faktur masih simulasi; grafik ringkasan belum terhubung ke sumber data.</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -357,20 +373,20 @@ export default function InvoiceWorkspace() {
 
         {/* KPIs */}
         <section aria-label="Ringkasan faktur" className="grid shrink-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Kpi delay={0} label="Faktur belum lunas" value="Rp 124.850.000" delta="↑ 12,5%" good={false} icon="alert" iconTone="bg-rose-50 text-rose-500"><AgingGauge /></Kpi>
-          <Kpi delay={90} label="Jatuh tempo 30 hari ke depan" value="Rp 86.240.000" delta="↓ 8,2%" good icon="calendar" iconTone="bg-[#EEEAFF] text-[#5B45F0]"><DueBars /></Kpi>
-          <Kpi delay={180} label="Rata-rata waktu pembayaran" value="16" unit="hari" delta="↓ 2 hari" good icon="clock" iconTone="bg-sky-50 text-sky-600"><PayWave /></Kpi>
-          <Kpi delay={270} label="Penjualan bulan ini" value="Rp 248.620.000" delta="↑ 18,6%" good icon="up" iconTone="bg-emerald-50 text-emerald-600"><TargetDonut /></Kpi>
+          <Kpi delay={0} label="Faktur belum lunas (data contoh)" value={money(unpaidAmount)} icon="alert" iconTone="bg-rose-50 text-rose-500"><AgingGauge /></Kpi>
+          <Kpi delay={90} label="Jatuh tempo 30 hari dari faktur terbaru" value={money(dueSoonAmount)} icon="calendar" iconTone="bg-[#EEEAFF] text-[#5B45F0]"><DueBars /></Kpi>
+          <Kpi delay={180} label="Rata-rata waktu pembayaran" value="—" delta="Belum tersedia" icon="clock" iconTone="bg-sky-50 text-sky-600"><PayWave /></Kpi>
+          <Kpi delay={270} label="Penjualan Oktober 2026 (data contoh)" value={money(sampleMonthSales)} icon="up" iconTone="bg-emerald-50 text-emerald-600"><TargetDonut /></Kpi>
         </section>
 
         {/* Filters */}
         <section aria-label="Filter faktur" className="grid shrink-0 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[auto_1fr_0.8fr_1fr_1.3fr]">
           <div className="flex h-10 items-center gap-3 px-2 text-sm font-semibold">Filter aktif<span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#14172B] text-xs text-white">{activeFilters}</span></div>
-          <Select label="Pelanggan" value={customer} onChange={setCustomer} options={["Semua pelanggan", ...invoices.map((i) => i.customer)]} />
+          <Select label="Pelanggan" value={customer} onChange={setCustomer} options={["Semua pelanggan", ...Array.from(new Set(invoices.map((i) => i.customer)))]} />
           <Select label="Periode" value={period} onChange={setPeriod} options={["Okt 2026", "Sep 2026", "Agu 2026", "Semua periode"]} />
           <Select label="Status" value={status} onChange={setStatus} options={["Semua status", "Menunggu pembayaran", "Terkirim", "Lunas", "Retur", "Diproses"]} />
           <label className="flex h-10 items-center gap-2 rounded-full border border-[#E6E6F5] bg-white px-4 text-[#8A8FB0] focus-within:border-[#5B45F0]">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor faktur" aria-label="Cari faktur" className="min-w-0 flex-1 bg-transparent text-[13px] text-[#14172F] outline-none placeholder:text-[#8A8FB0]" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor, pelanggan, kode, atau status" aria-label="Cari faktur" className="min-w-0 flex-1 bg-transparent text-[13px] text-[#14172F] outline-none placeholder:text-[#8A8FB0]" />
             <Icon name="search" size={17} />
           </label>
         </section>
