@@ -34,7 +34,7 @@ const invoices: Invoice[] = [
 
 const nav = [
   { label: "Dashboard", icon: "home" }, { label: "Penjualan", icon: "receipt" }, { label: "Master data", icon: "box" },
-  { label: "Operasional", icon: "bag" }, { label: "Piutang", icon: "wallet" }, { label: "Keuangan", icon: "chart" },
+  { label: "Operasional", icon: "bag" }, { label: "Pengiriman & piutang", icon: "wallet" }, { label: "Keuangan", icon: "chart" },
 ];
 const detailTabs = ["Detail barang", "Pembayaran", "Pengiriman", "Aktivitas", "Catatan"];
 const quickTabs = ["Semua", "Belum lunas", "Lunas", "Retur"] as const;
@@ -340,8 +340,8 @@ export default function InvoiceWorkspace() {
           <nav aria-label="Navigasi utama" className="mx-auto flex min-w-0 gap-1 overflow-x-auto rounded-full bg-[#14172B] p-1">
             {nav.map((n) => {
               const active = n.label === "Penjualan";
-              if (n.label === "Master data" || n.label === "Operasional") return (
-                <Link key={n.label} href={n.label === "Master data" ? "/master-data" : "/operasional"} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${ring} text-slate-300 hover:bg-white/10`}>
+              if (n.label === "Master data" || n.label === "Operasional" || n.label === "Pengiriman & piutang") return (
+                <Link key={n.label} href={n.label === "Master data" ? "/master-data" : n.label === "Operasional" ? "/operasional" : "/pengiriman-piutang"} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${ring} text-slate-300 hover:bg-white/10`}>
                   <Icon name={n.icon} size={15} /><span className="hidden lg:inline">{n.label}</span>
                 </Link>
               );
