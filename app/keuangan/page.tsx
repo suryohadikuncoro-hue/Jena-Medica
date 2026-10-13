@@ -53,7 +53,9 @@ export default function FinanceReportsPage() {
     if (!cleanDescription) { setNotice("Deskripsi transaksi wajib diisi."); return; }
     if (!Number.isFinite(value) || value <= 0) { setNotice("Nominal harus berupa angka lebih dari nol."); return; }
     const id = `KAS-SIM-${String(cashEntries.length + 1).padStart(3, "0")}`;
-    const entryPeriod = period === "Semua periode" ? "Okt 2026" : period;\n    const [entryMonth, entryYear] = entryPeriod.split(" ");\n    setCashEntries((prev) => [{ id, date: `14 ${entryMonth} ${entryYear}`, description: cleanDescription, category, type: cashType, amount: value }, ...prev]);
+    const entryPeriod = period === "Semua periode" ? "Okt 2026" : period;
+    const [entryMonth, entryYear] = entryPeriod.split(" ");
+    setCashEntries((prev) => [{ id, date: `14 ${entryMonth} ${entryYear}`, description: cleanDescription, category, type: cashType, amount: value }, ...prev]);
     setDescription(""); setAmount(""); setShowForm(false);
     setNotice(`Transaksi ${id} ditambahkan ke data simulasi. Belum memengaruhi saldo bank atau buku besar.`);
   }
