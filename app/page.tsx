@@ -153,16 +153,31 @@ function Chip({ color, label, value }: { color: string; label: string; value: st
   );
 }
 
-/** Kartu 1 — busur konsentris (umur faktur belum lunas). */
+/** Ringkasan jatuh tempo dihitung dari faktur contoh, bukan angka ilustrasi. */
+const agingBuckets = [
+  { label: "Jatuh tempo 0–7 hari", min: 0, max: 7, color: "#22D3EE" },
+  { label: "Jatuh tempo 8–14 hari", min: 8, max: 14, color: "#A78BFA" },
+  { label: "Jatuh tempo 15–30 hari", min: 15, max: 30, color: "#FB923C" },
+].map((bucket) => ({
+  ...bucket,
+  amount: invoices.filter((invoice) => isUnpaid(invoice)).filter((invoice) => {
+    const days = (parseInvoiceDate(invoice.due).getTime() - sampleReferenceDate.getTime()) / 86400000;
+    return days >= bucket.min && days <= bucket.max;
+  }).reduce((total, invoice) => total + invoice.amount, 0),
+}));
 function AgingGauge() {
-  const arcs = [
-    { r: 54, p: 0.62, a: "#3B82F6", b: "#22D3EE", label: "Belum jatuh tempo", value: "Rp 77,4 jt" },
-    { r: 42, p: 0.25, a: "#6D55F2", b: "#A78BFA", label: "Telat 1–14 hari", value: "Rp 31,2 jt" },
-    { r: 30, p: 0.13, a: "#F43F5E", b: "#FB923C", label: "Telat >14 hari", value: "Rp 16,2 jt" },
-  ];
+  const total = agingBuckets.reduce((sum, bucket) => sum + bucket.amount, 0);
+  const arcs = agingBuckets.map((bucket, index) => ({
+    r: 54 - index * 12,
+    p: total > 0 ? bucket.amount / total : 0,
+    a: bucket.color,
+    b: bucket.color,
+    label: bucket.label,
+    value: money(bucket.amount),
+  }));
   return (
     <div className="flex h-[64px] items-center gap-3">
-      <svg viewBox="0 0 120 64" className="h-[64px] w-[120px] shrink-0 drop-shadow-[0_3px_5px_rgba(59,130,246,.22)]" role="img" aria-label="62% belum jatuh tempo">
+      <svg viewBox="0 0 120 64" className="h-[64px] w-[120px] shrink-0 drop-shadow-[0_3px_5px_rgba(59,130,246,.22)]" role="img" aria-label="Ringkasan nilai jatuh tempo faktur belum lunas">
         <defs>{arcs.map((x, i) => <linearGradient key={i} id={`ag${i}`} x1="0" x2="1" y1="0" y2="0"><stop offset="0" stopColor={x.a} /><stop offset="1" stopColor={x.b} /></linearGradient>)}</defs>
         {arcs.map((x, i) => {
           const d = `M${60 - x.r} 62 A${x.r} ${x.r} 0 0 1 ${60 + x.r} 62`;
@@ -173,7 +188,7 @@ function AgingGauge() {
             </g>
           );
         })}
-        <text x="60" y="59" textAnchor="middle" fontSize="11" fontWeight="700" fill="#14172F">62%</text>
+        <text x="60" y="59" textAnchor="middle" fontSize="11" fontWeight="700" fill="#14172F">{total > 0 ? "100%" : "—"}</text>
       </svg>
       <div className="flex min-w-0 flex-1 flex-col gap-[3px]">{arcs.map((x) => <Chip key={x.label} color={x.b} label={x.label} value={x.value} />)}</div>
     </div>
@@ -182,8 +197,13 @@ function AgingGauge() {
 
 /** Kartu 2 — batang latar abu, batang gradasi, kurva halus, gelembung nilai pada puncak. */
 function DueBars() {
-  const data = [30, 48, 66, 58, 74, 68, 86], H = 44, peak = data.length - 1;
-  const barH = (v: number) => (v / 86) * 30;
+  const data = MONTHS.map((month) => {
+    const key = `2026-${monthNumber[month]}`;
+    return invoices.filter((invoice) => invoiceMonth(invoice.date) === key)
+      .reduce((total, invoice) => total + invoice.amount, 0) / 1_000_000;
+  });
+  const maxValue = Math.max(...data, 1), H = 44, peak = data.reduce((best, value, index) => value > data[best] ? index : best, 0);
+  const barH = (v: number) => (v / maxValue) * 30;
   const pts = data.map((v, i) => [((i + 0.5) / data.length) * 100, H - barH(v) - 3]);
   return (
     <div className="relative h-[64px]">
@@ -191,9 +211,9 @@ function DueBars() {
         {data.map((v, i) => {
           const isPeak = i === peak;
           return (
-            <div key={i} className="group relative h-full min-w-0 flex-1 rounded-t-[8px] rounded-b-[4px] bg-[#EFF1FA]" aria-label={`${MONTHS[i]}: Rp ${v} jt`}>
+            <div key={i} className="group relative h-full min-w-0 flex-1 rounded-t-[8px] rounded-b-[4px] bg-[#EFF1FA]" aria-label={`${MONTHS[i]} 2026: Rp ${v.toLocaleString("id-ID", { maximumFractionDigits: 1 })} jt`}>
               <span className={`jm-bar absolute inset-x-0 bottom-0 rounded-t-[8px] rounded-b-[4px] bg-gradient-to-t transition hover:brightness-110 ${isPeak ? "from-[#6D55F2] to-[#A78BFA]" : "from-[#3B82F6] to-[#22D3EE]"}`} style={{ height: `${barH(v)}px`, animationDelay: `${300 + i * 70}ms` }} />
-              <span className={`pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-white px-1.5 py-px text-[10px] font-semibold leading-[14px] text-[#14172F] shadow-[0_4px_12px_rgba(60,70,140,.22)] transition-opacity ${isPeak ? "" : "opacity-0 group-hover:opacity-100"}`} style={{ bottom: `${barH(v) + 4}px` }}>Rp {v} jt</span>
+              <span className={`pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-md bg-white px-1.5 py-px text-[10px] font-semibold leading-[14px] text-[#14172F] shadow-[0_4px_12px_rgba(60,70,140,.22)] transition-opacity ${isPeak ? "" : "opacity-0 group-hover:opacity-100"}`} style={{ bottom: `${barH(v) + 4}px` }}>Rp {v.toLocaleString("id-ID", { maximumFractionDigits: 1 })} jt</span>
             </div>
           );
         })}
@@ -206,50 +226,29 @@ function DueBars() {
   );
 }
 
-/** Kartu 3 — gelombang area berlapis dengan penanda segi enam. */
+/** Belum ada tanggal pembayaran pada data contoh; jangan tampilkan tren fiktif. */
 function PayWave() {
-  const w = 240, h = 64, front = [23, 21, 22, 20, 19, 18, 16], back = [19, 22, 20, 17, 18, 15, 13];
-  const X = (i: number) => 6 + (i / 6) * 228, Y = (v: number) => 50 - ((v - 12) / 12) * 28;
-  const f = front.map((v, i) => [X(i), Y(v)]), b = back.map((v, i) => [X(i), Y(v)]);
-  const area = (pts: number[][]) => `${smooth(pts)} L${pts[pts.length - 1][0]} ${h} L${pts[0][0]} ${h}Z`;
-  const marks = [0, 3, 6];
   return (
-    <div className="relative h-[64px]">
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="jm-reveal absolute inset-0 h-full w-full" aria-hidden="true">
-        <defs>
-          <linearGradient id="pwBack" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#22D3EE" stopOpacity=".5" /><stop offset="1" stopColor="#22D3EE" stopOpacity=".05" /></linearGradient>
-          <linearGradient id="pwFront" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#3B82F6" stopOpacity=".6" /><stop offset="1" stopColor="#6D55F2" stopOpacity=".06" /></linearGradient>
-        </defs>
-        <path d={area(b)} fill="url(#pwBack)" />
-        <path d={area(f)} fill="url(#pwFront)" />
-        <path d={smooth(f)} fill="none" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      </svg>
-      {marks.map((i) => (
-        <span key={i} className="jm-op absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${(X(i) / w) * 100}%`, top: `${(Y(front[i]) / h) * 100}%`, animationDelay: `${700 + i * 120}ms` }} aria-label={`${MONTHS[i]}: ${front[i]} hari`}>
-          <span className="absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold leading-3 text-[#1E3A8A]">{front[i]}{i === 6 ? " hari" : ""}</span>
-          <span className="block drop-shadow-[0_3px_4px_rgba(59,130,246,.5)]"><span className={`relative block h-[15px] w-[15px] bg-[#3B82F6] ${HEX}`}><span className={`absolute inset-[4.5px] bg-white ${HEX}`} /></span></span>
-        </span>
-      ))}
+    <div className="flex h-[64px] items-center justify-center rounded-xl border border-dashed border-[#E6E6F5] bg-[#F8F8FF] px-3 text-center text-xs text-[#8A8FB0]">
+      Tren waktu pembayaran akan tersedia setelah tanggal pembayaran dicatat.
     </div>
   );
 }
 
-/** Kartu 4 — donat dalam lingkaran putih mengilap + label mengambang. */
+/** Penjualan per periode belum dapat dibandingkan dengan target karena target belum ditetapkan. */
 function TargetDonut() {
   return (
     <div className="flex h-[64px] items-center gap-3">
-      <div className="relative flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-full bg-white shadow-[0_8px_20px_rgba(60,70,140,.2),inset_0_-3px_6px_rgba(120,130,200,.14)]" role="img" aria-label="78% dari target">
-        <svg viewBox="0 0 60 60" className="absolute inset-0 h-full w-full -rotate-90" aria-hidden="true">
-          <defs><linearGradient id="tdGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#22D3EE" /><stop offset="1" stopColor="#3B82F6" /></linearGradient></defs>
+      <div className="relative flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-full bg-white shadow-[0_8px_20px_rgba(60,70,140,.2),inset_0_-3px_6px_rgba(120,130,200,.14)]" role="img" aria-label="Target penjualan belum ditetapkan">
+        <svg viewBox="0 0 60 60" className="absolute inset-0 h-full w-full" aria-hidden="true">
           <circle cx="30" cy="30" r="23" fill="none" stroke="#EEF0FA" strokeWidth="7" />
-          <circle className="jm-arc" cx="30" cy="30" r="23" pathLength={1} fill="none" stroke="url(#tdGrad)" strokeWidth="7" strokeLinecap="round" strokeDasharray="0.78 1" style={{ animationDelay: "400ms" }} />
         </svg>
-        <span className="relative text-[13px] font-bold text-[#14172F]">78%</span>
+        <span className="relative text-[13px] font-bold text-[#8A8FB0]">—</span>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
-        <Chip color="#3B82F6" label="Tercapai" value="Rp 248,6 jt" />
-        <Chip color="#CBD0E8" label="Target" value="Rp 320 jt" />
-        <Chip color="#A78BFA" label="Sisa" value="Rp 71,4 jt" />
+        <Chip color="#3B82F6" label="Penjualan tercatat" value={money(sampleMonthSales)} />
+        <Chip color="#CBD0E8" label="Target" value="Belum ditetapkan" />
+        <Chip color="#A78BFA" label="Pencapaian" value="Belum tersedia" />
       </div>
     </div>
   );
