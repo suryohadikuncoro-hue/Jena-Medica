@@ -340,8 +340,8 @@ export default function InvoiceWorkspace() {
           <nav aria-label="Navigasi utama" className="mx-auto flex min-w-0 gap-1 overflow-x-auto rounded-full bg-[#14172B] p-1">
             {nav.map((n) => {
               const active = n.label === "Penjualan";
-              if (n.label === "Master data" || n.label === "Operasional" || n.label === "Pengiriman & piutang" || n.label === "Keuangan") return (
-                <Link key={n.label} href={n.label === "Master data" ? "/master-data" : n.label === "Operasional" ? "/operasional" : n.label === "Pengiriman & piutang" ? "/pengiriman-piutang" : "/keuangan"} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${ring} text-slate-300 hover:bg-white/10`}>
+              if (n.label === "Dashboard" || n.label === "Master data" || n.label === "Operasional" || n.label === "Pengiriman & piutang" || n.label === "Keuangan") return (
+                <Link key={n.label} href={n.label === "Dashboard" ? "/dashboard" : n.label === "Master data" ? "/master-data" : n.label === "Operasional" ? "/operasional" : n.label === "Pengiriman & piutang" ? "/pengiriman-piutang" : "/keuangan"} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium transition-colors ${ring} text-slate-300 hover:bg-white/10`}>
                   <Icon name={n.icon} size={15} /><span className="hidden lg:inline">{n.label}</span>
                 </Link>
               );
