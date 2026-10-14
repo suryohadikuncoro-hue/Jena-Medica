@@ -7,9 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "build:worker": "npx @opennextjs/cloudflare@1.20.11 build",
-    "preview": "npx @opennextjs/cloudflare@1.20.11 build && npx wrangler@4.151.0 preview",
-    "deploy": "npx @opennextjs/cloudflare@1.20.11 build && npx wrangler@4.151.0 deploy"
+    "build:worker": "npm install --no-save @opennextjs/cloudflare@1.20.11 wrangler@4.151.0 && npx @opennextjs/cloudflare@1.20.11 build",
+    "preview": "npm run build:worker && npx wrangler@4.151.0 preview",
+    "deploy": "npm run build:worker && npx wrangler@4.151.0 deploy"
   },
   "dependencies": {
     "next": "16.4.0",
