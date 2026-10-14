@@ -15,6 +15,7 @@
       "service": "jena-medica"
     }
   ],
+  "previews": {},
   "observability": {
     "enabled": true
   }
