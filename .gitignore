@@ -21,6 +21,7 @@
 /build
 
 # misc
+.open-next/
 .DS_Store
 *.pem
 
@@ -39,3 +40,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.dev.vars
