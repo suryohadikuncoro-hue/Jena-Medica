@@ -4,7 +4,7 @@ Aplikasi web B2B untuk Jena Medical Center dengan model **drop-ship**: supplier 
 
 ## Status implementasi
 
-Integrasi Supabase mencakup SO/PO, harga khusus pelanggan, capture draft Faktur Supplier, serta **pengiriman langsung supplier-ke-pelanggan**. Tujuh migration telah tercatat pada Supabase; 15 tabel public memakai RLS dan berisi data TEST terbatas.
+Integrasi Supabase mencakup SO/PO, harga khusus pelanggan, capture draft Faktur Supplier, serta **pengiriman langsung supplier-ke-pelanggan**. Delapan migration telah tercatat pada Supabase; 21 tabel public memakai RLS dan berisi data TEST terbatas.
 
 Sudah terhubung:
 
@@ -14,7 +14,7 @@ Sudah terhubung:
 - `/master-data#prices` — riwayat harga jual per pelanggan/barang.
 - `/operasional` — baca dan buat PO; kuantitas sumber divalidasi database.
 - `/operasional#invoices` — catat draft faktur supplier dan pasangkan baris faktur ke PO-line supplier yang sama.
-- `/pengiriman-piutang` — buat shipment parsial dan, dalam PR pembayaran, catat penerimaan pelanggan/pembayaran supplier yang terverifikasi sebagai kas/uang muka. Alokasi menunggu invoice berstatus `issued` atau faktur supplier berstatus `posted`.
+- `/pengiriman-piutang` — buat shipment parsial dan catat penerimaan pelanggan/pembayaran supplier terverifikasi sebagai kas/uang muka. Alokasi hanya menerima invoice pelanggan `issued` atau faktur supplier `posted`; posting status tersebut tersedia dalam framework accounting di PR terpisah.
 
 Saat membuat SO, harga khusus yang berlaku pada tanggal SO otomatis dipilih. Admin dapat mengubah harga secara manual; sumber harga dan flag override disimpan sebagai snapshot pada SO line. Perubahan rate tidak mengubah SO lama.
 
@@ -22,7 +22,7 @@ Status PO dikendalikan manual: Owner/Admin menandai PO telah dikirim setelah men
 
 Shipment mencadangkan kuantitas PO secara atomik dan mendukung pemenuhan parsial. Database mencegah jumlah kumulatif shipment non-batal melebihi kuantitas PO; pembatalan draft melepaskan kuantitas yang dicadangkan. Perubahan status memiliki timeline. Dengan migration invoice otomatis, pencatatan shipment sebagai diterima pelanggan membuat satu draft invoice dalam transaksi yang sama. Tiap kiriman parsial ditagih terpisah saat diterima; shipment tidak membuat invoice resmi, pajak, pembayaran, AP/HPP atau jurnal.
 
-Faktur supplier tetap **capture dokumen**: angka disimpan sebagaimana dokumen sumber—belum dihitung ulang atau diposting. Draft invoice pelanggan belum diterbitkan sebagai invoice resmi. PR pembayaran menambahkan capture dana dan alokasi guarded; migration-nya belum diterapkan, dan modul ini bukan posting AP/AR, jurnal, pajak, atau rekonsiliasi bank.
+Faktur supplier tetap **capture dokumen**: angka disimpan sebagaimana dokumen sumber—belum dihitung ulang atau diposting. Draft invoice pelanggan belum diterbitkan. Capture pembayaran dan alokasi guarded sudah tersedia di database; framework AP/AR dan jurnal masih dalam PR dan belum diterapkan. Pajak, HPP, laporan keuangan, audit dan rekonsiliasi bank belum siap untuk cutover.
 
 ## Supabase dan akses
 
@@ -58,16 +58,16 @@ npm run build:worker
 - `/` — Pesanan Pelanggan (Supabase).
 - `/operasional` — Order Supplier (Supabase); status PO dicatat manual dan tidak mengirim dokumen.
 - `/operasional#invoices` — draft capture Faktur Supplier.
-- `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA belum aktif.
-- `/pengiriman-piutang` — pengiriman langsung (Supabase); PR pembayaran menambahkan capture receipt/disbursement dan saldo uang muka. Alokasi hanya untuk dokumen posted; migration dan UAT masih diperlukan.
+- `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA berada pada framework accounting PR, belum terpasang remote.
+- `/pengiriman-piutang` — pengiriman langsung dan capture receipt/disbursement (Supabase); alokasi aman ke dokumen posted, menunggu workflow posting AP/AR pada PR accounting.
 - `/invoice-pelanggan` — satu draft per shipment delivered; draft shipment lama dapat dibuat manual oleh Owner/Admin. Otomatisasi draft aktif; invoice belum resmi atau diposting.
-- `/keuangan` — status dokumen aktual tanpa angka demo; laporan ledger belum tersedia.
+- `/keuangan` — status dokumen aktual tanpa angka demo; framework COA, posting, jurnal dan tutup periode dasar ada di PR accounting, sementara laporan GL belum tersedia.
 
 ## Model bisnis dan batas akuntansi
 
 Alur sasaran: Pesanan Pelanggan → PO supplier → Faktur Supplier → Pengiriman langsung supplier-ke-pelanggan → Invoice Pelanggan → Pembayaran → jurnal/laporan. PO dapat dipecah lintas supplier; pengiriman dapat parsial per item. Tidak ada modul gudang, batch, FEFO, expiry, penerimaan, picking, atau persediaan fisik.
 
-Belum siap untuk produksi pembukuan: penerbitan invoice resmi, pajak/PPN berbasis klasifikasi yang disetujui, posting AP/HPP/pendapatan, COA dan jurnal, audit umum, lampiran, backup/restore, serta UAT role-based. Migration pembayaran dalam PR belum diterapkan; pembayaran yang dicatat adalah bukti kas operasional, belum saldo buku besar. Alokasi menunggu dokumen posted dan saat ini tidak tersedia karena invoice masih draft. Rancangan aturan dan daftar cutover ada di [`ACCOUNTING_POLICY_AND_CUTOVER.md`](ACCOUNTING_POLICY_AND_CUTOVER.md).
+Belum siap untuk produksi pembukuan: e-Faktur, klasifikasi pajak tervalidasi, HPP aktual, pengakuan pendapatan final, laporan lengkap, audit umum, lampiran, backup/restore, serta UAT role-based. Capture pembayaran dan alokasi sudah terpasang; migration accounting pada PR belum diterapkan. Pembayaran tetap bukan saldo buku besar sebelum jurnal di-post melalui konfigurasi yang disetujui. Rancangan aturan dan daftar cutover ada di [`ACCOUNTING_POLICY_AND_CUTOVER.md`](ACCOUNTING_POLICY_AND_CUTOVER.md).
 
 ## Deployment
 

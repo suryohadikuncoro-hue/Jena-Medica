@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-type InvoiceStatus = "draft" | "void";
+type InvoiceStatus = "draft" | "issued" | "void";
 type Customer = { id: string; code: string; legal_name: string; phone: string | null };
 type SalesOrder = { id: string; order_number: string; customer_id: string };
 type Shipment = {
@@ -19,7 +19,7 @@ type CustomerInvoice = {
   id: string; invoice_number: string; shipment_id: string; sales_order_id: string; customer_id: string;
   invoice_date: string; due_date: string; currency_code: string; customer_code_snapshot: string;
   customer_name_snapshot: string; customer_phone_snapshot: string | null; ship_to_address_snapshot: string;
-  subtotal_amount: number | string; total_amount: number | string; status: InvoiceStatus;
+  subtotal_amount: number | string; total_amount: number | string; tax_amount: number | string; tax_status: string; issued_invoice_number: string | null; status: InvoiceStatus;
   notes: string | null; void_reason: string | null; created_at: string;
 };
 type CustomerInvoiceLine = {
@@ -91,7 +91,7 @@ export function CustomerInvoiceManager() {
         supabase.from("sales_orders").select("id,order_number,customer_id").limit(1000),
         supabase.from("shipments").select("id,shipment_number,sales_order_id,customer_id,shipment_date,delivered_at,status").order("shipment_date", { ascending: false }).limit(1000),
         supabase.from("shipment_lines").select("id,shipment_id,product_code_snapshot,product_name_snapshot,unit_snapshot,quantity").order("line_number").limit(4000),
-        supabase.from("sales_invoices").select("id,invoice_number,shipment_id,sales_order_id,customer_id,invoice_date,due_date,currency_code,customer_code_snapshot,customer_name_snapshot,customer_phone_snapshot,ship_to_address_snapshot,subtotal_amount,total_amount,status,notes,void_reason,created_at").order("invoice_date", { ascending: false }).limit(1000),
+        supabase.from("sales_invoices").select("id,invoice_number,shipment_id,sales_order_id,customer_id,invoice_date,due_date,currency_code,customer_code_snapshot,customer_name_snapshot,customer_phone_snapshot,ship_to_address_snapshot,subtotal_amount,total_amount,tax_amount,tax_status,issued_invoice_number,status,notes,void_reason,created_at").order("invoice_date", { ascending: false }).limit(1000),
         supabase.from("sales_invoice_lines").select("id,sales_invoice_id,line_number,shipment_line_id,sales_order_line_id,customer_product_price_id,price_overridden,product_code_snapshot,product_name_snapshot,unit_snapshot,quantity,unit_price_snapshot,line_total").order("line_number").limit(4000),
       ]);
       for (const result of results) if (result.error) throw result.error;
@@ -132,10 +132,12 @@ export function CustomerInvoiceManager() {
     const order = salesOrderById.get(row.sales_order_id);
     return `${row.invoice_number} ${row.customer_name_snapshot} ${shipment?.shipment_number ?? ""} ${order?.order_number ?? ""}`.toLowerCase().includes(query.toLowerCase());
   });
-  const invoiceNumber = selectedInvoice?.invoice_number ?? "";
+  const invoiceNumber = selectedInvoice ? (selectedInvoice.issued_invoice_number ?? selectedInvoice.invoice_number) : "";
   const phone = whatsappNumber(selectedInvoice?.customer_phone_snapshot ?? null);
   const whatsappText = selectedInvoice
-    ? `Halo ${selectedInvoice.customer_name_snapshot}, draf invoice ${selectedInvoice.invoice_number} untuk pengiriman ${selectedInvoiceShipment?.shipment_number ?? ""} telah disiapkan. Nilai sementara ${money(selectedInvoice.total_amount)}; PPN belum dihitung dan dokumen ini belum final. Jatuh tempo: ${displayDate(selectedInvoice.due_date)}.`
+    ? selectedInvoice.status === "issued"
+      ? `Halo ${selectedInvoice.customer_name_snapshot}, invoice ${invoiceNumber} untuk pengiriman ${selectedInvoiceShipment?.shipment_number ?? ""} telah diterbitkan. Total ${money(selectedInvoice.total_amount)}. Jatuh tempo: ${displayDate(selectedInvoice.due_date)}. Ini invoice komersial, bukan Faktur Pajak.`
+      : `Halo ${selectedInvoice.customer_name_snapshot}, draf invoice ${selectedInvoice.invoice_number} untuk pengiriman ${selectedInvoiceShipment?.shipment_number ?? ""} telah disiapkan. Nilai sementara ${money(selectedInvoice.total_amount)}; PPN belum dihitung dan dokumen ini belum final. Jatuh tempo: ${displayDate(selectedInvoice.due_date)}.`
     : "";
   const whatsappHref = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(whatsappText)}` : "";
 
@@ -184,7 +186,7 @@ export function CustomerInvoiceManager() {
       <div className="flex gap-2"><Link className="tab-button" href="/pengiriman-piutang">← Pengiriman</Link>{canWrite && <button className="primary-button" type="button" disabled={eligibleShipments.length === 0} onClick={openCreateForm}>＋ Buat draft shipment lama</button>}</div>
     </div>
 
-    <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> draft dibuat otomatis saat shipment dicatat diterima pelanggan. Setiap shipment parsial menghasilkan draft tersendiri; draft shipment lama yang belum memiliki invoice dapat dibuat manual oleh Owner/Admin. PPN dan identitas legal perusahaan belum dikonfigurasi, sehingga dokumen tetap draft, bukan invoice resmi/Faktur Pajak. Tidak ada jurnal, pembayaran, atau pengiriman pesan otomatis.</div>
+    <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> draft otomatis per shipment delivered; kiriman parsial memiliki draft terpisah. Terbitkan invoice komersial dan posting AR melalui antrean Posting &amp; Jurnal di Keuangan setelah konfigurasi disetujui. Nilai PPN tetap memerlukan keputusan manual; sistem tidak menerbitkan e-Faktur atau mengirim pesan otomatis.</div>
     {error && <p role="alert" className="screen-only mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
     {notice && <p role="status" className="screen-only mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
 
@@ -209,7 +211,7 @@ export function CustomerInvoiceManager() {
           const shipment = shipmentById.get(row.shipment_id);
           const order = salesOrderById.get(row.sales_order_id);
           return <button key={row.id} type="button" onClick={() => { setSelectedInvoiceId(row.id); setShowVoidForm(false); }} className={`w-full rounded-xl border p-3 text-left ${selectedInvoice?.id === row.id ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)] hover:bg-[var(--surface-muted)]"}`}>
-            <div className="flex items-start justify-between gap-2"><div><p className="font-mono text-[11px] text-[var(--accent)]">{row.invoice_number}</p><h3 className="mt-1 text-sm font-semibold">{row.customer_name_snapshot}</h3></div><span className="status-pill">{row.status === "draft" ? "Draft" : "Dibatalkan"}</span></div>
+            <div className="flex items-start justify-between gap-2"><div><p className="font-mono text-[11px] text-[var(--accent)]">{row.invoice_number}</p><h3 className="mt-1 text-sm font-semibold">{row.customer_name_snapshot}</h3></div><span className="status-pill">{row.status === "draft" ? "Draft" : row.status === "issued" ? "Terbit · AR posted" : "Dibatalkan"}</span></div>
             <div className="mt-2 flex flex-wrap justify-between gap-1 text-xs text-[var(--muted)]"><span>{shipment?.shipment_number ?? "Shipment"} · {order?.order_number ?? "SO"}</span><strong className="text-[var(--foreground)]">{money(row.total_amount)}</strong></div>
           </button>;
         })}</div>}
@@ -217,23 +219,24 @@ export function CustomerInvoiceManager() {
 
       {selectedInvoice ? <article id="invoice-print" className="print-document card card-pad">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--border)] pb-4">
-          <div><p className="page-kicker">Jena Medical Center</p><h2 className="mt-1 text-xl font-bold">Invoice Penjualan</h2><p className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${selectedInvoice.status === "draft" ? "bg-amber-100 text-amber-900" : "bg-slate-200 text-slate-800"}`}>{selectedInvoice.status === "draft" ? "DRAFT · BELUM DITERBITKAN" : "DIBATALKAN"}</p></div>
+          <div><p className="page-kicker">Jena Medical Center</p><h2 className="mt-1 text-xl font-bold">Invoice Penjualan</h2><p className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${selectedInvoice.status === "draft" ? "bg-amber-100 text-amber-900" : "bg-slate-200 text-slate-800"}`}>{selectedInvoice.status === "draft" ? "DRAFT · BELUM DITERBITKAN" : selectedInvoice.status === "issued" ? "TERBIT · AR POSTED" : "DIBATALKAN"}</p></div>
           <div className="text-left sm:text-right"><p className="text-xs text-[var(--muted)]">Nomor dokumen</p><p className="mt-1 font-mono text-sm font-semibold">{invoiceNumber}</p><p className="mt-2 text-xs text-[var(--muted)]">Tanggal {displayDate(selectedInvoice.invoice_date)}</p><p className="text-xs text-[var(--muted)]">Jatuh tempo {displayDate(selectedInvoice.due_date)}</p></div>
         </div>
         <div className="my-4 grid gap-4 sm:grid-cols-2"><div><p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">Pelanggan</p><p className="mt-1 font-semibold">{selectedInvoice.customer_name_snapshot}</p><p className="text-xs text-[var(--muted)]">{selectedInvoice.customer_code_snapshot}</p></div><div><p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">Pengiriman yang diterima</p><p className="mt-1 font-semibold">{selectedInvoiceShipment?.shipment_number ?? "—"}</p><p className="text-xs text-[var(--muted)]">SO {selectedInvoiceOrder?.order_number ?? "—"} · {displayDate(selectedInvoiceShipment?.delivered_at)}</p></div></div>
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950"><strong>Dokumen draft, bukan tagihan final atau Faktur Pajak.</strong> Identitas legal perusahaan dan perlakuan PPN belum dikonfigurasi; nilai di bawah adalah nilai sebelum pajak dan belum diposting ke akuntansi.</div>
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">{selectedInvoice.status === "issued" ? <><strong>Invoice komersial telah diterbitkan dan AR diposting.</strong> Nominal pajak mengikuti keputusan manual yang disetujui; dokumen ini bukan Faktur Pajak/e-Faktur.</> : selectedInvoice.status === "draft" ? <><strong>Dokumen draft, bukan tagihan final atau Faktur Pajak.</strong> Nilai belum termasuk pajak dan belum diposting ke akuntansi.</> : <><strong>Dokumen dibatalkan.</strong> Dokumen tersimpan sebagai jejak audit.</>}</div>
         <div className="mb-4 rounded-lg bg-[var(--surface-muted)] p-3 text-xs"><p className="font-semibold">Alamat tujuan pengiriman</p><p className="mt-1">{selectedInvoice.ship_to_address_snapshot}</p></div>
         <div className="overflow-x-auto"><table className="w-full min-w-[540px] border-collapse text-left text-xs invoice-print-table"><thead><tr className="border-y border-[var(--border)] text-[var(--muted)]"><th className="py-2 pr-2">Barang</th><th className="px-2 py-2 text-right">Qty</th><th className="px-2 py-2 text-right">Harga/unit</th><th className="py-2 pl-2 text-right">Jumlah setelah diskon SO</th></tr></thead><tbody>{selectedInvoiceLines.map(line => <tr key={line.id} className="border-b border-[var(--border)] align-top"><td className="py-3 pr-2"><strong>{line.product_name_snapshot}</strong><p className="mt-1 text-[10px] text-[var(--muted)]">{line.product_code_snapshot} · {line.unit_snapshot}{line.price_overridden ? " · harga override SO" : " · harga snapshot SO"}</p></td><td className="px-2 py-3 text-right tabular-nums">{Number(line.quantity).toLocaleString("id-ID")} {line.unit_snapshot}</td><td className="px-2 py-3 text-right tabular-nums">{money(line.unit_price_snapshot)}</td><td className="py-3 pl-2 text-right font-semibold tabular-nums">{money(line.line_total)}</td></tr>)}</tbody></table></div>
-        <div className="ml-auto mt-4 max-w-sm space-y-2 border-t border-[var(--border)] pt-3 text-sm"><div className="flex justify-between"><span>Subtotal setelah diskon</span><strong>{money(selectedInvoice.subtotal_amount)}</strong></div><div className="flex justify-between text-base font-bold"><span>Total sementara · belum termasuk PPN</span><strong>{money(selectedInvoice.total_amount)}</strong></div></div>
+        <div className="ml-auto mt-4 max-w-sm space-y-2 border-t border-[var(--border)] pt-3 text-sm"><div className="flex justify-between"><span>Subtotal setelah diskon</span><strong>{money(selectedInvoice.subtotal_amount)}</strong></div>{selectedInvoice.status === "issued" && <div className="flex justify-between"><span>PPN sesuai keputusan</span><strong>{money(selectedInvoice.tax_amount)}</strong></div>}<div className="flex justify-between text-base font-bold"><span>{selectedInvoice.status === "issued" ? "Total invoice" : "Total sementara · sebelum pajak"}</span><strong>{money(selectedInvoice.total_amount)}</strong></div></div>
         {selectedInvoice.notes && <p className="mt-4 text-xs text-[var(--muted)]">Catatan: {selectedInvoice.notes}</p>}
         {selectedInvoice.status === "void" && <p className="mt-4 rounded-lg bg-slate-100 p-3 text-xs text-slate-700">Alasan pembatalan: {selectedInvoice.void_reason}</p>}
-        <div className="mt-6 border-t border-[var(--border)] pt-3 text-[10px] leading-5 text-[var(--muted)]"><p>Dokumen ini hanya pratinjau internal. Belum diterbitkan, belum menghitung PPN, dan bukan Faktur Pajak. Lengkapi identitas legal serta kebijakan pajak sebelum menerbitkan dokumen resmi.</p><p className="mt-1">Jena Medical Center · Drop-ship langsung dari supplier ke pelanggan.</p></div>
+        <div className="mt-6 border-t border-[var(--border)] pt-3 text-[10px] leading-5 text-[var(--muted)]"><p>{selectedInvoice.status === "issued" ? "Invoice komersial ini diposting ke AR. Nilai PPN dicatat manual berdasar keputusan pajak; bukan Faktur Pajak/e-Faktur." : "Pratinjau draft internal. Belum diterbitkan dan belum diposting. Gunakan workflow issue & posting setelah kebijakan serta periode disetujui."}</p><p className="mt-1">Jena Medical Center · Drop-ship langsung dari supplier ke pelanggan.</p></div>
       </article> : <div className="screen-only card card-pad flex min-h-80 items-center justify-center text-center"><div><h2 className="font-semibold">Pilih invoice untuk pratinjau</h2><p className="mt-1 text-sm text-[var(--muted)]">PDF dapat disimpan melalui fungsi cetak browser.</p></div></div>}
     </section>
 
     {selectedInvoice && <div className="screen-only mt-4 flex flex-wrap gap-2">
       <button type="button" className="primary-button" onClick={() => window.print()}>Cetak / Simpan PDF</button>
-      {selectedInvoice.status === "draft" && phone ? <a className="tab-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Siapkan WhatsApp</a> : <button type="button" className="tab-button" disabled title="Nomor WhatsApp pelanggan yang valid diperlukan">Siapkan WhatsApp</button>}
+      {selectedInvoice.status !== "void" && phone ? <a className="tab-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Siapkan WhatsApp</a> : <button type="button" className="tab-button" disabled title="Nomor WhatsApp pelanggan yang valid diperlukan">Siapkan WhatsApp</button>}
+      {selectedInvoice.status === "draft" && <Link className="tab-button inline-flex items-center" href="/keuangan#jurnal">Issue & posting AR</Link>}
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setShowVoidForm(value => !value); setVoidReason(""); }}>Batalkan draft</button>}
       <p className="basis-full text-xs text-[var(--muted)]">WhatsApp hanya membuka teks siap kirim; tidak mengirim otomatis dan tidak melampirkan PDF. Cetak/Simpan PDF menggunakan dialog browser.</p>
     </div>}
