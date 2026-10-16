@@ -6,15 +6,16 @@
 
 ## Migration dan skema
 
-Lima migration tercatat pada Supabase:
+Enam migration tercatat pada Supabase (termasuk invoice draft per shipment):
 
 - `20261016125928_dropship_suppliers_orders` — master, SO/PO, snapshot, RPC dan RLS.
 - `20261016130021_dropship_foreign_key_indexes` — indeks foreign key.
 - `20261016132858_customer_product_price_history` — daftar harga pelanggan/barang, histori masa berlaku dan referensi harga pada baris SO.
 - `20261016134859_supplier_invoice_capture` — header/baris draft faktur supplier, relasi ke PO-line, RLS, RPC create/void.
 - `20261016171001_dropship_shipment_tracking` — metadata status PO, shipment/header/baris/timeline, validasi kuantitas, RLS dan RPC.
+- `20261016175827_customer_invoices_per_delivery_drafts` — invoice draft per shipment delivered, snapshot dan RPC create/void.
 
-Tiga belas tabel public terverifikasi: `customers`, `suppliers`, `products`, `customer_product_prices`, `sales_orders`, `sales_order_lines`, `purchase_orders`, `purchase_order_lines`, `supplier_invoices`, `supplier_invoice_lines`, `shipments`, `shipment_lines`, dan `shipment_status_events`. Semuanya memakai RLS dan masih berisi **0 baris**. Migration bersifat additive; tidak ada seed, perubahan/penghapusan data bisnis lama, atau saldo persediaan.
+Lima belas tabel public terverifikasi termasuk `sales_invoices` dan `sales_invoice_lines`; seluruh 15 tabel memakai RLS. Project memiliki data master TEST dan satu alur SO/PO uji; faktur supplier, shipment, dan invoice pelanggan belum berisi data. Tidak ada saldo persediaan.
 
 Satu project diasumsikan untuk satu perusahaan; skema belum memiliki isolasi multi-tenant.
 
@@ -28,7 +29,7 @@ Satu project diasumsikan untuk satu perusahaan; skema belum memiliki isolasi mul
 - Draft Faktur Supplier disimpan atomik bersama baris yang tertaut ke PO-line supplier yang sama. Angka dokumen disimpan apa adanya, bukan dihitung ulang atau diposting.
 - Shipment langsung dari supplier ke alamat snapshot pelanggan, dengan kuantitas parsial per PO-line. Database mengunci PO/line dan mencegah jumlah kumulatif draft/kiriman non-batal melebihi kuantitas PO. Pembatalan draft melepas alokasi.
 - Status shipment dan timeline: draft → dikirim → diterima; kendala dapat dicatat dan dilanjutkan. Pembatalan hanya untuk draft dan selalu menyimpan alasan. Tidak ada komunikasi otomatis dengan supplier/kurir.
-- Shipment tidak menghasilkan penerimaan, AP/HPP, invoice pelanggan, saldo pembayaran, pajak, atau jurnal.
+- Shipment tidak menghasilkan penerimaan, AP/HPP, invoice resmi, saldo pembayaran, pajak, atau jurnal. Migration auto-draft baru di PR terpisah akan mengikat pembuatan draft invoice ke transisi delivered.
 
 ## Keamanan
 
@@ -41,11 +42,11 @@ Satu project diasumsikan untuk satu perusahaan; skema belum memiliki isolasi mul
 
 ## Batasan & prasyarat pengujian
 
-Belum ada akun aplikasi atau data master. Administrator perlu mengundang pengguna dan mengatur app metadata, lalu membuat master, SO dan PO untuk menguji alur secara nyata.
+Project memiliki akun/data TEST, tetapi uji end-to-end UI dengan sesi ber-role Owner/Admin/Viewer tetap harus dijalankan.
 
-Belum tersedia pengiriman dokumen PO, integrasi kurir/resi, upload bukti/surat jalan, edit draft shipment, sales invoice, pembayaran/alokasi, dan jurnal. Jika draft shipment perlu diperbaiki, batalkan dengan alasan lalu buat ulang. Status shipment delivered/cancelled bersifat final; koreksi setelahnya belum memiliki reversal workflow.
+Belum tersedia pengiriman dokumen PO, integrasi kurir/resi, upload bukti/surat jalan, edit draft shipment, pembayaran/alokasi, dan jurnal. Draft invoice per shipment sudah tersedia; migration baru di PR mengotomatiskan draft saat delivered. Jika draft shipment perlu diperbaiki, batalkan dengan alasan lalu buat ulang. Status shipment delivered/cancelled bersifat final; koreksi setelahnya belum memiliki reversal workflow.
 
-Faktur supplier belum membatasi kuantitas kumulatif terhadap PO dan tidak menguji aritmetika subtotal/PPN/total. Keputusan pajak/PPN, alokasi diskon/ongkos, COA serta titik pengakuan pendapatan/HPP/AP masih terbuka. Shipment tidak memicu invoice atau posting.
+Faktur supplier belum membatasi kuantitas kumulatif terhadap PO dan tidak menguji aritmetika subtotal/PPN/total. Keputusan pajak/PPN, alokasi diskon/ongkos, COA serta titik pengakuan pendapatan/HPP/AP masih terbuka. Status shipment tidak memicu posting atau invoice resmi.
 
 ## Validasi
 
@@ -57,4 +58,8 @@ Faktur supplier belum membatasi kuantitas kumulatif terhadap PO dan tidak menguj
 - Security Advisor: 9 warning terkait SECURITY DEFINER yang dapat dipanggil authenticated; role checks tetap berada di database. Performance Advisor tidak melaporkan FK tanpa indeks.
 - Uji alur UI Owner/Admin/Viewer end-to-end belum dapat dilakukan karena belum ada akun ber-role maupun data master.
 
-Fitur ini bukan persetujuan cutover atau pembukuan produksi. Langkah selanjutnya: provisioning akun/data untuk uji shipment, finalisasi aturan invoice pelanggan, pajak/COA, posting AP/HPP, pembayaran/jurnal, audit, backup/restore, dan pengujian concurrency/reversal.
+Fitur ini bukan persetujuan cutover atau pembukuan produksi. Langkah selanjutnya: UAT auto-draft invoice pada environment non-production, finalisasi pajak/COA, posting AP/HPP, pembayaran/jurnal, audit, backup/restore, serta pengujian concurrency/reversal.
+
+## Pembaruan PR invoice otomatis
+
+Migration `20261017120000_auto_customer_invoice_on_delivery_drafts.sql` memasang trigger setelah status shipment berubah menjadi `delivered`. Trigger memanggil `create_customer_invoice` dalam transaksi yang sama; bila invoice gagal dibuat, update status delivery rollback. Shipment parsial masing-masing menghasilkan draft sendiri. Shipment delivered yang sudah ada tidak di-backfill dan masih dapat diproses manual. Migration ini berada di branch PR baru dan belum diterapkan pada Supabase Production. UAT/concurrency test terhadap database non-production belum dilakukan.
