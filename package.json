@@ -12,6 +12,7 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"

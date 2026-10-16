@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AuthStatus } from "@/app/components/auth-status";
 
 const groups = [
   { title: "Transaksi", items: [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Pengiriman", "/pengiriman-piutang"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pengiriman-piutang#payments"]] },
@@ -57,11 +58,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="relative"><button type="button" className="primary-button hidden sm:inline-flex" onClick={() => setCreateOpen(v => !v)}>＋ Buat Baru</button>{createOpen && <div className="action-popover">{quickActions.map(([label, href]) => <Link key={label} href={href} onClick={() => setCreateOpen(false)}>{label}</Link>)}</div>}</div>
           <button type="button" className="icon-button relative" aria-label="Notifikasi" onClick={() => setNotice("Notifikasi akan menampilkan tindakan yang perlu ditinjau.")}>♧<span className="notification-dot" /></button>
           <button type="button" className="icon-button hidden sm:inline-flex" aria-label={dark ? "Gunakan tema terang" : "Gunakan tema gelap"} onClick={toggleTheme}>{dark ? "☼" : "◐"}</button>
+          <AuthStatus />
           <button type="button" className="avatar-button hidden sm:inline-flex" aria-label="Profil pengguna">JM</button>
           <button type="button" className="icon-button lg:hidden" aria-label="Buka menu" aria-expanded={mobileOpen} onClick={() => setMobileOpen(v => !v)}>☰</button>
         </div>
       </div>
-      {mobileOpen && <div className="mobile-menu lg:hidden"><div className="mb-3 flex gap-2"><button className="search-trigger flex-1" type="button" onClick={() => { setPaletteOpen(true); setMobileOpen(false); }}>⌕ Cari transaksi</button><button className="icon-button" onClick={toggleTheme} aria-label="Ganti tema">◐</button></div><Link href="/dashboard" onClick={() => setMobileOpen(false)}>Dashboard</Link>{groups.map(g => <details key={g.title} className="mobile-menu-group"><summary>{g.title}</summary>{g.items.map(([label, href]) => <Link key={label} href={href} onClick={() => setMobileOpen(false)}>{label}</Link>)}</details>)}<Link href="/pengiriman-piutang" onClick={() => setMobileOpen(false)}>Pengiriman</Link><button className="primary-button mt-3 w-full" onClick={() => { setMobileOpen(false); setCreateOpen(v => !v); }}>＋ Buat Baru</button></div>}
+      {mobileOpen && <div className="mobile-menu lg:hidden"><div className="mb-3 flex gap-2"><button className="search-trigger flex-1" type="button" onClick={() => { setPaletteOpen(true); setMobileOpen(false); }}>⌕ Cari transaksi</button><button className="icon-button" onClick={toggleTheme} aria-label="Ganti tema">◐</button></div><Link href="/dashboard" onClick={() => setMobileOpen(false)}>Dashboard</Link>{groups.map(g => <details key={g.title} className="mobile-menu-group"><summary>{g.title}</summary>{g.items.map(([label, href]) => <Link key={label} href={href} onClick={() => setMobileOpen(false)}>{label}</Link>)}</details>)}<AuthStatus compact/><Link href="/pengiriman-piutang" onClick={() => setMobileOpen(false)}>Pengiriman</Link><button className="primary-button mt-3 w-full" onClick={() => { setMobileOpen(false); setCreateOpen(v => !v); }}>＋ Buat Baru</button></div>}
     </header>
     {notice && <div role="status" className="notice-banner mx-auto mt-3 max-w-[1500px] px-4 lg:px-8">{notice}<button className="ml-3 font-semibold" onClick={() => setNotice("")}>Tutup</button></div>}
     <div className="pb-20 lg:pb-0">{children}</div>

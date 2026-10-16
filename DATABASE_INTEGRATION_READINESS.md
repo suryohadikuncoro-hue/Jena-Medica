@@ -1,37 +1,45 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
 **Diperbarui:** 16 Oktober 2026
-**Status:** UI drop-ship dalam refaktor; belum siap untuk transaksi produksi.
-**Supabase terhubung:** proyek `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif; pada inspeksi read-only schema `public` belum berisi tabel.
+**Status:** Tahap awal Supabase terpasang; belum siap untuk pembukuan/produksi.
+**Project:** `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif.
 
-## Keputusan domain terkini
+## Perubahan tahap ini
 
-Model resmi yang diminta adalah **drop-ship tanpa stok fisik Jena**. Supplier mengirim langsung ke alamat pelanggan yang berasal dari pesanan. Karena itu, spesifikasi lama mengenai gudang, penerimaan stok, batch, FEFO, expiry, karantina, picking, stock allocation, stock ledger dan pengembalian ke stok **sudah tidak berlaku untuk aplikasi ini**. Dokumen pemetaan lama yang menyebut konsep tersebut digantikan oleh `DATA_MODEL_MAPPING_AND_INTEGRATION_PLAN.md` yang diperbarui.
+Dua migration tercatat pada proyek Supabase:
 
-Alur proses: Sales Order → PO supplier (dapat terpecah) → supplier invoice/cost aktual → shipment supplier-ke-pelanggan → sales invoice → customer payment → jurnal/laporan.
+- `20261016125928_dropship_suppliers_orders` — tujuh tabel referensi/transaksi, relasi, snapshot dan RPC.
+- `20261016130021_dropship_foreign_key_indexes` — indeks yang direkomendasikan untuk foreign key.
 
-## Kondisi saat ini
+Tabel `public.customers`, `suppliers`, `products`, `sales_orders`, `sales_order_lines`, `purchase_orders`, dan `purchase_order_lines` berhasil diverifikasi. RLS aktif di seluruh tabel dan jumlah baris awal **0**. Tidak ada seed/data demo, tabel stok, atau data yang ditimpa.
 
-- UI sebelumnya terdiri dari data hard-coded dan state lokal. Branch `feat/dropship-ui-foundation` memperkenalkan shared top navigation, tema terang/gelap, pencarian menu, quick-create, layar Pesanan Pelanggan, Dashboard, PO/Faktur Supplier, Master Data, Pengiriman/Pembayaran, dan ringkasan Keuangan.
-- Layar branch tersebut tetap prototipe: belum membaca/menulis database dan sebagian tindakan/form hanya untuk review UI.
-- Belum ada tabel `public`, migrasi, autentikasi aplikasi, RLS, atau transaksi akuntansi aktual yang dibuat oleh refaktor UI.
-- Data contoh tidak konsisten atau tidak valid sebagai saldo akuntansi. Jangan migrasikan data demo menjadi data produksi.
-- Build dan lint perlu divalidasi ulang pada checkpoint terbaru sebelum merge.
+Layar login, master Pelanggan/Supplier/Barang, SO, dan draft PO terhubung ke Supabase. Alur SO→PO memakai snapshot alamat/barang, nomor dokumen sequence, RPC transaksional, serta validasi agar kuantitas agregat PO tidak melebihi baris SO.
 
-## Gerbang sebelum persistensi
+## Keamanan dan akses
 
-1. Tentukan DBMS/platform dan environment dev/test/produksi secara eksplisit; pastikan proyek Supabase ini memang target pengembangan sebelum memuat data nyata.
-2. Finalisasi skema relasional drop-ship, constraints, strategi nomor dokumen, RLS, autentikasi, role Owner/Admin/Viewer dan kebijakan lampiran.
-3. Sepakati aturan pajak dan akuntansi: status PKP/tarif efektif, pembulatan, diskon faktur, alokasi biaya supplier, kapan AP/HPP/pendapatan diakui, dan perilaku shipment/invoice parsial.
-4. Implementasikan satu alur end-to-end pada environment non-produksi. Pastikan posting atomik, jurnal debit=kredit, idempotensi, audit, pembayaran parsial dan referensi SO-line → PO-line → supplier invoice line → shipment/invoice line.
-5. Siapkan backup/restore, migration rollback, rekonsiliasi, serta test penerimaan sebelum cutover.
+- Aplikasi memakai publishable key saja; tidak ada service-role key di client.
+- Semua tabel exposed memakai RLS. `app_private.has_business_role` memeriksa JWT `app_metadata.business_role`, bukan `user_metadata`.
+- `owner`/`admin` dapat mengelola master dan menjalankan RPC order; `viewer` hanya dapat membaca. User tanpa role tertutup secara default.
+- Tidak ada hard-delete grant/policy. Master dinonaktifkan melalui `is_active`.
+- RPC SO/PO memakai `SECURITY DEFINER` karena tabel transaksi tidak memberikan write langsung ke client; fungsi memeriksa role di server, memakai `search_path` kosong, dan execute hanya diberikan ke role `authenticated`. Advisor keamanan tetap memberi peringatan untuk 3 RPC tersebut karena bisa dipanggil oleh sesi authenticated. Ini disengaja agar UI dapat memakai transaksi atomik; warning perlu ditinjau lagi sebelum produksi.
+- Advisor performa tidak lagi melaporkan foreign key tanpa indeks. Advisor masih melaporkan indeks sebagai “unused”; tabel baru masih kosong sehingga statistik penggunaan belum bermakna.
 
-## Entitas sasaran konseptual
+## Keputusan domain dan batasan
 
-Master customer, supplier, product, customer-product price/version, account; sales order/line; purchase order/line; supplier invoice/line; direct shipment/line; customer payment/allocation; supplier payment/allocation; sales invoice/line; tax records; journal entry/line; accounting period; audit event; attachment; document sequence.
+Model yang diminta adalah **drop-ship tanpa stok fisik Jena**. Supplier mengirim langsung ke alamat pelanggan; spesifikasi gudang, batch, FEFO, expiry, karantina, picking dan stock ledger tidak berlaku.
 
-Tidak termasuk entitas stok fisik (warehouse, batch, goods receipt, stock movement/balance, FEFO allocation). Rincian relasi serta keputusan belum final dicatat dalam `DATA_MODEL_MAPPING_AND_INTEGRATION_PLAN.md`.
+Fase awal membatasi mata uang pada IDR, tidak menghitung PPN, tidak membuat jurnal, dan meminta harga jual dimasukkan manual (master harga khusus pelanggan belum dibuat). Belum ada supplier invoice, pengiriman, sales invoice, pembayaran, alokasi, COA, audit event atau attachment. Faktur Supplier di UI secara eksplisit belum terhubung.
 
-## Batasan audit
+## Prasyarat akses untuk memakai preview
 
-Pemeriksaan Supabase sebelumnya hanya membaca daftar tabel dan metadata proyek; bukan pemeriksaan keamanan runtime atau konfigurasi produksi. Dokumen ini bukan otorisasi untuk membuat migrasi atau mengubah database. Perubahan schema akan dilakukan setelah spesifikasi dan target environment disepakati.
+Proyek tidak berisi akun aplikasi atau data master awal. Administrator perlu membuat/mengundang pengguna di Supabase Auth dan memberi `app_metadata.business_role` (`owner`, `admin`, atau `viewer`) melalui mekanisme admin tepercaya. Setelah itu siapkan satu pelanggan dan satu barang sebelum membuat SO, serta satu supplier sebelum membuat PO. Perubahan role memerlukan JWT yang diperbarui/login ulang.
+
+## Pengujian dan status kesiapan
+
+- `npm run lint`: lulus.
+- `npm run build`: lulus.
+- Schema/list migration: berhasil diverifikasi via Supabase.
+- Semua tabel kosong; belum ada kredensial pengguna untuk menguji RLS secara end-to-end lewat UI.
+- Belum dilakukan simulasi transaksi nyata karena tidak ada user/seed data. Uji role Owner/Admin/Viewer dan split PO perlu dilakukan setelah admin memprovisikan akun dan master.
+
+Ini adalah tahap persistensi non-akuntansi, bukan persetujuan cutover. Sebelum produksi: sepakati PPN/COA dan titik pengakuan pendapatan/HPP/AP; implementasikan invoice/pengiriman/pembayaran/jurnal/audit; tambahkan test idempotensi, concurrency, backup/restore dan reversal.
