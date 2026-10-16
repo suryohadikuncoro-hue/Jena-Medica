@@ -1,5 +1,75 @@
 "use client";
-import {useEffect,useState} from "react";
-const money=(n:number)=>`Rp ${new Intl.NumberFormat("id-ID").format(n)}`;
-const tabs=["Ikhtisar","Arus kas","Laba rugi","Neraca","Jurnal umum","Buku Besar","Biaya Operasional","Tutup Buku","PPN","Hutang & piutang"] as const;
-export default function FinanceReportsPage(){const [tab,setTab]=useState<typeof tabs[number]>("Ikhtisar");const [period,setPeriod]=useState("Oktober 2026");useEffect(()=>{const map:Record<string,typeof tabs[number]>={"arus-kas":"Arus kas","laba-rugi":"Laba rugi","neraca":"Neraca","jurnal":"Jurnal umum","buku-besar":"Buku Besar","biaya":"Biaya Operasional","tutup-buku":"Tutup Buku","ppn":"PPN"};const sync=()=>{const next=map[window.location.hash.slice(1)];if(next)window.requestAnimationFrame(()=>setTab(next));};sync();window.addEventListener("hashchange",sync);return()=>window.removeEventListener("hashchange",sync);},[]);const reports:Record<string,[string,number|string][]>={"Ikhtisar":[["Penjualan",68450000],["Pembelian supplier",42800000],["Piutang usaha",32650000],["Hutang supplier",18400000]],"Arus kas":[["Saldo awal",19800000],["Penerimaan pelanggan",18400000],["Pembayaran supplier",-11200000],["Beban operasional",-3850000]],"Laba rugi":[["Penjualan bersih",67650000],["HPP / modal aktual",-42800000],["Laba kotor",24850000],["Beban operasional",-9100000],["Laba bersih",15750000]],"Neraca":[["Kas dan bank",23150000],["Piutang usaha",32650000],["PPN masukan",1650000],["Hutang supplier",-18400000]],"Jurnal umum":[["Jurnal penjualan contoh",68450000],["Jurnal faktur supplier contoh",42800000],["Jurnal pembayaran contoh",29600000]],"Buku Besar":[["Kas & Bank",23150000],["Piutang Usaha",32650000],["Hutang Supplier",18400000]],"Biaya Operasional":[["Biaya administrasi",2400000],["Biaya komunikasi",850000],["Biaya pengiriman",1850000]],"Tutup Buku":[["Periode berjalan","Belum ditutup"],["Jurnal belum ditinjau",3],["Status kontrol","Demo"]],"PPN":[["PPN Masukan",1650000],["PPN Keluaran",2480000],["Selisih ilustratif",830000]],"Hutang & piutang":[["Piutang belum jatuh tempo",21800000],["Piutang lewat jatuh tempo",10850000],["Hutang belum jatuh tempo",12600000],["Hutang segera jatuh tempo",5800000]]};return <main className="page-wrap"><div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="page-kicker">Akuntansi & laporan</p><h1 className="page-title">Keuangan</h1><p className="page-description">Laporan berdasarkan penjualan, faktur supplier, pembayaran dan biaya drop-ship.</p></div><div className="flex gap-2"><select className="field w-auto" value={period} onChange={e=>setPeriod(e.target.value)} aria-label="Periode laporan"><option>Oktober 2026</option><option>September 2026</option><option>Kuartal ini</option><option>Tahun ini</option></select><button className="tab-button">Ekspor ▾</button></div></div><div className="demo-banner mb-5"><strong>Data contoh.</strong> Nilai belum dihasilkan dari buku besar; laporan tidak untuk pembukuan aktual. Aturan posting perlu disepakati sebelum integrasi.</div><section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[["Penjualan",money(68450000)],["Laba kotor",money(24850000)],["Kas & bank",money(23150000)],["Piutang usaha",money(32650000)]].map(([a,b])=><article className="card card-pad" key={a}><p className="text-xs text-[var(--muted)]">{a}</p><p className="mt-2 text-xl font-bold tabular-nums">{b}</p></article>)}</section><section className="card card-pad"><div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Laporan dan buku"><button className="tab-button" role="tab" aria-selected={tab==="Ikhtisar"} onClick={()=>setTab("Ikhtisar")}>Ikhtisar</button>{tabs.slice(1).map(t=><button className="tab-button" key={t} role="tab" aria-selected={tab===t} onClick={()=>setTab(t)}>{t}</button>)}</div><div className="flex items-end justify-between"><div><h2 className="font-semibold">{tab=== "Ikhtisar"?"Ringkasan keuangan":tab}</h2><p className="mt-1 text-xs text-[var(--muted)]">Periode {period} · nilai demo</p></div><span className="status-pill">Belum posting aktual</span></div><div className="mt-4 divide-y divide-[var(--border)]">{reports[tab].map(([label,value])=><div className="flex items-center justify-between gap-4 py-3 text-sm" key={label}><span>{label}</span><strong className="tabular-nums">{typeof value === "number" ? `${money(Math.abs(value))}${value<0?" (−)":""}` : value}</strong></div>)}</div>{tab==="Laba rugi"&&<p className="mt-3 rounded-xl bg-[var(--surface-muted)] p-3 text-xs text-[var(--muted)]">Modal aktual per item akan ditautkan ke faktur supplier. Pengakuan HPP/pendapatan final perlu mengikuti kebijakan akuntansi yang disetujui.</p>}{tab==="Neraca"&&<p className="mt-3 rounded-xl bg-[var(--surface-muted)] p-3 text-xs text-[var(--muted)]">Tidak ada saldo persediaan fisik Jena pada model drop-ship. Laporan final harus seimbang terhadap buku besar.</p>}</section></main>}
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+
+const tabs = ["Ikhtisar", "Laba rugi", "Neraca", "Jurnal umum", "Buku Besar", "Tutup Buku", "PPN", "Hutang & piutang"] as const;
+type Tab = typeof tabs[number];
+type StatusData = { salesDrafts: number; salesDraftValue: number; supplierDrafts: number; supplierReportedValue: number; role: string };
+const empty: StatusData = { salesDrafts: 0, salesDraftValue: 0, supplierDrafts: 0, supplierReportedValue: 0, role: "" };
+const currency = (n: number) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n)}`;
+const pathByTab: Record<Tab, string> = { "Ikhtisar": "", "Laba rugi": "laba-rugi", "Neraca": "neraca", "Jurnal umum": "jurnal", "Buku Besar": "buku-besar", "Tutup Buku": "tutup-buku", "PPN": "ppn", "Hutang & piutang": "hutang-piutang" };
+
+export default function FinanceReportsPage() {
+  const [tab, setTab] = useState<Tab>("Ikhtisar");
+  const [data, setData] = useState<StatusData>(empty);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    const sync = () => { const slug = window.location.hash.slice(1); const match = tabs.find(t => pathByTab[t] === slug); if (match) setTab(match); };
+    sync(); window.addEventListener("hashchange", sync); return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  useEffect(() => {
+    let live = true;
+    async function load() {
+      if (!isSupabaseConfigured()) { setError("Supabase belum dikonfigurasi pada environment ini."); setLoading(false); return; }
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Masuk untuk melihat status dokumen aktual.");
+        const role = String(session.user.app_metadata?.business_role ?? "");
+        if (!["owner", "admin", "viewer"].includes(role)) throw new Error("Akun ini belum memiliki role bisnis yang valid.");
+        const [sales, supplier] = await Promise.all([
+          supabase.from("sales_invoices").select("status,total_amount").limit(2000),
+          supabase.from("supplier_invoices").select("status,invoice_total_reported").limit(2000),
+        ]);
+        if (sales.error) throw sales.error; if (supplier.error) throw supplier.error;
+        const salesDrafts = (sales.data ?? []).filter(row => row.status === "draft");
+        const supplierDrafts = (supplier.data ?? []).filter(row => row.status === "draft");
+        if (live) setData({ salesDrafts: salesDrafts.length, salesDraftValue: salesDrafts.reduce((sum, row) => sum + Number(row.total_amount), 0), supplierDrafts: supplierDrafts.length, supplierReportedValue: supplierDrafts.reduce((sum, row) => sum + Number(row.invoice_total_reported), 0), role });
+      } catch (cause) { if (live) setError(cause instanceof Error ? cause.message : "Status keuangan tidak dapat dimuat."); }
+      finally { if (live) setLoading(false); }
+    }
+    void load(); return () => { live = false; };
+  }, []);
+  const tabBlurb = useMemo(() => ({
+    "Ikhtisar": "Ringkasan dokumen yang ada; belum ada saldo buku besar.",
+    "Laba rugi": "Belum tersedia: revenue dan HPP hanya boleh berasal dari jurnal yang telah diposting.",
+    "Neraca": "Belum tersedia: saldo aset, kewajiban, dan ekuitas belum bersumber dari ledger.",
+    "Jurnal umum": "Belum tersedia: draft transaksi tidak menghasilkan jurnal.",
+    "Buku Besar": "Belum tersedia: belum ada bagan akun dan posting jurnal aktif.",
+    "Tutup Buku": "Belum tersedia: periode belum dapat dikunci tanpa ledger, kontrol reversal, serta rekonsiliasi.",
+    "PPN": "Belum tersedia: klasifikasi pajak produk dan profil PKP perusahaan belum diverifikasi.",
+    "Hutang & piutang": "Belum tersedia: draft bukan saldo AP/AR dan belum ada pembayaran yang dialokasikan.",
+  } as Record<Tab, string>)[tab], [tab]);
+  function choose(next: Tab) { setTab(next); const slug = pathByTab[next]; window.history.replaceState(null, "", `${window.location.pathname}${slug ? `#${slug}` : ""}`); }
+  return <main className="page-wrap">
+    <div className="mb-6"><p className="page-kicker">Akuntansi & laporan</p><h1 className="page-title">Keuangan</h1><p className="page-description">Panel status dokumen dan ketersediaan buku besar; bukan laporan akuntansi final.</p></div>
+    <div className="demo-banner mb-5"><strong>Belum untuk pembukuan atau pelaporan pajak.</strong> Draft invoice pelanggan dan capture faktur supplier tidak dihitung sebagai pendapatan, piutang, AP, HPP, pajak terutang, kas, atau laba.</div>
+    {error && <p role="alert" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
+    <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <Stat label="Draft invoice pelanggan" value={loading ? "…" : String(data.salesDrafts)} detail="Bukan piutang" href="/invoice-pelanggan" />
+      <Stat label="Nilai draft pelanggan" value={loading ? "…" : currency(data.salesDraftValue)} detail="Tanpa PPN; bukan pendapatan" href="/invoice-pelanggan" />
+      <Stat label="Capture faktur supplier" value={loading ? "…" : String(data.supplierDrafts)} detail="Bukan hutang/AP" href="/operasional#invoices" />
+      <Stat label="Nilai faktur terlapor" value={loading ? "…" : currency(data.supplierReportedValue)} detail="Sesuai dokumen; bukan HPP" href="/operasional#invoices" />
+    </section>
+    <section className="card card-pad"><div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Laporan dan buku">{tabs.map(item => <button className="tab-button" key={item} role="tab" aria-selected={tab === item} onClick={() => choose(item)}>{item}</button>)}</div>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">{tab === "Ikhtisar" ? "Kesiapan keuangan" : tab}</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">{tabBlurb}</p></div><span className="status-pill">{loading ? "Memuat" : "Belum diposting"}</span></div>
+      {tab === "Ikhtisar" ? <div className="mt-5 grid gap-3 md:grid-cols-2"><Gate title="Penerbitan invoice" status="Draft per shipment delivered" href="/invoice-pelanggan" text="Pengiriman parsial menghasilkan draft terpisah. Penerbitan resmi menunggu profil legal dan konfigurasi pajak."/><Gate title="Pembayaran & alokasi" status="Belum aktif" href="/pengiriman-piutang#payments" text="Belum ada penerimaan/pembayaran yang dapat dialokasikan ke dokumen resmi."/><Gate title="Posting & laporan" status="Belum aktif" href="#jurnal" text="Belum tersedia bagan akun yang disetujui, jurnal berimbang, reversal, dan audit ledger."/><Gate title="Tutup buku & backup" status="Belum aktif" href="#tutup-buku" text="Memerlukan kontrol periode, rekonsiliasi, serta prosedur restore yang diuji."/></div> : <div className="mt-5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-5"><p className="text-sm font-medium">Bagian ini belum memiliki angka transaksi keuangan.</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Sistem tidak mengisi angka contoh atau menghitung saldo dari draft. Buka invoice pelanggan atau capture faktur supplier untuk meninjau dokumen operasional aktual.</p><div className="mt-3 flex flex-wrap gap-2"><Link className="tab-button" href="/invoice-pelanggan">Invoice pelanggan</Link><Link className="tab-button" href="/operasional#invoices">Faktur supplier</Link></div></div>}
+    </section>
+    <p className="mt-4 text-xs leading-5 text-[var(--muted-soft)]">UAT pada akun owner/admin/viewer dan persetujuan kebijakan oleh pemilik/akuntan masih diperlukan. Jangan gunakan halaman ini untuk laporan manajemen, SPT, rekonsiliasi bank, atau tutup buku.</p>
+  </main>;
+}
+function Stat({ label, value, detail, href }: { label: string; value: string; detail: string; href: string }) { return <Link href={href} className="card card-pad transition hover:shadow-md"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-2 text-lg font-bold tabular-nums">{value}</p><p className="mt-1 text-[11px] text-[var(--muted-soft)]">{detail}</p></Link>; }
+function Gate({ title, status, text, href }: { title: string; status: string; text: string; href: string }) { return <Link href={href} className="rounded-xl border border-[var(--border)] p-4 transition hover:bg-[var(--surface-muted)]"><div className="flex items-start justify-between gap-3"><h3 className="text-sm font-semibold">{title}</h3><span className="status-pill shrink-0">{status}</span></div><p className="mt-2 text-xs leading-5 text-[var(--muted)]">{text}</p></Link>; }
