@@ -1,7 +1,42 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
-const money=(n:number)=>`Rp ${new Intl.NumberFormat("id-ID").format(n)}`;
-const shipments=[{id:"SJ/2026/10/0148",po:"PO/2026/10/0092",supplier:"PT Sehat Farma",customer:"Apotek Sehat Sentosa",destination:"Lamongan",date:"16 Okt 2026",status:"Menunggu resi"},{id:"SJ/2026/10/0147",po:"PO/2026/10/0091",supplier:"PT Medika Utama",customer:"Klinik Medika Utama",destination:"Gresik",date:"15 Okt 2026",status:"Dalam perjalanan"},{id:"SJ/2026/10/0146",po:"PO/2026/10/0090",supplier:"CV Mitra Medis",customer:"RS Anugerah",destination:"Surabaya",date:"14 Okt 2026",status:"Diterima pelanggan"},{id:"SJ/2026/10/0145",po:"PO/2026/10/0089",supplier:"PT Sehat Farma",customer:"Apotek Kencana",destination:"Lamongan",date:"13 Okt 2026",status:"Pengiriman bermasalah"}];
-const invoices=[{id:"INV/2026/10/0012",customer:"Apotek Sehat Sentosa",date:"16 Okt 2026",due:"30 Okt 2026",amount:12450000,paid:0},{id:"INV/2026/10/0011",customer:"Klinik Medika Utama",date:"15 Okt 2026",due:"29 Okt 2026",amount:8750000,paid:2500000},{id:"INV/2026/10/0010",customer:"Apotek Kencana",date:"13 Okt 2026",due:"27 Okt 2026",amount:7320000,paid:0}];
-export default function ShippingReceivablesPage(){const [tab,setTab]=useState("Pengiriman");const [q,setQ]=useState("");const [amount,setAmount]=useState("");useEffect(()=>{const sync=()=>{if(window.location.hash==="#payments")window.requestAnimationFrame(()=>setTab("Pembayaran"));else if(!window.location.hash)window.requestAnimationFrame(()=>setTab("Pengiriman"));};sync();window.addEventListener("hashchange",sync);return()=>window.removeEventListener("hashchange",sync);},[]);const filtered=useMemo(()=>tab==="Pengiriman"?shipments.filter(x=>`${x.id} ${x.po} ${x.supplier} ${x.customer}`.toLowerCase().includes(q.toLowerCase())):invoices.filter(x=>`${x.id} ${x.customer}`.toLowerCase().includes(q.toLowerCase())),[tab,q]);return <main className="page-wrap"><div className="mb-6"><p className="page-kicker">Fulfillment & penagihan</p><h1 className="page-title">Pengiriman & pembayaran</h1><p className="page-description">Pantau supplier yang mengirim langsung ke pelanggan dan pelunasan invoice.</p></div><div className="demo-banner mb-5"><strong>Mode prototipe.</strong> Pembaruan status dan pembayaran belum mencatat transaksi aktual. Tidak ada penerimaan atau pengembalian ke gudang Jena.</div><section className="mb-5 grid gap-3 sm:grid-cols-3"><Kpi label="Pengiriman berjalan" value="5"/><Kpi label="Piutang terbuka" value={money(26020000)}/><Kpi label="Invoice jatuh tempo 14 hari" value="3"/></section><section className="card card-pad"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap gap-2" role="tablist" aria-label="Pengiriman dan pembayaran">{["Pengiriman","Pembayaran"].map(t=><button key={t} className="tab-button" role="tab" aria-selected={tab===t} onClick={()=>{setTab(t);setQ("")}}>{t}</button>)}</div><input className="field sm:w-72" value={q} onChange={e=>setQ(e.target.value)} placeholder={tab==="Pengiriman"?"Cari PO, supplier, pelanggan":"Cari invoice atau pelanggan"} aria-label="Cari data"/></div>{tab==="Pengiriman"?<><div className="hidden overflow-x-auto md:block"><table className="w-full"><thead><tr className="table-head">{["Surat jalan","PO","Supplier pengirim","Pelanggan tujuan","Tanggal","Status"].map(h=><th className="py-3 pr-3" key={h}>{h}</th>)}</tr></thead><tbody>{(filtered as typeof shipments).map(x=><tr className="table-row" key={x.id}><td className="py-4 pr-3 font-mono text-xs text-[var(--accent)]">{x.id}</td><td className="py-4 pr-3">{x.po}</td><td className="py-4 pr-3">{x.supplier}</td><td className="py-4 pr-3">{x.customer}<div className="mt-1 text-[11px] text-[var(--muted)]">{x.destination}</div></td><td className="py-4 pr-3">{x.date}</td><td className="py-4"><span className="status-pill">{x.status}</span></td></tr>)}</tbody></table></div><div className="space-y-3 md:hidden">{(filtered as typeof shipments).map(x=><article className="rounded-xl border border-[var(--border)] p-3" key={x.id}><div className="flex justify-between gap-2"><div><p className="font-mono text-[11px] text-[var(--accent)]">{x.id}</p><h3 className="mt-1 text-sm font-semibold">{x.supplier} → {x.customer}</h3><p className="mt-1 text-xs text-[var(--muted)]">PO {x.po} · {x.destination} · {x.date}</p></div><span className="status-pill">{x.status}</span></div></article>)}</div><div className="mt-4 rounded-xl bg-[var(--surface-muted)] p-3 text-xs text-[var(--muted)]">Catat status Dipesan → Dikirim supplier → Diterima pelanggan, termasuk tanggal dan nomor resi/surat jalan.</div></>:<><div className="mb-4 grid gap-3 rounded-xl bg-[var(--surface-muted)] p-4 sm:grid-cols-[1fr_1fr_auto]"><label className="text-xs text-[var(--muted)]">Invoice pelanggan<select className="field mt-1">{invoices.map(x=><option key={x.id}>{x.id} · {x.customer}</option>)}</select></label><label className="text-xs text-[var(--muted)]">Nominal pembayaran<input className="field mt-1" type="number" min="1" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Contoh: 2.500.000"/></label><label className="text-xs text-[var(--muted)]">Metode<select className="field mt-1"><option>Transfer bank</option><option>Tunai</option></select></label><button className="primary-button self-end" onClick={()=>setAmount("")}>Catat pembayaran · demo</button></div><div className="hidden overflow-x-auto md:block"><table className="w-full"><thead><tr className="table-head">{["Invoice","Pelanggan","Tanggal","Jatuh tempo","Total","Dibayar","Sisa"].map(h=><th className="py-3 pr-3" key={h}>{h}</th>)}</tr></thead><tbody>{(filtered as typeof invoices).map(x=><tr className="table-row" key={x.id}><td className="py-4 pr-3 font-mono text-xs text-[var(--accent)]">{x.id}</td><td className="py-4 pr-3">{x.customer}</td><td className="py-4 pr-3">{x.date}</td><td className="py-4 pr-3">{x.due}</td><td className="py-4 pr-3 text-right tabular-nums">{money(x.amount)}</td><td className="py-4 pr-3 text-right tabular-nums">{money(x.paid)}</td><td className="py-4 text-right font-semibold tabular-nums">{money(x.amount-x.paid)}</td></tr>)}</tbody></table></div><div className="space-y-3 md:hidden">{(filtered as typeof invoices).map(x=><article className="rounded-xl border border-[var(--border)] p-3" key={x.id}><p className="font-mono text-[11px] text-[var(--accent)]">{x.id}</p><h3 className="mt-1 text-sm font-semibold">{x.customer}</h3><div className="mt-2 flex justify-between text-xs"><span>Jatuh tempo {x.due}</span><strong>Sisa {money(x.amount-x.paid)}</strong></div></article>)}</div></>}</section></main>}
-function Kpi({label,value}:{label:string;value:string}){return <article className="card card-pad"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-2 text-xl font-bold tabular-nums">{value}</p></article>}
+
+import { useEffect, useState } from "react";
+import { ShipmentManager } from "@/app/components/shipment-manager";
+
+type Tab = "Pengiriman" | "Pembayaran";
+
+export default function ShippingReceivablesPage() {
+  const [tab, setTab] = useState<Tab>("Pengiriman");
+
+  useEffect(() => {
+    const sync = () => setTab(window.location.hash === "#payments" ? "Pembayaran" : "Pengiriman");
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+
+  function switchTab(next: Tab) {
+    setTab(next);
+    window.history.replaceState(null, "", `${window.location.pathname}${next === "Pembayaran" ? "#payments" : ""}`);
+  }
+
+  return <main className="page-wrap">
+    <div className="mb-6">
+      <p className="page-kicker">Transaksi · Siklus drop-ship</p>
+      <h1 className="page-title">Pengiriman & pembayaran</h1>
+      <p className="page-description">Pantau kiriman supplier langsung ke pelanggan. Pencatatan pembayaran/piutang akan diaktifkan setelah siklus invoice ditetapkan.</p>
+    </div>
+    <div className="mb-5 flex flex-wrap gap-2" role="tablist" aria-label="Modul pengiriman dan pembayaran">
+      {(["Pengiriman", "Pembayaran"] as const).map(item => <button key={item} type="button" role="tab" aria-selected={tab === item} className="tab-button" onClick={() => switchTab(item)}>{item}</button>)}
+    </div>
+    {tab === "Pengiriman" ? <ShipmentManager /> : <PaymentPlaceholder />}
+  </main>;
+}
+
+function PaymentPlaceholder() {
+  return <section className="card card-pad">
+    <p className="page-kicker">Tahap berikutnya</p>
+    <h2 className="mt-1 text-lg font-semibold">Pembayaran & piutang belum terhubung</h2>
+    <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--muted)]">Belum ada transaksi pembayaran atau saldo piutang yang ditampilkan. Modul ini akan mengikuti keputusan invoice pelanggan, alokasi pembayaran, dan perlakuan akuntansi; angka contoh sengaja tidak ditampilkan sebagai data nyata.</p>
+  </section>;
+}
