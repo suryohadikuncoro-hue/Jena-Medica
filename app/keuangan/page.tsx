@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AccountingLedgerManager } from "@/app/components/accounting-ledger-manager";
 import { useEffect, useMemo, useState } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
@@ -47,16 +48,16 @@ export default function FinanceReportsPage() {
     "Ikhtisar": "Ringkasan dokumen yang ada; belum ada saldo buku besar.",
     "Laba rugi": "Belum tersedia: revenue dan HPP hanya boleh berasal dari jurnal yang telah diposting.",
     "Neraca": "Belum tersedia: saldo aset, kewajiban, dan ekuitas belum bersumber dari ledger.",
-    "Jurnal umum": "Belum tersedia: draft transaksi tidak menghasilkan jurnal.",
-    "Buku Besar": "Belum tersedia: belum ada bagan akun dan posting jurnal aktif.",
-    "Tutup Buku": "Belum tersedia: periode belum dapat dikunci tanpa ledger, kontrol reversal, serta rekonsiliasi.",
+    "Jurnal umum": "Konfigurasi COA, kebijakan, periode, dan jurnal berimbang; posting tetap terkunci sampai persetujuan dicatat.",
+    "Buku Besar": "Belum tersedia: laporan buku besar/GL belum dirilis; jurnal hanya dapat ditampilkan pada tab Jurnal umum.",
+    "Tutup Buku": "Tutup periode dasar tersedia setelah outstanding source dan jurnal tidak seimbang ditutup; rekonsiliasi eksternal, kontrol close menyeluruh, dan reopen workflow masih belum lengkap.",
     "PPN": "Belum tersedia: klasifikasi pajak produk dan profil PKP perusahaan belum diverifikasi.",
-    "Hutang & piutang": "Belum tersedia: draft bukan saldo AP/AR dan belum ada pembayaran yang dialokasikan.",
+    "Hutang & piutang": "Draft bukan saldo AP/AR; pembayaran dapat dicatat, sedangkan alokasi memerlukan invoice/AP yang sudah diposting.",
   } as Record<Tab, string>)[tab], [tab]);
   function choose(next: Tab) { setTab(next); const slug = pathByTab[next]; window.history.replaceState(null, "", `${window.location.pathname}${slug ? `#${slug}` : ""}`); }
   return <main className="page-wrap">
     <div className="mb-6"><p className="page-kicker">Akuntansi & laporan</p><h1 className="page-title">Keuangan</h1><p className="page-description">Panel status dokumen dan ketersediaan buku besar; bukan laporan akuntansi final.</p></div>
-    <div className="demo-banner mb-5"><strong>Belum untuk pembukuan atau pelaporan pajak.</strong> Draft invoice pelanggan dan capture faktur supplier tidak dihitung sebagai pendapatan, piutang, AP, HPP, pajak terutang, kas, atau laba.</div>
+    <div className="demo-banner mb-5"><strong>Belum untuk pembukuan atau pelaporan pajak.</strong> Draft invoice pelanggan dan capture faktur supplier bukan saldo akuntansi. Receipt/disbursement operasional yang belum diposting juga tidak termasuk dalam buku besar atau laporan.</div>
     {error && <p role="alert" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <Stat label="Draft invoice pelanggan" value={loading ? "…" : String(data.salesDrafts)} detail="Bukan piutang" href="/invoice-pelanggan" />
@@ -66,7 +67,7 @@ export default function FinanceReportsPage() {
     </section>
     <section className="card card-pad"><div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Laporan dan buku">{tabs.map(item => <button className="tab-button" key={item} role="tab" aria-selected={tab === item} onClick={() => choose(item)}>{item}</button>)}</div>
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">{tab === "Ikhtisar" ? "Kesiapan keuangan" : tab}</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">{tabBlurb}</p></div><span className="status-pill">{loading ? "Memuat" : "Belum diposting"}</span></div>
-      {tab === "Ikhtisar" ? <div className="mt-5 grid gap-3 md:grid-cols-2"><Gate title="Penerbitan invoice" status="Draft per shipment delivered" href="/invoice-pelanggan" text="Pengiriman parsial menghasilkan draft terpisah. Penerbitan resmi menunggu profil legal dan konfigurasi pajak."/><Gate title="Pembayaran & alokasi" status="Belum aktif" href="/pengiriman-piutang#payments" text="Belum ada penerimaan/pembayaran yang dapat dialokasikan ke dokumen resmi."/><Gate title="Posting & laporan" status="Belum aktif" href="#jurnal" text="Belum tersedia bagan akun yang disetujui, jurnal berimbang, reversal, dan audit ledger."/><Gate title="Tutup buku & backup" status="Belum aktif" href="#tutup-buku" text="Memerlukan kontrol periode, rekonsiliasi, serta prosedur restore yang diuji."/></div> : <div className="mt-5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-5"><p className="text-sm font-medium">Bagian ini belum memiliki angka transaksi keuangan.</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Sistem tidak mengisi angka contoh atau menghitung saldo dari draft. Buka invoice pelanggan atau capture faktur supplier untuk meninjau dokumen operasional aktual.</p><div className="mt-3 flex flex-wrap gap-2"><Link className="tab-button" href="/invoice-pelanggan">Invoice pelanggan</Link><Link className="tab-button" href="/operasional#invoices">Faktur supplier</Link></div></div>}
+      {tab === "Ikhtisar" ? <div className="mt-5 grid gap-3 md:grid-cols-2"><Gate title="Penerbitan invoice" status="Draft per shipment delivered" href="/invoice-pelanggan" text="Pengiriman parsial menghasilkan draft terpisah. Penerbitan resmi menunggu profil legal dan konfigurasi pajak."/><Gate title="Pembayaran & alokasi" status="Capture tersedia" href="/pengiriman-piutang#payments" text="Penerimaan/pembayaran dapat dicatat sebagai dana terverifikasi; posting jurnal dan alokasi menunggu invoice/AP posted."/><Gate title="Posting & laporan" status="Terkunci sampai persetujuan" href="#jurnal" text="Kerangka COA, jurnal dan approval tersedia pada tab Jurnal umum; posting diblokir sebelum konfigurasi serta periode disetujui."/><Gate title="Tutup buku & backup" status="Belum siap cutover" href="#tutup-buku" text="Penutupan periode dasar tersedia dalam kerangka; rekonsiliasi, audit trail lengkap, serta backup/restore masih harus diuji."/></div> : tab === "Jurnal umum" ? <AccountingLedgerManager/> : <div className="mt-5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-muted)] p-5"><p className="text-sm font-medium">Bagian ini belum memiliki angka transaksi keuangan.</p><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Sistem tidak mengisi angka contoh atau menghitung saldo dari draft. Buka invoice pelanggan atau capture faktur supplier untuk meninjau dokumen operasional aktual.</p><div className="mt-3 flex flex-wrap gap-2"><Link className="tab-button" href="/invoice-pelanggan">Invoice pelanggan</Link><Link className="tab-button" href="/operasional#invoices">Faktur supplier</Link></div></div>}
     </section>
     <p className="mt-4 text-xs leading-5 text-[var(--muted-soft)]">UAT pada akun owner/admin/viewer dan persetujuan kebijakan oleh pemilik/akuntan masih diperlukan. Jangan gunakan halaman ini untuk laporan manajemen, SPT, rekonsiliasi bank, atau tutup buku.</p>
   </main>;

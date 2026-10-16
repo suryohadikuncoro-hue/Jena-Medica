@@ -1,13 +1,13 @@
 # Kebijakan Akuntansi & Gerbang Cutover — Jena Medical Center
 
-**Status:** rancangan implementasi; belum disetujui pemilik/akuntan dan belum diterapkan ke database.  
+**Status:** kerangka posting AP/AR dan jurnal ada pada migration PR `20261017140000`; belum diterapkan ke Supabase dan belum disetujui pemilik/akuntan.
 **Model:** drop-ship langsung dari supplier ke pelanggan; sistem tidak mengelola persediaan fisik.
 
 ## Aturan yang sudah dapat dipakai
 
 - **Invoice pelanggan:** satu draft per shipment yang dicatat `delivered`; setiap shipment parsial dapat ditagih dengan draft terpisah. Nilai neto berasal dari snapshot SO, dialokasikan pro-rata pada baris, dan sisa pembulatan masuk ke shipment terakhir. Void hanya untuk draft dan menyimpan alasan. Draft bukan invoice resmi, Faktur Pajak, piutang, atau pendapatan.
-- **Titik operasional penagihan:** status delivered berarti penerimaan pelanggan telah dicatat pada shipment. Perubahan status ini belum membuat invoice atau jurnal otomatis. Aturan tersebut harus dicocokkan dengan kontrak, bukti serah terima, dan saat penyerahan hak/kendali yang ditetapkan perusahaan.
-- **Dokumen supplier:** capture angka faktur seperti sumbernya. Draft saat ini tidak mengakui AP, HPP, pajak masukan yang dapat dikreditkan, atau jurnal. Selisih kuantitas/harga terhadap PO harus direkonsiliasi sebelum posting.
+- **Titik operasional penagihan:** status delivered berarti penerimaan pelanggan telah dicatat pada shipment dan membuat draft invoice secara atomik. Perubahan tersebut tidak menerbitkan invoice komersial atau jurnal; issue & posting AR harus dijalankan setelah kebijakan/COA disetujui dan tanggal invoice masuk periode terbuka. Aturan pengakuan harus cocok dengan kontrak dan bukti penyerahan hak/kendali.
+- **Dokumen supplier:** capture angka faktur seperti sumbernya. Posting AP tersedia dalam kerangka baru setelah review manual; total supplier didebit ke akun clearing biaya (bukan HPP) dan dikreditkan ke AP. Header harus merekonsiliasi: untuk `exclusive`, `subtotal − diskon + PPN + biaya lain = total`; untuk `inclusive`, subtotal sudah memuat PPN sehingga `subtotal − diskon + biaya lain = total`. PPN masukan hanya didebit ke akun PPN masukan setelah perlakuan `recoverable` direview; selisih kuantitas/harga terhadap PO tetap harus direkonsiliasi manual.
 
 ## Pajak/PPN: kontrol sistem yang diperlukan
 
@@ -31,7 +31,7 @@ Ini kebijakan usulan untuk direview, bukan saran akuntansi final:
 - **Modal/HPP:** tidak membuat saldo persediaan gudang. Biaya aktual supplier, diskon dan ongkos yang dapat diatribusikan ditautkan ke PO-line dan dialokasikan konsisten pada jumlah unit. Akui HPP pada titik transfer kendali/pemenuhan pelanggan sesuai kontrak dan bukti penerimaan. Jika faktur supplier belum tersedia saat itu, gunakan estimasi yang disetujui lalu catat selisih terhadap biaya aktual sebagai penyesuaian terjejak. Jangan menampilkan HPP aktual dari `quoted_unit_cost` PO.
 - **Pendapatan/AR:** pada penyerahan yang memenuhi syarat pengakuan sesuai kontrak (default rancangan: penerimaan pelanggan yang terdokumentasi), buat invoice resmi dan jurnal. Status `delivered` saja tidak membuktikan kewajiban hukum/pajak terpenuhi.
 - **PPN keluaran/masukan:** pisahkan dari pendapatan dan biaya hanya setelah klasifikasi serta kelayakan kredit pajak disahkan. PPN masukan pada capture invoice supplier belum otomatis dapat dikreditkan.
-- **Pembayaran pelanggan:** pembayaran menjadi kas/bank dan kredit AR saat dana terverifikasi; alokasi mengurangi piutang invoice, dengan overpayment tetap menjadi kredit pelanggan. **Pembayaran supplier:** debit AP dan kredit kas/bank; uang muka supplier disimpan sebagai uang muka, bukan alokasi ke faktur draft.
+- **Pembayaran pelanggan:** capture operasional yang sudah termigrasi menyimpan receipt sebagai dana terverifikasi; saat journal-post, debit kas/bank dan kredit uang muka pelanggan. Alokasi yang dijurnal kemudian mendebit uang muka dan mengkredit AR invoice; sisa dana tetap kredit pelanggan. **Pembayaran supplier:** saat journal-post debit uang muka supplier dan kredit kas/bank; alokasi kemudian mendebit AP dan mengkredit uang muka supplier. Alokasi operasional tidak otomatis membuat jurnal.
 - **Biaya total/diskon:** alokasikan ke baris memakai basis yang konsisten dan simpan metode serta angka pembulatan; sisa sen dikoreksi deterministik pada baris terakhir. Credit note/retur setelah posting harus memakai dokumen reversal/penyesuaian, bukan mengedit transaksi lama.
 
 Jurnal contoh untuk diputuskan bersama akuntan:
@@ -41,18 +41,18 @@ Jurnal contoh untuk diputuskan bersama akuntan:
 - Saat faktur supplier diposting setelah akrual: Dr akrual biaya belum ditagih/akun penyesuaian biaya dan Dr PPN Masukan yang memenuhi syarat; Cr AP.
 - Saat penerimaan pelanggan: Dr Bank/Kas; Cr Piutang. Saat bayar supplier: Dr AP; Cr Bank/Kas.
 
-Pemetaan COA, pembebanan biaya kirim, diskon header, retur, uang muka, margin negatif, rounding dan akun selisih belum disahkan. Posting harus idempoten, debit=kredit, atomik, memakai idempotency key, dan memiliki reversal yang menaut ke jurnal asal.
+Pemetaan COA, pembebanan biaya kirim, diskon header, retur, HPP aktual, uang muka, margin negatif, rounding dan akun selisih belum disahkan. Kerangka posting memakai referensi kebijakan, debit=kredit, transaksi atomik, source idempotency untuk payment, dan reversal yang menaut ke jurnal asal. DPP/nominal/rate invoice pelanggan harus presisi sesuai skala rupiah; tarif dan DPP tidak dihitung otomatis. `cash` dan `bank_transfer` didukung; metode check/card/other tidak memiliki pemetaan ledger dan belum boleh diposting.
 
 ## Pembayaran dan alokasi
 
 Keputusan tahap pembayaran: Owner/Admin dapat mencatat penerimaan pelanggan dan pengeluaran supplier yang telah terverifikasi, dengan referensi dan metode; sisa dana tetap sebagai uang muka yang belum teralokasi. RPC server-side memvalidasi role, nominal positif IDR, dan audit reason untuk void. Idempotency key juga mencegah retry capture menggandakan transaksi. Batch alokasi parsial/multi-invoice hanya menerima invoice pelanggan `issued` atau faktur supplier `posted`; transaksi mengunci pembayaran dan dokumen, memeriksa saldo, dan idempotency key mencegah duplikasi request. Void pembayaran membatalkan batch aktifnya dengan alasan/audit yang tercatat. Viewer hanya baca. Uang muka supplier tidak boleh dialokasikan ke faktur draft.
 
-Tabel/RPC/UI capture pembayaran serta RPC alokasi guarded tersedia dalam migration PR terpisah, tetapi migration belum diterapkan. Dokumen remote saat ini masih draft-only; karena itu sistem dapat mencatat dana sebagai receipt/disbursement operasional dan uang muka, namun belum ada dokumen yang eligible untuk alokasi. Posting AP/AR, pengakuan pajak, bank, dan jurnal tetap menunggu langkah 3 serta persetujuan akuntansi.
+Migration pembayaran `20261017130000` sudah diterapkan: receipt/disbursement dapat dicatat dan alokasi dibatasi ke dokumen posted. Karena remote masih draft-only, belum ada invoice/AP eligible untuk alokasi. Accounting migration `20261017140000` di PR ini menambahkan posting dan jurnal, namun belum diterapkan remote; pembayaran belum memengaruhi ledger sampai jurnal diposting setelah approval.
 
 ## Jurnal, tutup buku, audit dan dokumen
 
-- COA harus disetujui pemilik/akuntan; jurnal mempunyai nomor, sumber, periode, pengguna, tanggal, currency, total debit/kredit dan status draft/posted/reversed.
-- Jurnal posted tidak diedit/dihapus. Periode ditutup hanya setelah rekonsiliasi bank, AR/AP, pajak, trial balance, jurnal manual dan transaksi cutoff diperiksa. Reopen memerlukan role lebih tinggi, alasan dan audit event.
+- COA harus disetujui pemilik/akuntan; framework mencatat nomor jurnal, sumber, periode, pengguna, tanggal, IDR, total debit/kredit dan status posted/reversed. Tidak ada akun/mapping default. Approval gate membutuhkan 10 mapping, empat referensi kebijakan, referensi persetujuan, dan periode terbuka.
+- Jurnal posted tidak diedit/dihapus. Posting payment/allocations hanya memiliki jalur reversal terhubung ke transaksi sumber; invoice reversal/credit note belum didukung. Tutup periode dasar menolak source draft dan jurnal tidak seimbang, tetapi **tidak menggantikan** rekonsiliasi bank, AR/AP, pajak, trial balance, jurnal manual dan pemeriksaan cutoff. Reopen workflow belum tersedia.
 - Audit umum mencatat actor, timestamp, aksi, entitas, nilai sebelum/sesudah yang aman, dan alasan. Jangan simpan password, token, nomor kartu, atau rahasia dalam log.
 - Metadata lampiran harus terhubung ke object storage privat, memakai signed URL singkat, MIME/size allowlist, checksum, pemindaian file, retensi dan audit unduh.
 - Ekspor laporan mesti dapat direproduksi untuk rentang tanggal dan menyertakan waktu dibuat, timezone, currency, filter, status, nomor halaman serta label sumber data.
@@ -79,4 +79,4 @@ Gunakan project non-production dengan akun Owner, Admin, dan Viewer terpisah ser
 
 ## Status cutover saat ini
 
-Project yang diperiksa didokumentasikan sebagai Production dan berisi data uji pada tabel operasional. Perubahan UI lokal dalam branch saat ini menghilangkan angka demo dari dashboard/halaman keuangan, tetapi **tidak** membuat laporan buku besar. Tidak ada migration keuangan yang diterapkan remote dalam pekerjaan ini. Modul pembayaran, penerbitan invoice resmi, pajak jual, AP/HPP, jurnal, audit umum, backup/restore dan UAT role-based masih belum aktif. Jangan mengoperasikan pembukuan atau melakukan deployment cutover sampai kebijakan dan seluruh UAT di atas disetujui dan dilaksanakan.
+Project yang diperiksa didokumentasikan sebagai Production dan berisi data uji pada tabel operasional. Migration pembayaran sudah terpasang, tetapi invoice/AP remote masih draft-only sehingga saldo belum dapat dialokasikan. Accounting migration pada PR ini belum diterapkan. Framework menyediakan issue invoice komersial dan posting AP/AR/jurnal setelah konfigurasi disetujui, tetapi bukan e-Faktur, belum menghitung pajak otomatis, belum mengakui HPP aktual, dan belum menyediakan laporan GL, audit umum, backup/restore atau UAT role-based penuh. Jangan mengoperasikan pembukuan atau cutover sebelum kebijakan dan seluruh UAT disetujui dan dilaksanakan.
