@@ -1,5 +1,64 @@
+"use client";
+
 import Link from "next/link";
-const money = (n:number) => `Rp ${new Intl.NumberFormat("id-ID").format(n)}`;
-const metrics = [["Penjualan bulan ini", money(68450000), "+8,2% vs bulan lalu"], ["Pembelian supplier", money(42800000), "Faktur supplier contoh"], ["Laba kotor", money(15200000), "Modal aktual contoh"], ["Laba bersih", money(9700000), "Setelah beban contoh"], ["Kas & bank", money(23150000), "Saldo demo"], ["Piutang usaha", money(32650000), "3 invoice terbuka"], ["Hutang supplier", money(18400000), "2 supplier terbuka"]];
-const actions = [["SO/2026/10/0048", "Pesanan belum dibuatkan PO", "Apotek Sehat Sentosa", "/"], ["PO/2026/10/0029", "Supplier belum mengisi resi", "PT Sehat Farma · Kirim ke pelanggan", "/pengiriman-piutang"], ["INV/2026/10/0012", "Invoice belum dikirim via WhatsApp", "Jatuh tempo 30 Okt 2026", "/invoice-pelanggan"], ["FP/2026/10/0092", "Faktur supplier segera jatuh tempo", "PT Medika Utama · 18 Okt 2026", "/operasional#invoices"]];
-export default function DashboardPage(){return <main className="page-wrap"><div className="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p className="page-kicker">Jena Medical Center · Manajemen</p><h1 className="page-title">Dashboard</h1><p className="page-description">Ringkasan transaksi drop-ship dan pekerjaan yang perlu ditindaklanjuti.</p></div><select className="field w-auto" aria-label="Periode dashboard"><option>Bulan ini</option><option>Bulan lalu</option><option>Kuartal ini</option><option>Tahun ini</option><option>Kustom</option></select></div><div className="demo-banner mb-5"><strong>Mode prototipe.</strong> Angka contoh belum berasal dari satu sumber transaksi; jangan gunakan untuk keputusan operasional.</div><section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([label,value,detail])=><article className="card card-pad" key={label}><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-2 text-xl font-bold tabular-nums">{value}</p><p className="mt-1 text-[11px] text-[var(--muted-soft)]">{detail}</p></article>)}</section><section className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_.9fr]"><article className="card card-pad"><div className="flex items-start justify-between"><div><h2 className="font-semibold">Tren penjualan & laba</h2><p className="mt-1 text-xs text-[var(--muted)]">Visual konseptual · sumber data belum terhubung</p></div><span className="status-pill">7 bulan</span></div><div className="mt-6 flex h-48 items-end gap-3 border-b border-l border-[var(--border)] px-3 pb-0">{[35,49,43,64,58,76,68].map((h,i)=><div key={i} className="flex h-full flex-1 flex-col justify-end"><div className="w-full rounded-t-md bg-[var(--accent)] opacity-85" style={{height:`${h}%`}}/><span className="py-2 text-center text-[10px] text-[var(--muted-soft)]">{["Apr","Mei","Jun","Jul","Agu","Sep","Okt"][i]}</span></div>)}</div><div className="mt-3 flex gap-4 text-xs text-[var(--muted)]"><span>● Penjualan</span><span className="text-[var(--info)]">● Laba kotor (contoh)</span></div></article><article className="card card-pad"><div className="flex items-start justify-between"><div><h2 className="font-semibold">Pipeline drop-ship</h2><p className="mt-1 text-xs text-[var(--muted)]">Status pesanan dapat bercabang per supplier.</p></div><Link className="text-xs font-semibold text-[var(--accent)]" href="/">Buka pesanan →</Link></div><div className="mt-5 space-y-3">{[["Pesanan pelanggan","18","bg-teal-600"],["PO supplier dibuat","14","bg-teal-500"],["Faktur supplier dicatat","12","bg-sky-600"],["Dikirim supplier","10","bg-cyan-600"],["Invoice pelanggan","9","bg-emerald-600"],["Lunas","7","bg-green-700"]].map(([label,count,color],i)=><div key={label}><div className="mb-1 flex justify-between text-xs"><span>{label}</span><strong>{count} pesanan</strong></div><div className="h-2 overflow-hidden rounded-full bg-[var(--surface-muted)]"><div className={`h-full rounded-full ${color}`} style={{width:`${100-i*12}%`}}/></div></div>)}</div></article></section><section className="mt-5 card card-pad"><div className="flex items-center justify-between"><div><h2 className="font-semibold">Perlu tindakan</h2><p className="mt-1 text-xs text-[var(--muted)]">Prioritas operasional lintas dokumen.</p></div><span className="status-pill">4 contoh</span></div><div className="mt-4 grid gap-3 md:grid-cols-2">{actions.map(([id,title,detail,href])=><Link href={href} key={id} className="rounded-xl border border-[var(--border)] p-4 transition hover:bg-[var(--surface-muted)]"><div className="flex justify-between gap-3"><div><p className="text-[11px] font-semibold text-[var(--accent)]">{id}</p><h3 className="mt-1 text-sm font-semibold">{title}</h3><p className="mt-1 text-xs text-[var(--muted)]">{detail}</p></div><span className="text-[var(--accent)]">→</span></div></Link>)}</div></section></main>}
+import { useEffect, useState } from "react";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+
+type Snapshot = { customers: number; openOrders: number; inTransit: number; deliveredUninvoiced: number; supplierDrafts: number; salesDrafts: number };
+const empty: Snapshot = { customers: 0, openOrders: 0, inTransit: 0, deliveredUninvoiced: 0, supplierDrafts: 0, salesDrafts: 0 };
+const cards: { key: keyof Snapshot; label: string; hint: string; href: string }[] = [
+  { key: "customers", label: "Pelanggan aktif", hint: "Master pelanggan", href: "/master-data#customers" },
+  { key: "openOrders", label: "SO terkonfirmasi", hint: "Menunggu proses berikutnya", href: "/" },
+  { key: "inTransit", label: "Shipment berjalan", hint: "Dikirim atau ada kendala", href: "/pengiriman-piutang" },
+  { key: "deliveredUninvoiced", label: "Diterima · belum ditagih", hint: "Siap dibuat draft invoice", href: "/invoice-pelanggan" },
+  { key: "supplierDrafts", label: "Draft faktur supplier", hint: "Capture dokumen saja; belum AP", href: "/operasional#invoices" },
+  { key: "salesDrafts", label: "Draft invoice pelanggan", hint: "Belum diterbitkan atau diposting", href: "/invoice-pelanggan" },
+];
+
+export default function DashboardPage() {
+  const [snapshot, setSnapshot] = useState<Snapshot>(empty);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let live = true;
+    async function load() {
+      if (!isSupabaseConfigured()) { setMessage("Supabase belum dikonfigurasi pada environment ini."); setLoading(false); return; }
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { setMessage("Masuk untuk melihat ringkasan transaksi yang aktual."); setLoading(false); return; }
+        const role = String(session.user.app_metadata?.business_role ?? "");
+        if (!["owner", "admin", "viewer"].includes(role)) { setMessage("Akun ini belum memiliki role bisnis yang valid."); setLoading(false); return; }
+        const [customers, orders, shipments, invoices, supplierInvoices] = await Promise.all([
+          supabase.from("customers").select("id", { count: "exact", head: true }).eq("is_active", true),
+          supabase.from("sales_orders").select("status").limit(2000),
+          supabase.from("shipments").select("id,status").limit(2000),
+          supabase.from("sales_invoices").select("shipment_id,status").limit(2000),
+          supabase.from("supplier_invoices").select("id,status").limit(2000),
+        ]);
+        for (const result of [customers, orders, shipments, invoices, supplierInvoices]) if (result.error) throw result.error;
+        const delivered = (shipments.data ?? []).filter(row => row.status === "delivered");
+        const invoiced = new Set((invoices.data ?? []).filter(row => row.status !== "void").map(row => row.shipment_id));
+        if (!live) return;
+        setSnapshot({
+          customers: customers.count ?? 0,
+          openOrders: (orders.data ?? []).filter(row => row.status === "confirmed").length,
+          inTransit: (shipments.data ?? []).filter(row => row.status === "shipped" || row.status === "issue").length,
+          deliveredUninvoiced: delivered.filter(row => !invoiced.has(row.id)).length,
+          supplierDrafts: (supplierInvoices.data ?? []).filter(row => row.status === "draft").length,
+          salesDrafts: (invoices.data ?? []).filter(row => row.status === "draft").length,
+        });
+      } catch (cause) { if (live) setMessage(cause instanceof Error ? cause.message : "Ringkasan tidak dapat dimuat dari Supabase."); }
+      finally { if (live) setLoading(false); }
+    }
+    void load();
+    return () => { live = false; };
+  }, []);
+  return <main className="page-wrap">
+    <div className="mb-6"><p className="page-kicker">Jena Medical Center · Manajemen</p><h1 className="page-title">Dashboard</h1><p className="page-description">Ringkasan operasional drop-ship dari transaksi tersimpan. Tidak menampilkan saldo keuangan yang belum dibukukan.</p></div>
+    {message && <div role="status" className="demo-banner mb-5"><strong>{loading ? "Memuat data." : "Ringkasan belum tersedia."}</strong> {message}{message.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</div>}
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{cards.map(item => <Link href={item.href} key={item.key} className="card card-pad transition hover:-translate-y-0.5 hover:shadow-md"><p className="text-xs text-[var(--muted)]">{item.label}</p><p className="mt-2 text-2xl font-bold tabular-nums">{loading ? "…" : snapshot[item.key].toLocaleString("id-ID")}</p><p className="mt-1 text-xs text-[var(--muted-soft)]">{item.hint}</p></Link>)}</section>
+    <section className="mt-5 grid gap-4 lg:grid-cols-2"><article className="card card-pad"><h2 className="font-semibold">Alur kerja</h2><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Pesanan → PO supplier → shipment langsung → draft invoice per shipment delivered. Shipment parsial dapat ditagih terpisah.</p><div className="mt-4 flex flex-wrap gap-2"><Link className="primary-button" href="/">Buka pesanan pelanggan</Link><Link className="tab-button" href="/pengiriman-piutang">Kelola pengiriman</Link><Link className="tab-button" href="/invoice-pelanggan">Invoice pelanggan</Link></div></article><article className="card card-pad"><h2 className="font-semibold">Kontrol keuangan</h2><p className="mt-1 text-xs leading-5 text-[var(--muted)]">Invoice dan faktur supplier yang ada masih tahap draft/capture. Pembayaran, AP/HPP, pajak terapan, jurnal, dan laporan belum diposting sebagai buku besar.</p><Link className="mt-4 inline-flex text-sm font-semibold text-[var(--accent)]" href="/keuangan">Lihat status akuntansi →</Link></article></section>
+    <p className="mt-5 text-xs text-[var(--muted-soft)]">Angka di atas adalah hitungan dokumen operasional aktual, bukan pendapatan, kas, piutang, hutang, atau laba.</p>
+  </main>;
+}

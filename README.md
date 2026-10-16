@@ -54,20 +54,20 @@ npm run build:worker
 
 ## Rute aplikasi
 
-- `/dashboard` — ringkasan UI; sebagian metrik belum menjadi read model database.
+- `/dashboard` — hitungan dokumen operasional aktual dari Supabase; bukan saldo akuntansi.
 - `/` — Pesanan Pelanggan (Supabase).
 - `/operasional` — Order Supplier (Supabase); status PO dicatat manual dan tidak mengirim dokumen.
 - `/operasional#invoices` — draft capture Faktur Supplier.
-- `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA masih prototipe.
-- `/pengiriman-piutang` — pengiriman langsung (Supabase); tab pembayaran/piutang masih placeholder.
-- `/invoice-pelanggan` — prototipe invoice pelanggan.
-- `/keuangan` — prototipe ringkasan keuangan/laporan.
+- `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA belum aktif.
+- `/pengiriman-piutang` — pengiriman langsung (Supabase); pembayaran/piutang belum merupakan transaksi.
+- `/invoice-pelanggan` — draft per shipment delivered; belum diterbitkan resmi atau diposting.
+- `/keuangan` — status dokumen aktual tanpa angka demo; laporan ledger belum tersedia.
 
 ## Model bisnis dan batas akuntansi
 
 Alur sasaran: Pesanan Pelanggan → PO supplier → Faktur Supplier → Pengiriman langsung supplier-ke-pelanggan → Invoice Pelanggan → Pembayaran → jurnal/laporan. PO dapat dipecah lintas supplier; pengiriman dapat parsial per item. Tidak ada modul gudang, batch, FEFO, expiry, penerimaan, picking, atau persediaan fisik.
 
-Belum siap untuk produksi pembukuan: perlakuan pajak/PPN, alokasi diskon dan ongkos, pengakuan AP/HPP/pendapatan, invoice pelanggan, pembayaran, jurnal, audit umum, lampiran, backup/restore, serta uji end-to-end dengan akun ber-role masih perlu diselesaikan bersama pemilik/akuntan. Nilai capture Faktur Supplier dan status shipment bukan posting keuangan.
+Belum siap untuk produksi pembukuan: penerbitan invoice resmi, pajak/PPN berbasis klasifikasi yang disetujui, pembayaran/alokasi, pengakuan AP/HPP/pendapatan, COA dan jurnal, audit umum, lampiran, backup/restore, serta UAT role-based. Nilai capture Faktur Supplier dan status shipment bukan posting keuangan. Rancangan aturan dan daftar cutover ada di [`ACCOUNTING_POLICY_AND_CUTOVER.md`](ACCOUNTING_POLICY_AND_CUTOVER.md).
 
 ## Deployment
 
