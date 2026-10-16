@@ -28,7 +28,7 @@ Satu project mewakili satu perusahaan/data bisnis; belum ada isolasi multi-tenan
 | `shipment_status_events` | Timeline append-only status shipment, tanggal kejadian, catatan, pengguna dan waktu pencatatan. |
 | `sales_invoices` / `sales_invoice_lines` | Draft invoice satu per shipment berstatus delivered; baris menelusuri shipment-line → PO-line → SO-line dan menggunakan harga jual snapshot SO. |
 
-Enam migration telah diterapkan. Lima belas tabel public ber-RLS kini tersedia. Dataset TEST Production mencakup master customer/supplier/product dan harga, satu SO terkonfirmasi, serta satu PO draft; tabel invoice pelanggan tetap kosong sampai ada shipment delivered. SO/PO/invoice menggunakan IDR; nilai SO dan invoice draft belum menghitung PPN.
+Tujuh migration telah tercatat pada Supabase. Lima belas tabel public ber-RLS tersedia, dengan data TEST terbatas pada master, harga, SO dan PO; tabel shipment, invoice pelanggan, dan faktur supplier masih kosong. SO/PO/invoice menggunakan IDR; nilai SO dan invoice draft belum menghitung PPN. Migration pembayaran dalam PR terpisah belum diterapkan.
 
 ## Aturan harga dan faktur
 
@@ -47,7 +47,7 @@ Faktur supplier tahap ini hanya **capture dokumen**: nilai disimpan seperti terc
 - `create_shipment` hanya menerima PO status `sent` atau `acknowledged`, menyalin relasi dan alamat tujuan dari PO, menyimpan line snapshot, dan mengizinkan kuantitas parsial. RPC mengunci PO dan setiap PO-line, memeriksa alokasi shipment non-batal terdahulu, serta menolak jumlah di atas kuantitas PO. Draft shipment ikut mencadangkan kuantitas; pembatalan draft melepaskannya.
 - `transition_shipment` hanya mengizinkan transisi `draft → shipped/cancelled`, `shipped → delivered/issue`, atau `issue → shipped/delivered`. Alasan wajib untuk kendala/pembatalan, tanggal diperiksa, dan setiap perubahan mencatat event. Hanya draft dapat dibatalkan; tidak ada reversal setelah delivered. Setelah migration `20261017120000_auto_customer_invoice_on_delivery_drafts` diterapkan, transisi ke `delivered` membuat satu draft invoice secara atomik. Setiap shipment parsial menghasilkan draft tersendiri. Jika pembuatan draft gagal, transisi delivery ikut rollback.
 - `create_customer_invoice` hanya menerima shipment berstatus `delivered`, membuat satu draft per shipment, menyalin customer/alamat serta harga dari snapshot transaksi, membatasi kuantitas invoice kumulatif terhadap SO-line, dan mengalokasikan nilai bersih SO secara proporsional untuk kiriman parsial dengan sisa pembulatan pada kiriman terakhir. `void_customer_invoice` membatalkan draft dengan alasan, pengguna, dan waktu; draft void tetap tersimpan dan shipment dapat dibuatkan draft baru.
-- Invoice pelanggan hanya berstatus `draft`/`void`; nomor diawali `DRAFT-INV`. Migration otomatis tidak backfill shipment delivered lama; draft yang hilang dapat dibuat manual oleh Owner/Admin. Belum ada PPN, penerbitan resmi, posting piutang/pendapatan, pembayaran, jurnal, penyimpanan PDF, atau pengiriman WhatsApp otomatis. UI memakai dialog cetak browser untuk Save as PDF; WhatsApp hanya membuka teks siap kirim dan tidak melampirkan PDF.
+- Invoice pelanggan remote masih berstatus `draft`/`void`; nomor diawali `DRAFT-INV`. Migration otomatis tidak backfill shipment delivered lama; draft yang hilang dapat dibuat manual oleh Owner/Admin. PR pembayaran menambahkan capture receipt/disbursement dan RPC alokasi, tetapi migration belum diterapkan. Alokasi hanya menerima dokumen `issued`/`posted`; sampai status final tersedia, dana tercatat sebagai uang muka belum teralokasi. Belum ada PPN, penerbitan resmi, posting piutang/pendapatan, jurnal, penyimpanan PDF, atau pengiriman WhatsApp otomatis. UI memakai dialog cetak browser untuk Save as PDF; WhatsApp hanya membuka teks siap kirim dan tidak melampirkan PDF.
 - Shipment mencatat direct delivery supplier-ke-pelanggan; shipment sendiri tidak membuat penerimaan, saldo, AP/HPP, invoice, pajak, pembayaran atau jurnal.
 - Faktur supplier tidak membatasi kuantitas kumulatif terhadap PO dan tidak menguji aritmetika subtotal/PPN/total; selisih masih harus diperiksa manual.
 - RPC `SECURITY DEFINER` memakai `SET search_path = ''`, memeriksa role di database dan mencabut execute dari `PUBLIC`/`anon`; execute diberikan hanya ke `authenticated`.
@@ -64,9 +64,10 @@ RLS memakai `app_metadata`, bukan `user_metadata`. Rujukan: [Supabase Row Level 
 - `supabase/migrations/20261016134859_supplier_invoice_capture.sql`
 - `supabase/migrations/20261016171001_dropship_shipment_tracking.sql`
 - `supabase/migrations/20261017100000_customer_invoices_per_delivery_drafts.sql`
-- `supabase/migrations/20261017120000_auto_customer_invoice_on_delivery_drafts.sql` (**baru di branch PR; belum diterapkan ke Supabase**)
+- `supabase/migrations/20261017120000_auto_customer_invoice_on_delivery_drafts.sql` (**file lokal; remote mencatat auto-invoice pada versi `20261016205342`**)
+- `supabase/migrations/20261017130000_payments_and_invoice_allocations.sql` (**PR pembayaran; belum diterapkan ke Supabase**)
 
-Enam migration sampai invoice draft cocok dengan skema remote yang diperiksa. Migration ketujuh pada branch ini menambahkan trigger untuk draft otomatis dan **belum diterapkan ke remote/Production**. Migration tersebut tidak membackfill shipment lama dan tidak membuat jurnal atau transaksi pajak.
+Tujuh migration tercatat pada remote; auto-invoice diterapkan dengan versi remote `20261016205342`. Migration pembayaran pada branch/PR ini adalah perubahan berikutnya dan **belum diterapkan ke Supabase Production**. Migration tersebut tidak memposting AP/AR, pajak, atau jurnal.
 
 ## UI yang terhubung
 
@@ -76,12 +77,12 @@ Enam migration sampai invoice draft cocok dengan skema remote yang diperiksa. Mi
 - `/` — SO, default customer price, manual override dan snapshot sumber rate
 - `/operasional` — baca/buat PO draft dan catat status terkirim/konfirmasi secara manual
 - `/operasional#invoices` — baca/buat/void draft Faktur Supplier yang terhubung ke PO-lines
-- `/pengiriman-piutang` — baca/buat shipment, partial quantity, resi/surat jalan, transisi status dan timeline; tab Pembayaran masih placeholder
-- `/invoice-pelanggan` — draft invoice per shipment delivered; setelah migration otomatis diterapkan, draft dibuat saat shipment diterima. Draft shipment lama dapat dibuat manual. Pratinjau cetak/PDF dan tautan WhatsApp tidak mengirim otomatis.
+- `/pengiriman-piutang` — shipment dan UI pembayaran dalam PR; capture pembayaran manual menyimpan referensi dan uang muka, sementara alokasi dibatasi ke invoice pelanggan `issued` dan faktur supplier `posted`. Migration pembayaran belum diterapkan.
+- `/invoice-pelanggan` — draft invoice per shipment delivered; trigger remote membuat draft saat shipment diterima. Shipment lama dapat dibuatkan draft manual. Pratinjau cetak/PDF dan tautan WhatsApp tidak mengirim otomatis.
 
 ## Belum termasuk
 
-Penerbitan resmi invoice pelanggan, perhitungan/pemetaan PPN, pengakuan piutang/pendapatan, pengiriman dokumen PO atau komunikasi kurir, upload bukti/surat jalan, alokasi diskon/ongkos ke modal, pengakuan hutang/AP dan HPP, pembayaran/alokasi, akuntansi/jurnal, audit log umum, approval, backup/restore, serta uji transaksi UI end-to-end dengan akun ber-role. Jangan gunakan invoice draft atau status shipment sebagai pencatatan keuangan final.
+Penerbitan resmi invoice pelanggan, perhitungan/pemetaan PPN, pengakuan piutang/pendapatan, pengiriman dokumen PO atau komunikasi kurir, upload bukti/surat jalan, alokasi diskon/ongkos ke modal, pengakuan hutang/AP dan HPP, posting/jurnal, audit log umum, approval, backup/restore, serta UAT role-based. Migration pembayaran pada PR belum diterapkan; saat ini alokasi tidak dapat dijalankan karena semua dokumen masih draft. Jangan gunakan invoice draft atau status shipment sebagai pencatatan keuangan final.
 
 ## Catatan dependensi
 
