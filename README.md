@@ -20,9 +20,9 @@ Saat membuat SO, harga khusus yang berlaku pada tanggal SO otomatis dipilih. Adm
 
 Status PO dikendalikan manual: Owner/Admin menandai PO telah dikirim setelah mengirimkannya di luar aplikasi, lalu mencatat konfirmasi supplier. Aksi ini **tidak mengirim email atau dokumen**.
 
-Shipment mencadangkan kuantitas PO secara atomik dan mendukung pemenuhan parsial. Database mencegah jumlah kumulatif shipment non-batal melebihi kuantitas PO; pembatalan draft melepaskan kuantitas yang dicadangkan. Perubahan status memiliki timeline. Shipment tidak membuat penerimaan, hutang/AP, HPP, invoice pelanggan, pajak, pembayaran, atau jurnal.
+Shipment mencadangkan kuantitas PO secara atomik dan mendukung pemenuhan parsial. Database mencegah jumlah kumulatif shipment non-batal melebihi kuantitas PO; pembatalan draft melepaskan kuantitas yang dicadangkan. Perubahan status memiliki timeline. Dengan migration invoice otomatis, pencatatan shipment sebagai diterima pelanggan membuat satu draft invoice dalam transaksi yang sama. Tiap kiriman parsial ditagih terpisah saat diterima; shipment tidak membuat invoice resmi, pajak, pembayaran, AP/HPP atau jurnal.
 
-Faktur supplier tetap **capture dokumen**: angka disimpan sebagaimana dokumen sumber—belum dihitung ulang atau diposting. Tab Pembayaran/piutang, invoice pelanggan, akuntansi dan dashboard masih belum menjadi transaksi aktual; tab Pembayaran tidak menampilkan angka contoh sebagai data nyata.
+Faktur supplier tetap **capture dokumen**: angka disimpan sebagaimana dokumen sumber—belum dihitung ulang atau diposting. Draft invoice pelanggan belum diterbitkan sebagai invoice resmi. Tab Pembayaran/piutang dan akuntansi belum menjadi transaksi aktual.
 
 ## Supabase dan akses
 
@@ -60,14 +60,14 @@ npm run build:worker
 - `/operasional#invoices` — draft capture Faktur Supplier.
 - `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA belum aktif.
 - `/pengiriman-piutang` — pengiriman langsung (Supabase); pembayaran/piutang belum merupakan transaksi.
-- `/invoice-pelanggan` — draft per shipment delivered; belum diterbitkan resmi atau diposting.
+- `/invoice-pelanggan` — satu draft per shipment delivered; draft shipment lama dapat dibuat manual oleh Owner/Admin. Otomatisasi aktif setelah migration diterapkan; belum invoice resmi atau posting.
 - `/keuangan` — status dokumen aktual tanpa angka demo; laporan ledger belum tersedia.
 
 ## Model bisnis dan batas akuntansi
 
 Alur sasaran: Pesanan Pelanggan → PO supplier → Faktur Supplier → Pengiriman langsung supplier-ke-pelanggan → Invoice Pelanggan → Pembayaran → jurnal/laporan. PO dapat dipecah lintas supplier; pengiriman dapat parsial per item. Tidak ada modul gudang, batch, FEFO, expiry, penerimaan, picking, atau persediaan fisik.
 
-Belum siap untuk produksi pembukuan: penerbitan invoice resmi, pajak/PPN berbasis klasifikasi yang disetujui, pembayaran/alokasi, pengakuan AP/HPP/pendapatan, COA dan jurnal, audit umum, lampiran, backup/restore, serta UAT role-based. Nilai capture Faktur Supplier dan status shipment bukan posting keuangan. Rancangan aturan dan daftar cutover ada di [`ACCOUNTING_POLICY_AND_CUTOVER.md`](ACCOUNTING_POLICY_AND_CUTOVER.md).
+Belum siap untuk produksi pembukuan: penerbitan invoice resmi, pajak/PPN berbasis klasifikasi yang disetujui, pembayaran/alokasi, pengakuan AP/HPP/pendapatan, COA dan jurnal, audit umum, lampiran, backup/restore, serta UAT role-based. Migration invoice otomatis hanya membuat draft dan harus diterapkan terlebih dulu ke environment yang sesuai. Nilai capture Faktur Supplier dan status shipment bukan posting keuangan. Rancangan aturan dan daftar cutover ada di [`ACCOUNTING_POLICY_AND_CUTOVER.md`](ACCOUNTING_POLICY_AND_CUTOVER.md).
 
 ## Deployment
 

@@ -268,7 +268,10 @@ export function ShipmentManager() {
       });
       if (rpcError) throw rpcError;
       const label = statusLabel[transitionTarget.status];
-      setTransitionTarget(null); setNotice(`Status pengiriman diperbarui: ${label}. Riwayat kejadian tersimpan.`);
+      setTransitionTarget(null);
+      setNotice(transitionTarget.status === "delivered"
+        ? `Status pengiriman diperbarui: ${label}. Draft invoice untuk shipment ini dibuat otomatis; kiriman parsial dibuatkan draft terpisah.`
+        : `Status pengiriman diperbarui: ${label}. Riwayat kejadian tersimpan.`);
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Gagal memperbarui status pengiriman.");
