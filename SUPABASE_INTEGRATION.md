@@ -6,6 +6,10 @@ Target: project `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif. Ap
 
 Sesi memakai Supabase Auth email/password. Tidak ada signup publik. Administrator perlu membuat/mengundang user dan menetapkan claim tepercaya `app_metadata.business_role` (`owner`, `admin`, `viewer`). Jangan gunakan `user_metadata` untuk otorisasi. Setelah claim diperbarui, refresh token atau login ulang.
 
+## URL Auth Production
+
+Supabase Auth URL Configuration menggunakan Site URL `https://jena-medica.fa-mitra.my.id` dan redirect allowlist `https://jena-medica.fa-mitra.my.id/**`. Jangan biarkan Site URL Production mengarah ke `localhost`; tautan email undangan menggunakan Site URL ini bila `redirectTo` tidak diberikan. Pengguna membuka undangan terbaru, lalu saat sesi aktif memilih **Atur kata sandi** di aplikasi (`/set-password`) sebelum memakai login email/password.
+
 ## Skema tahap ini
 
 Satu project mewakili satu perusahaan/data bisnis; belum ada isolasi multi-tenant (`tenant_id`). Jangan gunakan skema ini untuk beberapa entitas legal tanpa desain tenancy dan RLS terpisah.
@@ -66,6 +70,7 @@ Keenam migration cocok dengan skema remote. Migration invoice additive, tidak me
 ## UI yang terhubung
 
 - `/login`
+- `/set-password` — menetapkan atau mengganti kata sandi saat sesi undangan/pemulihan aktif.
 - `/master-data#customers`, `/master-data#suppliers`, `/master-data#products`, `/master-data#prices`
 - `/` — SO, default customer price, manual override dan snapshot sumber rate
 - `/operasional` — baca/buat PO draft dan catat status terkirim/konfirmasi secara manual
