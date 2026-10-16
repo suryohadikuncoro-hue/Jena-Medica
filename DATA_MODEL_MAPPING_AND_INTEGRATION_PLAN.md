@@ -1,7 +1,7 @@
 # Pemetaan Model Data dan Blueprint Integrasi — Drop-Ship
 
 **Diperbarui:** 16 Oktober 2026
-**Status:** blueprint konseptual untuk review; belum menjadi skema fisik atau migrasi.
+**Status:** blueprint konseptual; fase awal telah dibuat sebagai skema Supabase fisik. Lihat bagian 8 untuk cakupan yang sudah tersedia.
 **Menggantikan:** blueprint lama yang mengasumsikan penerimaan stok, batch, FEFO, dan inventaris. Semua asumsi stok fisik dinyatakan tidak berlaku.
 
 ## 1. Prinsip domain
@@ -95,4 +95,20 @@ Diagram ini konseptual. Pengiriman dan invoice parsial/multi-supplier perlu line
 
 ## 7. Status lingkungan database
 
-Pada inspeksi read-only 16 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif dan schema `public` kosong. Tidak ada migrasi/schema/data yang dibuat sebagai bagian dari refaktor UI. Blueprint ini bukan izin mengubah schema; implementasi database dimulai setelah keputusan pada bagian 5 dan target environment disepakati.
+Per 16 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Dua migration awal telah diterapkan dengan persetujuan eksplisit untuk integrasi; tujuh tabel baru ber-RLS dan tidak berisi data. Cakupan serta batasnya dijelaskan pada bagian 8; bagian pajak dan akuntansi tetap memerlukan keputusan sebelum fase lanjutan.
+
+
+## 8. Status implementasi fase pertama (16 Oktober 2026)
+
+Blueprint tahap awal diterapkan pada Supabase project `Jena Medical Center` melalui migration `20261016125928_dropship_suppliers_orders` dan `20261016130021_dropship_foreign_key_indexes`. Tabel fisik: `customers`, `suppliers`, `products`, `sales_orders`, `sales_order_lines`, `purchase_orders`, dan `purchase_order_lines`. Seluruh tabel memakai RLS dan masih kosong; tidak ada data contoh atau tabel persediaan.
+
+Alur UI yang telah tersambung: login Supabase Auth, master Pelanggan/Supplier/Barang, pembuatan dan konfirmasi SO, serta pembuatan draft PO supplier dari SO terkonfirmasi. Rincian kebijakan role, RPC, advisor dan environment ada di `SUPABASE_INTEGRATION.md`.
+
+**Batas fase ini:** mata uang IDR; harga jual diisi manual; PPN/jurnal tidak dihitung; supplier invoice, shipment, sales invoice, pembayaran, audit dan lampiran belum dibuat. Jangan menganggap blueprint seluruh siklus akuntansi telah selesai.
+
+## 9. Langkah berikutnya
+
+1. Administrator memprovisikan akun Supabase Auth dan menetapkan claim role tepercaya `app_metadata.business_role`; lakukan uji Owner/Admin/Viewer.
+2. Tinjau manual snapshot, SO/PO dan kuantitas split melalui satu transaksi non-produksi.
+3. Finalisasi customer-product price history, tax/PPN, termin dan COA bersama pemilik/akuntan.
+4. Implementasikan supplier invoice, shipment langsung, sales invoice, payments/allocations, audit log dan jurnal idempotent; tambahkan test concurrency, backup/restore serta reversal sebelum rilis produksi.
