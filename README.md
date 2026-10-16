@@ -4,7 +4,7 @@ Aplikasi web B2B untuk Jena Medical Center dengan model **drop-ship**: supplier 
 
 ## Status implementasi
 
-Branch `feat/customer-product-pricing` melanjutkan integrasi Supabase pada proyek **Jena Medical Center**. Tiga migration telah diterapkan. Delapan tabel tetap kosong; tidak ada data demo yang ditanam.
+Integrasi Supabase sudah mencakup SO/PO, harga khusus pelanggan, dan **pencatatan draft Faktur Supplier**. Empat migration telah diterapkan. Sepuluh tabel public ber-RLS tetap kosong; tidak ada data demo yang ditanam.
 
 Sudah terhubung:
 
@@ -13,17 +13,18 @@ Sudah terhubung:
 - `/master-data#customers`, `/master-data#suppliers`, `/master-data#products` — kelola master aktif melalui Supabase.
 - `/master-data#prices` — riwayat harga jual per pelanggan/barang; versi baru efektif hari ini atau tanggal mendatang.
 - `/operasional` — baca dan buat draft PO dari SO terkonfirmasi; kuantitas split dibatasi database.
+- `/operasional#invoices` — catat draft faktur supplier dan pasangkan baris faktur ke PO-lines supplier yang sama.
 
 Saat membuat SO, harga khusus yang berlaku pada tanggal SO otomatis dipilih. Admin dapat mengubah harga secara manual; sumber harga dan flag override disimpan sebagai snapshot pada SO line. Perubahan rate tidak mengubah SO lama.
 
-Faktur supplier, pengiriman, invoice pelanggan, pembayaran, pajak, jurnal dan laporan keuangan masih prototipe atau belum terhubung. Nilai SO tetap pra-pajak.
+Faktur supplier saat ini hanya **capture dokumen**: nomor/tanggal/tempo, status dan mode pajak, angka diskon/pajak/total sesuai faktur asli, serta baris yang ditautkan ke PO. Tidak ada hitung PPN otomatis, pengakuan hutang/AP, HPP/modal final, pembayaran, atau jurnal. Pengiriman, invoice pelanggan, dan laporan keuangan masih prototipe/belum terhubung.
 
 ## Supabase dan akses
 
 1. Salin `.env.example` menjadi `.env.local` dan isi `NEXT_PUBLIC_SUPABASE_URL` serta `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 2. Jangan gunakan atau menyimpan service-role key di browser/Git. `.env.local` diabaikan Git.
 3. Administrator membuat/mengundang pengguna di Supabase Auth dan menetapkan claim tepercaya `app_metadata.business_role` menjadi `owner`, `admin`, atau `viewer`. UI tidak membuka pendaftaran atau pengaturan role.
-4. Seluruh tabel memakai RLS. Owner/Admin dapat menulis master, menetapkan harga, dan menjalankan RPC transaksi; Viewer hanya membaca. Tidak ada hard-delete API.
+4. Seluruh tabel memakai RLS. Owner/Admin dapat mengubah master dan menjalankan RPC transaksi; Viewer hanya membaca. Faktur supplier hanya ditulis lewat RPC Owner/Admin; draft dapat di-void dengan alasan, tanpa hard-delete.
 
 Harga baru hanya dapat berlaku mulai hari ini atau tanggal mendatang dan harus lebih baru dari versi terakhir; rate terbuka sebelumnya berakhir sehari sebelum versi baru. Koreksi mundur atau mengganti versi yang sudah dibuat pada hari yang sama belum didukung.
 
@@ -50,7 +51,7 @@ npm run build:worker
 
 - `/dashboard` — ringkasan UI; sebagian metrik belum menjadi read model database.
 - `/` — Pesanan Pelanggan (Supabase).
-- `/operasional` — Order Supplier (Supabase); Faktur Supplier belum diintegrasikan.
+- `/operasional` — Order Supplier (Supabase); `/operasional#invoices` — draft capture Faktur Supplier.
 - `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA masih prototipe.
 - `/invoice-pelanggan` — prototipe invoice pelanggan.
 - `/pengiriman-piutang` — prototipe pengiriman langsung dan pembayaran/piutang.
@@ -60,7 +61,7 @@ npm run build:worker
 
 Alur sasaran: Pesanan Pelanggan → satu atau beberapa PO supplier → Faktur Supplier → Pengiriman langsung supplier-ke-pelanggan → Invoice Pelanggan → Pembayaran → jurnal/laporan. Tidak ada gudang, batch, FEFO, expiry, penerimaan, picking, atau persediaan fisik.
 
-Belum siap untuk produksi pembukuan: aturan pajak/PPN, pengakuan pendapatan/HPP/AP, faktur/pembayaran, audit log, backup/restore dan uji end-to-end masih perlu diselesaikan bersama pemilik/akuntan.
+Belum siap untuk produksi pembukuan: perlakuan pajak/PPN, alokasi diskon dan ongkos, pengakuan AP/HPP/pendapatan, pembayaran, shipment, invoice pelanggan, jurnal, audit log, backup/restore dan uji end-to-end masih perlu diselesaikan bersama pemilik/akuntan. Nilai yang dicatat pada faktur supplier belum menjadi saldo hutang atau modal.
 
 ## Deployment
 

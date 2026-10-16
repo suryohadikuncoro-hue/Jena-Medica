@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { SupplierInvoiceManager } from "@/app/components/supplier-invoice-manager";
 
 const money = (n: number) => `Rp ${new Intl.NumberFormat("id-ID").format(n)}`;
 type Tab = "PO Supplier" | "Faktur Supplier";
@@ -83,6 +84,8 @@ export default function SupplierOperationsPage() {
   const selectedOrder = salesOrders.find(item => item.id === salesOrderId);
   const totalEstimate = purchaseOrders.reduce((sum, item) => sum + Number(item.estimated_total), 0);
   const draftCount = purchaseOrders.filter(item => item.status === "draft").length;
+
+  if (tab === "Faktur Supplier") return <SupplierInvoiceManager />;
 
   function chooseSalesOrder(id: string) {
     setSalesOrderId(id);
