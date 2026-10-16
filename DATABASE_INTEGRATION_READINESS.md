@@ -1,55 +1,60 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
-**Diperbarui:** 16 Oktober 2026
-**Status:** SO/PO, harga khusus dan capture draft Faktur Supplier aktif; belum siap untuk pembukuan/produksi.
+**Diperbarui:** 17 Oktober 2026
+**Status:** SO/PO, harga khusus, capture draft Faktur Supplier, dan shipment langsung aktif; belum siap untuk pembukuan/produksi.
 **Project:** `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif.
 
 ## Migration dan skema
 
-Empat migration tercatat pada Supabase:
+Lima migration tercatat pada Supabase:
 
 - `20261016125928_dropship_suppliers_orders` — master, SO/PO, snapshot, RPC dan RLS.
 - `20261016130021_dropship_foreign_key_indexes` — indeks foreign key.
 - `20261016132858_customer_product_price_history` — daftar harga pelanggan/barang, histori masa berlaku dan referensi harga pada baris SO.
-- `20261016134859_supplier_invoice_capture` — header dan baris draft faktur supplier, relasi ke PO-line, RLS, RPC create/void.
+- `20261016134859_supplier_invoice_capture` — header/baris draft faktur supplier, relasi ke PO-line, RLS, RPC create/void.
+- `20261016171001_dropship_shipment_tracking` — metadata status PO, shipment/header/baris/timeline, validasi kuantitas, RLS dan RPC.
 
-Sepuluh tabel public terverifikasi: `customers`, `suppliers`, `products`, `customer_product_prices`, `sales_orders`, `sales_order_lines`, `purchase_orders`, `purchase_order_lines`, `supplier_invoices`, dan `supplier_invoice_lines`. Semuanya memakai RLS dan masih berisi **0 baris**. Tidak ada seed data, stok fisik atau perubahan/penghapusan data lama.
+Tiga belas tabel public terverifikasi: `customers`, `suppliers`, `products`, `customer_product_prices`, `sales_orders`, `sales_order_lines`, `purchase_orders`, `purchase_order_lines`, `supplier_invoices`, `supplier_invoice_lines`, `shipments`, `shipment_lines`, dan `shipment_status_events`. Semuanya memakai RLS dan masih berisi **0 baris**. Migration bersifat additive; tidak ada seed, perubahan/penghapusan data bisnis lama, atau saldo persediaan.
 
 Satu project diasumsikan untuk satu perusahaan; skema belum memiliki isolasi multi-tenant.
 
 ## Alur yang sudah tersambung
 
 - Login Supabase Auth dan master Pelanggan/Supplier/Barang.
-- Harga khusus per customer-product: riwayat append-only, IDR, rentang efektif tidak tumpang tindih. Penetapan harga hanya melalui RPC Owner/Admin; versi baru menutup versi terbuka sehari sebelumnya. Versi tidak dapat di-backdate atau diganti pada tanggal berlaku yang sama.
-- SO mengambil harga yang berlaku pada tanggal pesanan secara default. Admin dapat mengubah harga manual; RPC menyimpan harga snapshot, referensi rate bila dipakai, dan `price_overridden`. RPC memvalidasi rate/customer/product/tanggal di database.
+- Harga khusus per customer-product: histori append-only, IDR, rentang efektif tidak tumpang tindih. Penetapan harga hanya melalui RPC Owner/Admin.
+- SO mengambil harga yang berlaku pada tanggal pesanan sebagai default; server menyimpan snapshot dan memvalidasi referensi harga.
 - PO draft dari SO terkonfirmasi dengan batas kuantitas split dan locking di database.
-- Draft Faktur Supplier disimpan atomik bersama baris yang tertaut ke PO-line dari supplier yang sama. Nomor supplier unik tanpa membedakan kapital/spasi; void draft menyimpan alasan dan jejak pengguna/waktu.
-- Angka pajak, diskon, subtotal, biaya lain dan total disimpan **sesuai dokumen supplier**, bukan dihitung ulang. Tidak ada pengakuan AP, pembayaran, HPP/modal final, PPN masukan terhitung, atau jurnal.
-
-Harga SO tetap pra-pajak. Perubahan rate tidak memutasi snapshot SO lama. Tidak ada transaksi yang menghasilkan jurnal pada fase ini.
+- PO dapat ditandai terkirim lalu dikonfirmasi supplier melalui RPC. Ini pencatatan manual setelah komunikasi di luar aplikasi; tidak ada email/dokumen yang dikirim otomatis.
+- Draft Faktur Supplier disimpan atomik bersama baris yang tertaut ke PO-line supplier yang sama. Angka dokumen disimpan apa adanya, bukan dihitung ulang atau diposting.
+- Shipment langsung dari supplier ke alamat snapshot pelanggan, dengan kuantitas parsial per PO-line. Database mengunci PO/line dan mencegah jumlah kumulatif draft/kiriman non-batal melebihi kuantitas PO. Pembatalan draft melepas alokasi.
+- Status shipment dan timeline: draft → dikirim → diterima; kendala dapat dicatat dan dilanjutkan. Pembatalan hanya untuk draft dan selalu menyimpan alasan. Tidak ada komunikasi otomatis dengan supplier/kurir.
+- Shipment tidak menghasilkan penerimaan, AP/HPP, invoice pelanggan, saldo pembayaran, pajak, atau jurnal.
 
 ## Keamanan
 
 - Aplikasi hanya memakai publishable key; tidak ada service-role key di client.
 - RLS memeriksa JWT `app_metadata.business_role` (`owner`, `admin`, `viewer`); tanpa role akses tertutup.
-- Owner/Admin dapat mengubah master, menetapkan versi harga, membuat SO/PO, serta membuat/void draft faktur supplier. Viewer hanya membaca. Tidak ada hard-delete API.
-- Enam RPC `SECURITY DEFINER` di schema `public` dapat dipanggil oleh sesi authenticated; setiap fungsi memeriksa role di database, menggunakan `search_path` kosong, dan hanya diberi execute ke authenticated. Supabase Security Advisor menandai pola tersebut sebagai warning; tinjau kembali sebelum produksi. [Panduan advisor Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
-- Performance Advisor tidak melaporkan FK tanpa index. Temuan “unused index” masih wajar karena seluruh tabel baru kosong.
+- Owner/Admin dapat mengubah master, membuat/mengonfirmasi SO, membuat PO, mencatat status PO, membuat/transisi shipment, serta membuat/void draft faktur. Viewer hanya membaca. Tabel shipment dan faktur tidak memberi hak tulis langsung.
+- RPC `set_purchase_order_status`, `create_shipment`, dan `transition_shipment` membatasi transisi dan memeriksa role server-side. Fungsi `create_shipment` memverifikasi PO status, pemetaan PO-line dan batas kuantitas dengan locking.
+- Security Advisor menampilkan 9 warning `authenticated_security_definer_function_executable` untuk RPC yang memang dipanggil sesi authenticated; setiap fungsi memeriksa role, menggunakan `search_path` kosong, dan execute dibatasi ke `authenticated`. Tinjau lagi sebelum produksi. [Panduan advisor Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+- Performance Advisor tidak melaporkan foreign key tanpa indeks. Temuan `unused index` masih wajar karena tabel baru kosong.
 
 ## Batasan & prasyarat pengujian
 
-Belum ada akun aplikasi atau data master. Administrator perlu mengundang pengguna dan mengatur app metadata, lalu membuat master dan SO/PO sebelum menguji faktur supplier.
+Belum ada akun aplikasi atau data master. Administrator perlu mengundang pengguna dan mengatur app metadata, lalu membuat master, SO dan PO untuk menguji alur secara nyata.
 
-Faktur supplier dapat dicatat sebagai draft dan dibatalkan dengan alasan. Belum tersedia edit draft; koreksi dilakukan dengan membatalkan lalu membuat ulang nomor yang sama. Sistem belum memblokir kuantitas invoice yang melampaui kuantitas PO; selisih perlu diperiksa manual. Tidak ada penghitungan pajak atau validasi bahwa rincian/total aritmetis sama dengan faktur.
+Belum tersedia pengiriman dokumen PO, integrasi kurir/resi, upload bukti/surat jalan, edit draft shipment, sales invoice, pembayaran/alokasi, dan jurnal. Jika draft shipment perlu diperbaiki, batalkan dengan alasan lalu buat ulang. Status shipment delivered/cancelled bersifat final; koreksi setelahnya belum memiliki reversal workflow.
 
-Keputusan pajak/PPN, alokasi diskon/ongkos, COA dan titik pengakuan pendapatan/HPP/AP masih terbuka. Shipment, invoice pelanggan, pembayaran/alokasi, jurnal, audit umum, lampiran, backup/restore dan uji end-to-end belum dibuat.
+Faktur supplier belum membatasi kuantitas kumulatif terhadap PO dan tidak menguji aritmetika subtotal/PPN/total. Keputusan pajak/PPN, alokasi diskon/ongkos, COA serta titik pengakuan pendapatan/HPP/AP masih terbuka. Shipment tidak memicu invoice atau posting.
 
 ## Validasi
 
 - `npm run lint`: lulus.
-- `npm run build`: lulus setelah integrasi UI Faktur Supplier.
-- `list_tables`/`list_migrations`: dua tabel faktur, kolom, foreign key, RLS dan migration keempat terverifikasi di Supabase.
-- Security Advisor: 6 warning `authenticated_security_definer_function_executable` (4 RPC lama + 2 RPC capture/void); semua memeriksa role server-side.
-- Semua 10 tabel masih kosong; belum ada kredensial ber-role untuk menjalankan uji alur UI sebagai Owner/Admin/Viewer.
+- `npm run build`: lulus; route `/pengiriman-piutang` terkompilasi.
+- `npm run build:worker`: lulus pada OpenNext/Cloudflare.
+- `list_migrations`: migration kelima tercatat dengan versi `20261016171001`.
+- `list_tables`: tiga tabel shipment, metadata PO, RLS, constraint, foreign key dan indeks terverifikasi; seluruh 13 tabel masih kosong.
+- Security Advisor: 9 warning terkait SECURITY DEFINER yang dapat dipanggil authenticated; role checks tetap berada di database. Performance Advisor tidak melaporkan FK tanpa indeks.
+- Uji alur UI Owner/Admin/Viewer end-to-end belum dapat dilakukan karena belum ada akun ber-role maupun data master.
 
-Fitur ini bukan persetujuan cutover atau pembukuan produksi. Sebelum itu, selesaikan aturan pajak/COA, posting AP/HPP, shipment, siklus invoice/pembayaran/jurnal, audit, backup/restore, dan pengujian idempotensi/concurrency/reversal.
+Fitur ini bukan persetujuan cutover atau pembukuan produksi. Langkah selanjutnya: provisioning akun/data untuk uji shipment, finalisasi aturan invoice pelanggan, pajak/COA, posting AP/HPP, pembayaran/jurnal, audit, backup/restore, dan pengujian concurrency/reversal.

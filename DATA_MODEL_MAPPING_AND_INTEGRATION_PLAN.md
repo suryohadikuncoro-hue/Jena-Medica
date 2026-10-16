@@ -1,7 +1,7 @@
 # Pemetaan Model Data dan Blueprint Integrasi — Drop-Ship
 
 **Diperbarui:** 16 Oktober 2026
-**Status:** blueprint konseptual; SO/PO, harga khusus pelanggan, dan capture-only Faktur Supplier telah diterapkan pada Supabase. Lihat bagian 8, 10, dan 12 untuk cakupannya.
+**Status:** blueprint konseptual; SO/PO, harga khusus pelanggan, capture-only Faktur Supplier, dan shipment langsung telah diterapkan bertahap. Lihat bagian 8, 10, 12, dan 13 untuk cakupannya.
 **Menggantikan:** blueprint lama yang mengasumsikan penerimaan stok, batch, FEFO, dan inventaris. Semua asumsi stok fisik dinyatakan tidak berlaku.
 
 ## 1. Prinsip domain
@@ -89,13 +89,13 @@ Diagram ini konseptual. Pengiriman dan invoice parsial/multi-supplier perlu line
 3. Implementasi autentikasi/otorisasi dan master customer, supplier, product, price history serta account.
 4. Implementasi SO dan PO supplier split, validasi batas kuantitas, alamat tujuan dan nomor dokumen.
 5. Capture faktur supplier dari dokumen sumber telah dimulai; lanjutkan validasi pajak/PPN, alokasi diskon ke modal aktual, AP dan pembayaran setelah kebijakan disepakati.
-6. Implementasi shipment langsung, sales invoice, PDF/WA link dan customer payment allocation.
+6. Shipment langsung sudah diimplementasikan; lanjutkan sales invoice dan customer payment allocation setelah trigger invoice, pajak dan aturan posting disepakati.
 7. Implementasi posting jurnal dan laporan berbasis ledger; audit, close period, ekspor dan dashboard.
 8. Uji end-to-end cash/credit, split supplier, partial ship/invoice/payment, margin negatif, pajak, reversal, role, backup/restore.
 
 ## 7. Status lingkungan database
 
-Per 16 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Empat migration telah diterapkan untuk SO/PO, harga khusus pelanggan, dan capture Faktur Supplier; sepuluh tabel ber-RLS dan tidak berisi data. Cakupan serta batasnya dijelaskan pada bagian 8, 10, dan 12; pajak dan akuntansi tetap memerlukan keputusan sebelum posting.
+Per 17 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Lima migration telah diterapkan untuk SO/PO, harga khusus pelanggan, capture Faktur Supplier, dan shipment; 13 tabel ber-RLS dan tidak berisi data. Cakupan serta batasnya dijelaskan pada bagian 8, 10, 12, dan 13; pajak dan akuntansi tetap memerlukan keputusan sebelum posting.
 
 
 ## 8. Status implementasi fase pertama (16 Oktober 2026)
@@ -111,7 +111,8 @@ Alur UI yang telah tersambung: login Supabase Auth, master Pelanggan/Supplier/Ba
 1. Administrator memprovisikan akun Supabase Auth dan menetapkan claim role tepercaya `app_metadata.business_role`; lakukan uji Owner/Admin/Viewer.
 2. Tinjau manual snapshot, SO/PO dan kuantitas split melalui satu transaksi non-produksi.
 3. Uji customer-product price history bersama pemilik; finalisasi tax/PPN, termin dan COA bersama pemilik/akuntan.
-4. Lanjutkan faktur supplier dari capture ke kebijakan pajak/AP/modal aktual setelah disetujui; implementasikan shipment langsung, sales invoice, payments/allocations, audit log dan jurnal idempotent. Tambahkan test concurrency, backup/restore serta reversal sebelum rilis produksi.
+4. Uji shipment dengan PO split/parsial setelah data master tersedia. Modul transaksi berikutnya adalah sales invoice; sepakati kapan invoice diterbitkan untuk pengiriman parsial sebelum membuat posting, payments/allocations, audit log dan jurnal idempotent.
+5. Tambahkan test concurrency, backup/restore, audit dan reversal sebelum rilis produksi.
 
 
 ## 10. Tahap kedua — harga khusus pelanggan (16 Oktober 2026)
@@ -126,7 +127,7 @@ Semua tarif masih **pra-pajak**. Tahap harga tidak menentukan status PKP, PPN, p
 
 - Uji harga berlaku, rate terjadwal, pergantian rate, SO yang memakai rate, dan override manual setelah akun ber-role tersedia.
 - Koreksi historis/backdate atau mengganti versi pada tanggal yang sama belum didukung; jangan menghapus riwayat lewat SQL untuk memperbaikinya.
-- Capture draft Faktur Supplier sudah tersedia; langkah berikutnya yang memerlukan keputusan pemilik/akuntan adalah pajak/PPN, COA, alokasi diskon/ongkos, serta titik pengakuan HPP/pendapatan/AP. Shipment tetap modul transaksi berikutnya.
+- Capture draft Faktur Supplier dan shipment langsung sudah tersedia. Langkah transaksi berikutnya adalah sales invoice; keputusan pajak/PPN, COA, alokasi diskon/ongkos, serta titik pengakuan HPP/pendapatan/AP tetap memerlukan pemilik/akuntan.
 
 ## 12. Tahap ketiga — capture Faktur Supplier (16 Oktober 2026)
 
@@ -135,3 +136,11 @@ Migration `20261016134859_supplier_invoice_capture` menambahkan `supplier_invoic
 Semua tabel ber-RLS; data hanya bisa dibuat lewat RPC Owner/Admin `create_supplier_invoice`. Draft hanya dapat di-void melalui `void_supplier_invoice` dengan alasan, pengguna, dan waktu; data tidak dihapus. Viewer dapat membaca. Semua sepuluh tabel masih kosong.
 
 **Batas penting:** capture ini bukan posting akuntansi. Tarif 11% hanya nilai awal dari brief untuk faktur supplier berstatus PKP dan bukan penetapan hukum atau hasil perhitungan pajak. Sistem tidak menghitung PPN/total, tidak mengalokasikan diskon/ongkos ke HPP, tidak mengakui hutang, tidak mencatat pembayaran/jurnal, dan belum membatasi kuantitas faktur kumulatif terhadap PO. Periksa faktur asli dan semua selisih secara manual sampai aturan bisnis disepakati.
+
+## 13. Tahap keempat — shipment langsung supplier-ke-pelanggan (17 Oktober 2026)
+
+Migration `20261016171001_dropship_shipment_tracking` menambahkan `shipments`, `shipment_lines`, dan `shipment_status_events`, serta metadata `sent_at/sent_by` dan `acknowledged_at/acknowledged_by` pada PO. Owner/Admin menandai PO terkirim lalu mencatat konfirmasi supplier secara manual; sistem tidak mengirim dokumen atau email.
+
+Shipment hanya dapat dibuat dari PO yang sudah berstatus `sent` atau `acknowledged`. Header mengambil supplier, customer, SO dan alamat tujuan dari snapshot PO. Baris mengacu ke PO-line, menyimpan snapshot item, dan mendukung pengiriman parsial. RPC mengunci PO/line dan menghitung kuantitas pada shipment draft/non-batal untuk mencegah overship; pembatalan draft melepaskan kuantitas. Semua tabel ber-RLS, hanya dapat ditulis lewat RPC Owner/Admin, dan seluruh 13 tabel tetap kosong.
+
+Status yang dicatat: `draft`, `shipped`, `delivered`, `issue`, dan `cancelled`. Timeline menyimpan perubahan, tanggal, catatan, pengguna dan waktu pencatatan. Draft dapat dibatalkan dengan alasan; shipment yang sudah dikirim tidak dapat dibatalkan lewat alur ini. Shipment tidak membuat penerimaan, invoice pelanggan, hutang/AP, HPP, pajak, pembayaran atau jurnal. Belum ada integrasi kurir, upload bukti, akun uji/data bisnis, maupun uji UI end-to-end; sales invoice menjadi tahap berikutnya setelah kebijakan penerbitannya disepakati.
