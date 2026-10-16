@@ -2,54 +2,57 @@
 
 ## Environment dan credential
 
-Target: project `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif. Aplikasi memakai Supabase JS di browser dengan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Publishable key bukan pengganti RLS; service-role key tidak dipakai di browser atau disimpan di repo. `.env.local` diabaikan Git; `.env.example` hanya berisi placeholder.
+Target: project `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif. Aplikasi memakai Supabase JS di browser dengan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Publishable key tidak menggantikan RLS; service-role key tidak dipakai di browser atau disimpan di repo. `.env.local` diabaikan Git; `.env.example` hanya berisi placeholder.
 
-Sesi menggunakan Supabase Auth email/password. Tidak ada signup publik pada UI. Sebelum menguji aplikasi, administrator harus membuat/mengundang akun dan mengisi claim tepercaya `app_metadata.business_role` dengan salah satu nilai `owner`, `admin`, atau `viewer`. Jangan menggunakan `user_metadata` untuk otorisasi karena dapat diubah pengguna. Setelah claim diperbarui, refresh token atau login ulang.
+Sesi memakai Supabase Auth email/password. Tidak ada signup publik. Administrator perlu membuat/mengundang user dan menetapkan claim tepercaya `app_metadata.business_role` (`owner`, `admin`, `viewer`). Jangan gunakan `user_metadata` untuk otorisasi. Setelah claim diperbarui, refresh token atau login ulang.
 
-## Skema tahap pertama
+## Skema tahap ini
 
-Saat ini satu project mewakili satu perusahaan/data bisnis; belum ada `tenant_id`/isolasi multi-perusahaan. Jangan memakai skema ini untuk beberapa entitas legal tanpa mendesain ulang tenancy dan RLS.
+Satu project mewakili satu perusahaan/data bisnis; belum ada isolasi multi-tenant (`tenant_id`). Jangan gunakan skema ini untuk beberapa entitas legal tanpa desain tenancy dan RLS terpisah.
 
 | Tabel | Peran |
 |---|---|
 | `customers` | Referensi pelanggan, alamat default, termin dan limit kredit opsional. |
-| `suppliers` | Master supplier, status pajak/identitas pajak opsional, kontak dan termin. Rekening bank sengaja belum dikumpulkan. |
-| `products` | Master barang/satuan; tidak memiliki saldo atau atribut stok. |
-| `sales_orders` / `sales_order_lines` | SO dengan customer, tanggal/jatuh tempo, tujuan kirim dan snapshot harga/barang/termin/diskon. |
-| `purchase_orders` / `purchase_order_lines` | PO satu supplier per dokumen, terkait SO dan SO-line, snapshot tujuan, biaya estimasi. Satu SO-line dapat dipenuhi oleh beberapa PO. |
+| `suppliers` | Master supplier, status pajak/identitas pajak opsional, kontak dan termin. Rekening bank belum dikumpulkan. |
+| `products` | Master barang/satuan; tanpa saldo stok. |
+| `customer_product_prices` | Histori harga IDR per pelanggan+barang, dengan tanggal efektif, catatan opsional dan pencipta. Versi baru append-only dari UI. |
+| `sales_orders` / `sales_order_lines` | SO dengan tujuan kirim, termin dan snapshot harga/barang/diskon. Baris menyimpan referensi rate bila dipakai dan `price_overridden` bila admin memakai harga manual. |
+| `purchase_orders` / `purchase_order_lines` | PO satu supplier per dokumen, terkait SO dan SO-line, snapshot tujuan dan biaya estimasi. Satu SO-line dapat dipenuhi beberapa PO. |
 
-Nomor SO/PO dibuat menggunakan sequence. Harga ditangkap di transaksi; master harga pelanggan dan perhitungan pajak belum ada. Semua dokumen memakai IDR pada fase ini. Tidak ada seed rows.
+Harga baru hanya boleh berlaku hari ini atau ke depan, serta harus setelah versi terakhir. Jika sebelumnya ada rate terbuka, RPC menutupnya sehari sebelum tanggal baru. Tidak boleh backdate atau mengganti versi yang sudah dibuat pada tanggal yang sama. Tidak ada seed rows. SO/PO/harga memakai IDR; harga SO pra-pajak.
 
 ## Operasi dan otorisasi
 
-- Semua tabel `public` memiliki RLS. Semua role bisnis dapat membaca. Hanya `owner`/`admin` dapat membuat/mengubah master; tidak ada delete grant.
-- `create_sales_order` membuat header dan seluruh baris dalam satu RPC/transaksi, memverifikasi pelanggan/barang aktif, menangkap snapshot, menghitung due date dan total pra-pajak.
-- `confirm_sales_order` hanya mengonfirmasi draft dengan sekurangnya satu baris.
-- `create_purchase_order` hanya menerima SO terkonfirmasi, supplier aktif, SO-line yang benar, dan kuantitas sisa yang tidak melampaui jumlah SO. Row lock pada SO-line mencegah dua PO bersaing melewati batas.
-- Aplikasi tidak diberi write langsung untuk tabel SO/PO; RPC memeriksa `app_metadata.business_role` di database. Fungsi `SECURITY DEFINER` menggunakan `SET search_path = ''`, mencabut execute dari `PUBLIC`/`anon`, dan memberi execute hanya ke `authenticated`.
-- Supabase Security Advisor memberi warning `authenticated_security_definer_function_executable` untuk tiga RPC karena sesi authenticated dapat memanggil endpoint RPC. Itu disengaja untuk workflow browser dan dibatasi validasi role; tetap harus ditinjau menjelang produksi. [Panduan advisor Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
-- Performance Advisor awal menemukan foreign key tanpa indeks; migration kedua menambahkan indeks yang hilang. Advisor masih menyebut indeks unused, wajar karena tabel kosong/belum ada traffic.
+- Semua tabel `public` memakai RLS. Role bisnis dapat membaca; hanya `owner`/`admin` dapat mengubah master dan menetapkan harga. Tidak ada direct insert/update/delete pada tabel harga.
+- `create_customer_product_price` memvalidasi role, pelanggan dan barang aktif, serialisasi perubahan pasangan customer-product dengan advisory lock, menutup rate terbuka sebelumnya, lalu membuat versi baru secara atomik.
+- `create_sales_order` membuat header/baris SO dalam satu transaksi. Jika line merujuk `customer_product_price_id`, database memverifikasi customer, product dan masa berlaku serta mengambil harga dari baris rate, bukan mempercayai angka yang dikirim browser. Jika referensi rate tidak ada, harga manual dicatat sebagai `price_overridden = true`.
+- `confirm_sales_order` hanya mengonfirmasi draft yang berisi baris.
+- `create_purchase_order` menerima SO terkonfirmasi, supplier aktif, SO-line yang benar dan kuantitas sisa yang tidak melebihi jumlah SO; locking mencegah PO bersamaan melewati batas.
+- RPC `SECURITY DEFINER` memakai `SET search_path = ''`, memeriksa role di database, mencabut execute dari `PUBLIC`/`anon`, dan memberi execute hanya ke `authenticated`.
+- Security Advisor mengeluarkan warning `authenticated_security_definer_function_executable` untuk empat RPC karena endpoint RPC dapat dipanggil sesi authenticated. Akses dibatasi oleh pengecekan role server-side, tetapi perlu ditinjau lagi sebelum produksi. [Panduan advisor Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+- Performance Advisor tidak menemukan FK tanpa indeks setelah migration; laporan “unused index” masih wajar karena tabel kosong.
 
-RLS mengandalkan `auth.jwt()` / `app_metadata`; Supabase mengingatkan bahwa perubahan metadata baru tercermin setelah token diperbarui. Rujukan: [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
+RLS memakai `app_metadata`, bukan `user_metadata`. Rujukan: [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
 ## Migrasi
 
 - `supabase/migrations/20261016125928_dropship_suppliers_orders.sql`
 - `supabase/migrations/20261016130021_dropship_foreign_key_indexes.sql`
+- `supabase/migrations/20261016132858_customer_product_price_history.sql`
 
-Versi tersebut sesuai catatan migration remote. Migrasi pertama create-only dan tidak menghapus data; migrasi kedua menambah indeks saja.
+Versi tersebut sesuai catatan migration remote. Migration harga bersifat additive, tidak menanam data; mengganti fungsi SO tetap kompatibel dengan payload lama yang tidak menyertakan `customer_product_price_id`.
 
 ## UI yang terhubung
 
 - `/login`
-- `/master-data#customers`, `/master-data#suppliers`, `/master-data#products`
-- `/` (baca/tambah SO, konfirmasi SO)
-- `/operasional` (baca/buat draft PO)
+- `/master-data#customers`, `/master-data#suppliers`, `/master-data#products`, `/master-data#prices`
+- `/` — SO, default customer price, manual override, snapshot sumber rate
+- `/operasional` — baca/buat PO draft
 
 ## Belum termasuk
 
-Harga khusus pelanggan, invoice supplier/customer, perlakuan PPN dan diskon faktur, shipment/tracking, pembayaran/alokasi, akuntansi/jurnal, audit log, lampiran, mekanisme cancellation/approval PO, backup/restore, dan pengujian transaksi end-to-end dengan akun ber-role. Jangan gunakan modul prototipe yang belum terhubung untuk pencatatan keuangan.
+Supplier invoice, shipment/tracking, sales invoice, perlakuan PPN/diskon faktur, pembayaran/alokasi, akuntansi/jurnal, audit log, lampiran, pembatalan/approval PO, backup/restore, dan pengujian transaksi end-to-end dengan user ber-role. Jangan gunakan modul prototipe yang belum terhubung untuk pencatatan keuangan.
 
 ## Catatan dependensi
 
-`npm audit` melaporkan 9 temuan high pada dependency graph toolchain yang ada, terutama `@opennextjs/cloudflare` dan `eslint-config-next`. Rute perbaikan yang disarankan npm memerlukan perubahan major pada toolchain, jadi versi tersebut tidak diubah dalam lingkup integrasi Supabase. Tinjau dan upgrade secara terpisah sebelum rilis produksi; paket `@supabase/supabase-js` tidak termasuk dalam nama temuan yang dilaporkan.
+`npm audit` melaporkan 9 temuan high pada dependency graph toolchain yang ada, terutama `@opennextjs/cloudflare` dan `eslint-config-next`. Rute perbaikan yang disarankan npm memerlukan perubahan major, jadi versi tersebut tidak diubah dalam lingkup ini. Tinjau terpisah sebelum produksi; `@supabase/supabase-js` bukan salah satu paket yang dilaporkan.

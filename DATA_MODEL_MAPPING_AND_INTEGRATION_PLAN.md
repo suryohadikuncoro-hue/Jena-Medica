@@ -1,7 +1,7 @@
 # Pemetaan Model Data dan Blueprint Integrasi — Drop-Ship
 
 **Diperbarui:** 16 Oktober 2026
-**Status:** blueprint konseptual; fase awal telah dibuat sebagai skema Supabase fisik. Lihat bagian 8 untuk cakupan yang sudah tersedia.
+**Status:** blueprint konseptual; fase pertama (SO/PO) dan tahap kedua (harga khusus pelanggan) telah dibuat pada Supabase. Lihat bagian 8 dan 10 untuk cakupannya.
 **Menggantikan:** blueprint lama yang mengasumsikan penerimaan stok, batch, FEFO, dan inventaris. Semua asumsi stok fisik dinyatakan tidak berlaku.
 
 ## 1. Prinsip domain
@@ -95,7 +95,7 @@ Diagram ini konseptual. Pengiriman dan invoice parsial/multi-supplier perlu line
 
 ## 7. Status lingkungan database
 
-Per 16 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Dua migration awal telah diterapkan dengan persetujuan eksplisit untuk integrasi; tujuh tabel baru ber-RLS dan tidak berisi data. Cakupan serta batasnya dijelaskan pada bagian 8; bagian pajak dan akuntansi tetap memerlukan keputusan sebelum fase lanjutan.
+Per 16 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Tiga migration telah diterapkan untuk SO/PO dan harga khusus pelanggan; delapan tabel ber-RLS dan tidak berisi data. Cakupan serta batasnya dijelaskan pada bagian 8 dan 10; bagian pajak dan akuntansi tetap memerlukan keputusan sebelum fase lanjutan.
 
 
 ## 8. Status implementasi fase pertama (16 Oktober 2026)
@@ -104,11 +104,26 @@ Blueprint tahap awal diterapkan pada Supabase project `Jena Medical Center` mela
 
 Alur UI yang telah tersambung: login Supabase Auth, master Pelanggan/Supplier/Barang, pembuatan dan konfirmasi SO, serta pembuatan draft PO supplier dari SO terkonfirmasi. Rincian kebijakan role, RPC, advisor dan environment ada di `SUPABASE_INTEGRATION.md`.
 
-**Batas fase ini:** mata uang IDR; harga jual diisi manual; PPN/jurnal tidak dihitung; supplier invoice, shipment, sales invoice, pembayaran, audit dan lampiran belum dibuat. Jangan menganggap blueprint seluruh siklus akuntansi telah selesai.
+**Batas fase ini:** mata uang IDR; tarif dan SO belum menghitung PPN/jurnal; supplier invoice, shipment, sales invoice, pembayaran, audit dan lampiran belum dibuat. Jangan menganggap blueprint seluruh siklus akuntansi telah selesai.
 
 ## 9. Langkah berikutnya
 
 1. Administrator memprovisikan akun Supabase Auth dan menetapkan claim role tepercaya `app_metadata.business_role`; lakukan uji Owner/Admin/Viewer.
 2. Tinjau manual snapshot, SO/PO dan kuantitas split melalui satu transaksi non-produksi.
-3. Finalisasi customer-product price history, tax/PPN, termin dan COA bersama pemilik/akuntan.
+3. Uji customer-product price history bersama pemilik; finalisasi tax/PPN, termin dan COA bersama pemilik/akuntan.
 4. Implementasikan supplier invoice, shipment langsung, sales invoice, payments/allocations, audit log dan jurnal idempotent; tambahkan test concurrency, backup/restore serta reversal sebelum rilis produksi.
+
+
+## 10. Tahap kedua — harga khusus pelanggan (16 Oktober 2026)
+
+Migration `20261016132858_customer_product_price_history` menambahkan `customer_product_prices`, referensi rate pada `sales_order_lines.customer_product_price_id`, dan flag `price_overridden`. Harga khusus per customer-product memakai rentang tanggal efektif, IDR dan catatan opsional. RLS memungkinkan baca role bisnis; penetapan rate hanya melalui RPC Owner/Admin. Versi baru menutup rate terbuka sehari sebelumnya dan tidak boleh backdated atau mengganti versi di tanggal yang sama.
+
+SO memilih harga yang berlaku pada tanggal SO secara default. Bila rate dipilih, server memvalidasi customer, product dan tanggal lalu menyimpan snapshot harga serta ID rate. Admin dapat mengubah harga manual; server menandai baris sebagai override dan tetap menyimpan harga sebagai snapshot. Perubahan rate tidak mengubah SO lama.
+
+Semua tarif masih **pra-pajak**. Tahap ini tidak menentukan status PKP, PPN, pembulatan, atau jurnal. Semua delapan tabel tetap kosong; akun uji ber-role dan data master belum diprovisikan.
+
+## 11. Batas operasional setelah tahap harga
+
+- Uji harga berlaku, rate terjadwal, pergantian rate, SO yang memakai rate, dan override manual setelah akun ber-role tersedia.
+- Koreksi historis/backdate atau mengganti versi pada tanggal yang sama belum didukung; jangan menghapus riwayat lewat SQL untuk memperbaikinya.
+- Langkah bisnis berikutnya yang memerlukan keputusan pemilik/akuntan tetap: pajak/PPN, COA, titik pengakuan HPP/pendapatan/AP, lalu supplier invoice dan shipment.

@@ -8,14 +8,16 @@ const money = (n: number) => `Rp ${new Intl.NumberFormat("id-ID").format(n)}`;
 type Customer = { id: string; code: string; legal_name: string; default_shipping_address: string | null; contact_name: string | null; phone: string | null; payment_terms_days: number };
 type Product = { id: string; code: string; name: string; unit: string };
 type SalesOrder = { id: string; order_number: string; customer_id: string; order_date: string; due_date: string; status: "draft" | "confirmed" | "cancelled"; total_amount: number };
-type OrderLineDraft = { product_id: string; quantity: string; unit_price: string; discount_amount: string };
-const emptyLine: OrderLineDraft = { product_id: "", quantity: "1", unit_price: "", discount_amount: "0" };
+type OrderLineDraft = { product_id: string; quantity: string; unit_price: string; discount_amount: string; customer_product_price_id: string; price_overridden: boolean };
+type CustomerPrice = { id: string; customer_id: string; product_id: string; unit_price: number; valid_from: string; valid_until: string | null };
+const emptyLine: OrderLineDraft = { product_id: "", quantity: "1", unit_price: "", discount_amount: "0", customer_product_price_id: "", price_overridden: false };
 const statusLabels: Record<SalesOrder["status"], string> = { draft: "Draft", confirmed: "Terkonfirmasi", cancelled: "Dibatalkan" };
 
 export default function SalesOrdersPage() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [customerPrices, setCustomerPrices] = useState<CustomerPrice[]>([]);
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -60,6 +62,30 @@ export default function SalesOrdersPage() {
 
   useEffect(() => { const frame = window.requestAnimationFrame(() => { void load(); }); return () => window.cancelAnimationFrame(frame); }, [load]);
 
+  useEffect(() => {
+    if (!customerId || !orderDate || !configured) return;
+    let cancelled = false;
+    const fetchPrices = async () => {
+      try {
+        const { data, error: priceError } = await getSupabaseBrowserClient().from("customer_product_prices")
+          .select("id,customer_id,product_id,unit_price,valid_from,valid_until")
+          .eq("customer_id", customerId).lte("valid_from", orderDate)
+          .or(`valid_until.is.null,valid_until.gte.${orderDate}`).order("valid_from", { ascending: false }).limit(500);
+        if (priceError) throw priceError;
+        if (cancelled) return;
+        const available = (data ?? []) as CustomerPrice[];
+        setCustomerPrices(available);
+        setLines(current => current.map(line => {
+          if (!line.product_id || line.price_overridden) return line;
+          const match = available.find(price => price.product_id === line.product_id);
+          return { ...line, unit_price: match ? String(match.unit_price) : "", customer_product_price_id: match?.id ?? "" };
+        }));
+      } catch (cause) { if (!cancelled) { setCustomerPrices([]); setError(cause instanceof Error ? cause.message : "Gagal memuat harga pelanggan."); } }
+    };
+    void fetchPrices();
+    return () => { cancelled = true; };
+  }, [customerId, orderDate, configured]);
+
   const customerById = useMemo(() => new Map(customers.map(customer => [customer.id, customer])), [customers]);
   const filtered = useMemo(() => orders.filter(order => (status === "all" || order.status === status) && `${order.order_number} ${customerById.get(order.customer_id)?.legal_name ?? ""} ${statusLabels[order.status]}`.toLowerCase().includes(query.toLowerCase())), [orders, status, query, customerById]);
   const orderValue = orders.reduce((sum, order) => sum + Number(order.total_amount), 0);
@@ -68,6 +94,8 @@ export default function SalesOrdersPage() {
 
   function selectCustomer(id: string) {
     setCustomerId(id);
+    setCustomerPrices([]);
+    setLines(current => current.map(line => ({ ...line, unit_price: "", customer_product_price_id: "", price_overridden: false })));
     const customer = customers.find(item => item.id === id);
     setShipAddress(customer?.default_shipping_address ?? "");
     setShipContact(customer?.contact_name ?? "");
@@ -78,7 +106,7 @@ export default function SalesOrdersPage() {
     event.preventDefault(); setError(""); setNotice(""); setSaving(true);
     try {
       if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk membuat pesanan.");
-      const normalizedLines = lines.filter(line => line.product_id).map(line => ({ product_id: line.product_id, quantity: Number(line.quantity), unit_price: Number(line.unit_price), discount_amount: Number(line.discount_amount || 0) }));
+      const normalizedLines = lines.filter(line => line.product_id).map(line => ({ product_id: line.product_id, quantity: Number(line.quantity), unit_price: Number(line.unit_price), discount_amount: Number(line.discount_amount || 0), customer_product_price_id: line.customer_product_price_id || null }));
       if (!customerId) throw new Error("Pilih pelanggan terlebih dahulu.");
       if (normalizedLines.length === 0) throw new Error("Tambahkan minimal satu barang.");
       if (normalizedLines.some(line => !Number.isFinite(line.quantity) || line.quantity <= 0 || !Number.isFinite(line.unit_price) || line.unit_price < 0 || !Number.isFinite(line.discount_amount) || line.discount_amount < 0)) throw new Error("Periksa jumlah, harga dan diskon pada setiap baris.");
@@ -88,7 +116,7 @@ export default function SalesOrdersPage() {
         p_lines: normalizedLines,
       });
       if (rpcError) throw rpcError;
-      setShowForm(false); setCustomerId(""); setLines([{ ...emptyLine }]); setNotes("");
+      setShowForm(false); setCustomerId(""); setCustomerPrices([]); setLines([{ ...emptyLine }]); setNotes("");
       setNotice("Pesanan tersimpan sebagai draft secara atomik di Supabase."); await load();
       if (data) setQuery("");
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menyimpan pesanan."); }
@@ -109,8 +137,8 @@ export default function SalesOrdersPage() {
     <div className="demo-banner mb-5"><strong>Supabase + RLS.</strong> Halaman ini membaca dan menulis pesanan aktual. PPN dan jurnal belum dihitung; nilai pesanan adalah nilai sebelum pajak.</div>
     {error && <div role="alert" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 font-semibold underline" href="/login">Masuk</Link>}</div>}
     {notice && <p role="status" className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
-    {showForm && <form className="card card-pad mb-5" onSubmit={submitOrder}><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">Pesanan pelanggan baru</h2><p className="mt-1 text-xs text-[var(--muted)]">Nomor SO, termin dan snapshot barang dibuat oleh transaksi database atomik.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-xs text-[var(--muted)]">Pelanggan<select required className="field mt-1" value={customerId} onChange={e => selectCustomer(e.target.value)}><option value="">Pilih pelanggan…</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.code} · {customer.legal_name}</option>)}</select></label><label className="text-xs text-[var(--muted)]">Tanggal pesanan<input required type="date" className="field mt-1" value={orderDate} onChange={e => setOrderDate(e.target.value)}/></label><label className="text-xs text-[var(--muted)] lg:col-span-2">Alamat kirim langsung<input required className="field mt-1" value={shipAddress} onChange={e => setShipAddress(e.target.value)} placeholder="Alamat tujuan supplier"/></label><label className="text-xs text-[var(--muted)]">Kontak penerima<input className="field mt-1" value={shipContact} onChange={e => setShipContact(e.target.value)} placeholder="Nama penerima"/></label><label className="text-xs text-[var(--muted)]">Telepon penerima<input className="field mt-1" value={shipPhone} onChange={e => setShipPhone(e.target.value)} placeholder="Nomor telepon"/></label><label className="text-xs text-[var(--muted)] sm:col-span-2">Catatan<textarea className="field mt-1 min-h-20 py-2" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Instruksi pesanan"/></label></div>
-      <div className="mt-4 rounded-xl bg-[var(--surface-muted)] p-4"><div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Item pesanan</h3><button type="button" className="tab-button" onClick={() => setLines(existing => [...existing, { ...emptyLine }])}>＋ Tambah baris</button></div><div className="mt-3 space-y-3">{lines.map((line, index) => <div key={index} className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]"><select required className="field" aria-label={`Barang baris ${index + 1}`} value={line.product_id} onChange={e => setLines(existing => existing.map((item, i) => i === index ? { ...item, product_id: e.target.value } : item))}><option value="">Pilih barang…</option>{products.map(product => <option key={product.id} value={product.id}>{product.code} · {product.name} ({product.unit})</option>)}</select><input required className="field" type="number" min="0.0001" step="0.0001" value={line.quantity} aria-label="Jumlah" onChange={e => setLines(existing => existing.map((item, i) => i === index ? { ...item, quantity: e.target.value } : item))}/><input required className="field" type="number" min="0" step="0.01" value={line.unit_price} placeholder="Harga/unit" aria-label="Harga jual per unit" onChange={e => setLines(existing => existing.map((item, i) => i === index ? { ...item, unit_price: e.target.value } : item))}/><input className="field" type="number" min="0" step="0.01" value={line.discount_amount} placeholder="Diskon" aria-label="Diskon baris" onChange={e => setLines(existing => existing.map((item, i) => i === index ? { ...item, discount_amount: e.target.value } : item))}/><button type="button" className="tab-button" aria-label="Hapus baris" disabled={lines.length === 1} onClick={() => setLines(existing => existing.filter((_, i) => i !== index))}>×</button></div>)}</div><p className="mt-3 text-xs text-[var(--muted)]">Harga jual disimpan sebagai snapshot. Pajak tidak diposting pada tahap ini; diskon harus tidak melebihi nilai baris.</p></div>
+    {showForm && <form className="card card-pad mb-5" onSubmit={submitOrder}><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">Pesanan pelanggan baru</h2><p className="mt-1 text-xs text-[var(--muted)]">Nomor SO, termin dan snapshot barang dibuat oleh transaksi database atomik.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-xs text-[var(--muted)]">Pelanggan<select required className="field mt-1" value={customerId} onChange={e => selectCustomer(e.target.value)}><option value="">Pilih pelanggan…</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.code} · {customer.legal_name}</option>)}</select></label><label className="text-xs text-[var(--muted)]">Tanggal pesanan<input required type="date" className="field mt-1" value={orderDate} onChange={e => { const nextDate = e.target.value; setOrderDate(nextDate); setCustomerPrices([]); setLines(current => current.map(line => line.price_overridden ? line : { ...line, unit_price: "", customer_product_price_id: "" })); }}/></label><label className="text-xs text-[var(--muted)] lg:col-span-2">Alamat kirim langsung<input required className="field mt-1" value={shipAddress} onChange={e => setShipAddress(e.target.value)} placeholder="Alamat tujuan supplier"/></label><label className="text-xs text-[var(--muted)]">Kontak penerima<input className="field mt-1" value={shipContact} onChange={e => setShipContact(e.target.value)} placeholder="Nama penerima"/></label><label className="text-xs text-[var(--muted)]">Telepon penerima<input className="field mt-1" value={shipPhone} onChange={e => setShipPhone(e.target.value)} placeholder="Nomor telepon"/></label><label className="text-xs text-[var(--muted)] sm:col-span-2">Catatan<textarea className="field mt-1 min-h-20 py-2" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Instruksi pesanan"/></label></div>
+      <div className="mt-4 rounded-xl bg-[var(--surface-muted)] p-4"><div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Item pesanan</h3><button type="button" className="tab-button" onClick={() => setLines(existing => [...existing, { ...emptyLine }])}>＋ Tambah baris</button></div><div className="mt-3 space-y-3">{lines.map((line, index) => <div key={index} className="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_1fr_auto]"><select required className="field" aria-label={`Barang baris ${index + 1}`} value={line.product_id} onChange={e => { const productId = e.target.value; const matchedPrice = customerPrices.find(price => price.product_id === productId); setLines(existing => existing.map((item, i) => i === index ? { ...item, product_id: productId, unit_price: matchedPrice ? String(matchedPrice.unit_price) : "", customer_product_price_id: matchedPrice?.id ?? "", price_overridden: false } : item)); }}><option value="">Pilih barang…</option>{products.map(product => <option key={product.id} value={product.id}>{product.code} · {product.name} ({product.unit})</option>)}</select><input required className="field" type="number" min="0.0001" step="0.0001" value={line.quantity} aria-label="Jumlah" onChange={e => setLines(existing => existing.map((item, i) => i === index ? { ...item, quantity: e.target.value } : item))}/><input required className="field" type="number" min="0" step="0.01" value={line.unit_price} placeholder="Harga/unit" aria-label="Harga jual per unit" onChange={e => setLines(existing => existing.map((item, i) => i === index ? { ...item, unit_price: e.target.value, customer_product_price_id: "", price_overridden: true } : item))}/><input className="field" type="number" min="0" step="0.01" value={line.discount_amount} placeholder="Diskon" aria-label="Diskon baris" onChange={e => setLines(existing => existing.map((item, i) => i === index ? { ...item, discount_amount: e.target.value } : item))}/><button type="button" className="tab-button" aria-label="Hapus baris" disabled={lines.length === 1} onClick={() => setLines(existing => existing.filter((_, i) => i !== index))}>×</button></div>)}</div><p className="mt-3 text-xs text-[var(--muted)]">Harga khusus yang berlaku pada tanggal SO terisi otomatis. Mengubah harga menandainya sebagai override manual; harga dan sumber disimpan sebagai snapshot. Pajak belum dihitung.</p></div>
       {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}<div className="mt-4 flex justify-end gap-2"><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Batal</button><button type="submit" className="primary-button" disabled={saving}>{saving ? "Menyimpan…" : "Simpan draft"}</button></div>
     </form>}
     <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Kpi label="Pesanan dimuat" value={String(orders.length)} detail="Maksimum 200 terbaru"/><Kpi label="Draft" value={String(draftCount)} detail="Belum dikonfirmasi"/><Kpi label="Terkonfirmasi" value={String(confirmedCount)} detail="Siap dibuatkan PO supplier"/><Kpi label="Nilai pesanan" value={money(orderValue)} detail="Pra-pajak · hasil query"/></section>
