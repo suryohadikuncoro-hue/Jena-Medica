@@ -1,29 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
+import { AppShell } from "./components/app-shell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-app-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Jena Medical Center | Faktur Penjualan",
-  description: "Workspace pengelolaan faktur penjualan Jena Medical Center.",
+  title: "Jena Medical Center | Business Suite",
+  description: "Pengelolaan transaksi distribusi medis drop-ship Jena Medical Center.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return (
-    <html
-      lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
-    </html>
-  );
+  return <html lang="id" className={`${geistSans.variable} h-full antialiased`}><body className="min-h-full"><AppShell>{children}</AppShell></body></html>;
 }
