@@ -1,7 +1,7 @@
 # Pemetaan Model Data dan Blueprint Integrasi — Drop-Ship
 
-**Diperbarui:** 16 Oktober 2026
-**Status:** blueprint konseptual; SO/PO, harga khusus pelanggan, capture-only Faktur Supplier, dan shipment langsung telah diterapkan bertahap. Lihat bagian 8, 10, 12, dan 13 untuk cakupannya.
+**Diperbarui:** 17 Oktober 2026
+**Status:** SO/PO, harga khusus pelanggan, capture-only Faktur Supplier, shipment langsung, serta draft invoice per shipment yang diterima telah diterapkan bertahap. Invoice resmi, pajak, pembayaran, dan jurnal masih menunggu kebijakan akuntansi/legal.
 **Menggantikan:** blueprint lama yang mengasumsikan penerimaan stok, batch, FEFO, dan inventaris. Semua asumsi stok fisik dinyatakan tidak berlaku.
 
 ## 1. Prinsip domain
@@ -67,7 +67,7 @@ Diagram ini konseptual. Pengiriman dan invoice parsial/multi-supplier perlu line
 - Snapshot: sales price, supplier cost, unit, discount, tax rate, destination dan due term tidak berubah setelah transaksi diposting.
 - Split PO: PO line menjaga referensi ke satu sales order line; kuantitas gabungan PO/shipment tidak melampaui jumlah SO tanpa override tercatat.
 - Direct delivery: shipment wajib supplier dan alamat pelanggan; tidak menulis tabel stok.
-- Invoice: kebijakan quantity/trigger faktur perlu disepakati; jangan membuat penagihan ganda atas SO line.
+- Invoice: untuk fase draft, satu invoice dibuat per shipment yang tercatat delivered; pengiriman parsial dapat ditagih bertahap. Database mengunci SO-line, mencegah kuantitas invoice agregat melampaui SO, dan membagi nilai bersih pro-rata dengan sisa pembulatan pada kiriman terakhir. Kebijakan penerbitan resmi, pajak, dan posting tetap perlu ditinjau.
 - Payments: alokasi total <= payment available dan <= invoice outstanding; dukung banyak invoice dan cicilan dengan proteksi concurrency.
 - Journal: validasi debit=kredit; posting satu transaksi atomik dan idempotent; periode tutup tidak dapat dimutasi biasa.
 - Auth: server-side role checks dan RLS untuk Owner/Admin/Viewer; UI-only hiding tidak memadai.
@@ -78,7 +78,7 @@ Diagram ini konseptual. Pengiriman dan invoice parsial/multi-supplier perlu line
 1. Status PKP, profil pajak, jenis transaksi kena pajak, tarif efektif dan aturan rounding perlu diverifikasi.
 2. Tentukan kapan AP dan modal aktual dicatat jika supplier invoice diterima sebelum shipment.
 3. Tentukan titik pengakuan pendapatan dan HPP pada transaksi direct delivery: pengiriman supplier, bukti pelanggan menerima, atau aturan lain.
-4. Tentukan apakah invoice pelanggan dapat diterbitkan per shipment parsial atau hanya setelah keseluruhan SO selesai.
+4. Keputusan fase draft: invoice per shipment delivered, termasuk pengiriman parsial. Tentukan kebijakan pajak dan pengakuan sebelum invoice resmi atau jurnal dibuka.
 5. Tetapkan perlakuan diskon total, ongkos kirim, supplier credit/retur, selisih kuantitas, uang muka, PPN masukan/keluaran dan jurnal reversal.
 6. COA awal ada dalam dokumen Fase 0; pemetaan final harus ditinjau pemilik/akuntan.
 
@@ -89,13 +89,13 @@ Diagram ini konseptual. Pengiriman dan invoice parsial/multi-supplier perlu line
 3. Implementasi autentikasi/otorisasi dan master customer, supplier, product, price history serta account.
 4. Implementasi SO dan PO supplier split, validasi batas kuantitas, alamat tujuan dan nomor dokumen.
 5. Capture faktur supplier dari dokumen sumber telah dimulai; lanjutkan validasi pajak/PPN, alokasi diskon ke modal aktual, AP dan pembayaran setelah kebijakan disepakati.
-6. Shipment langsung sudah diimplementasikan; lanjutkan sales invoice dan customer payment allocation setelah trigger invoice, pajak dan aturan posting disepakati.
+6. Shipment langsung dan draft invoice per shipment delivered sudah diimplementasikan. Lanjutkan penerbitan resmi, pajak, customer payment allocation, dan posting setelah aturan hukum/akuntansi disepakati.
 7. Implementasi posting jurnal dan laporan berbasis ledger; audit, close period, ekspor dan dashboard.
 8. Uji end-to-end cash/credit, split supplier, partial ship/invoice/payment, margin negatif, pajak, reversal, role, backup/restore.
 
 ## 7. Status lingkungan database
 
-Per 17 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Lima migration telah diterapkan untuk SO/PO, harga khusus pelanggan, capture Faktur Supplier, dan shipment; 13 tabel ber-RLS dan tidak berisi data. Cakupan serta batasnya dijelaskan pada bagian 8, 10, 12, dan 13; pajak dan akuntansi tetap memerlukan keputusan sebelum posting.
+Per 17 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Enam migration telah diterapkan untuk SO/PO, harga khusus pelanggan, capture Faktur Supplier, shipment, dan draft invoice pelanggan; 15 tabel memakai RLS. Dataset TEST Production mencakup master TEST, harga, satu SO confirmed, dan satu PO draft; tabel invoice tetap kosong sampai ada shipment delivered. Pajak dan akuntansi tetap memerlukan keputusan sebelum posting.
 
 
 ## 8. Status implementasi fase pertama (16 Oktober 2026)
@@ -108,10 +108,10 @@ Alur UI yang telah tersambung: login Supabase Auth, master Pelanggan/Supplier/Ba
 
 ## 9. Langkah berikutnya
 
-1. Administrator memprovisikan akun Supabase Auth dan menetapkan claim role tepercaya `app_metadata.business_role`; lakukan uji Owner/Admin/Viewer.
-2. Tinjau manual snapshot, SO/PO dan kuantitas split melalui satu transaksi non-produksi.
+1. Akun TEST Supabase Auth dan claim `app_metadata.business_role` telah disiapkan; penerimaan undangan dan uji login UI masih menunggu.
+2. Uji database Production menggunakan data TEST telah membuat SO confirmed dan PO draft, lalu memverifikasi harga snapshot, total dan relasi. PO belum dikirim ke supplier; shipment belum dibuat.
 3. Uji customer-product price history bersama pemilik; finalisasi tax/PPN, termin dan COA bersama pemilik/akuntan.
-4. Uji shipment dengan PO split/parsial setelah data master tersedia. Modul transaksi berikutnya adalah sales invoice; sepakati kapan invoice diterbitkan untuk pengiriman parsial sebelum membuat posting, payments/allocations, audit log dan jurnal idempotent.
+4. Uji shipment dengan PO split/parsial setelah supplier benar-benar dikirimi PO. Draft invoice kini mengikuti setiap shipment delivered; sebelum penerbitan resmi, sepakati PPN, profil legal, dan aturan posting. Setelah itu lanjut payments/allocations, audit log dan jurnal idempotent.
 5. Tambahkan test concurrency, backup/restore, audit dan reversal sebelum rilis produksi.
 
 
@@ -127,7 +127,7 @@ Semua tarif masih **pra-pajak**. Tahap harga tidak menentukan status PKP, PPN, p
 
 - Uji harga berlaku, rate terjadwal, pergantian rate, SO yang memakai rate, dan override manual setelah akun ber-role tersedia.
 - Koreksi historis/backdate atau mengganti versi pada tanggal yang sama belum didukung; jangan menghapus riwayat lewat SQL untuk memperbaikinya.
-- Capture draft Faktur Supplier dan shipment langsung sudah tersedia. Langkah transaksi berikutnya adalah sales invoice; keputusan pajak/PPN, COA, alokasi diskon/ongkos, serta titik pengakuan HPP/pendapatan/AP tetap memerlukan pemilik/akuntan.
+- Capture draft Faktur Supplier, shipment langsung, dan draft invoice per shipment delivered tersedia. Keputusan pajak/PPN, COA, alokasi diskon/ongkos, serta titik pengakuan HPP/pendapatan/AP tetap memerlukan pemilik/akuntan sebelum dokumen resmi atau posting.
 
 ## 12. Tahap ketiga — capture Faktur Supplier (16 Oktober 2026)
 
@@ -143,4 +143,10 @@ Migration `20261016171001_dropship_shipment_tracking` menambahkan `shipments`, `
 
 Shipment hanya dapat dibuat dari PO yang sudah berstatus `sent` atau `acknowledged`. Header mengambil supplier, customer, SO dan alamat tujuan dari snapshot PO. Baris mengacu ke PO-line, menyimpan snapshot item, dan mendukung pengiriman parsial. RPC mengunci PO/line dan menghitung kuantitas pada shipment draft/non-batal untuk mencegah overship; pembatalan draft melepaskan kuantitas. Semua tabel ber-RLS, hanya dapat ditulis lewat RPC Owner/Admin, dan seluruh 13 tabel tetap kosong.
 
-Status yang dicatat: `draft`, `shipped`, `delivered`, `issue`, dan `cancelled`. Timeline menyimpan perubahan, tanggal, catatan, pengguna dan waktu pencatatan. Draft dapat dibatalkan dengan alasan; shipment yang sudah dikirim tidak dapat dibatalkan lewat alur ini. Shipment tidak membuat penerimaan, invoice pelanggan, hutang/AP, HPP, pajak, pembayaran atau jurnal. Belum ada integrasi kurir, upload bukti, akun uji/data bisnis, maupun uji UI end-to-end; sales invoice menjadi tahap berikutnya setelah kebijakan penerbitannya disepakati.
+Status yang dicatat: `draft`, `shipped`, `delivered`, `issue`, dan `cancelled`. Timeline menyimpan perubahan, tanggal, catatan, pengguna dan waktu pencatatan. Draft dapat dibatalkan dengan alasan; shipment yang sudah dikirim tidak dapat dibatalkan lewat alur ini. Shipment tidak membuat penerimaan, invoice pelanggan, hutang/AP, HPP, pajak, pembayaran atau jurnal. Belum ada integrasi kurir atau upload bukti. Uji database SO→PO telah dilakukan dengan data TEST; uji UI end-to-end masih menunggu penerimaan undangan Supabase dan shipment yang benar-benar dikirim/diterima.
+
+## 14. Tahap kelima — draft invoice pelanggan per shipment delivered (17 Oktober 2026)
+
+Migration `20261017100000_customer_invoices_per_delivery_drafts` menambahkan `sales_invoices` dan `sales_invoice_lines`. Berdasarkan keputusan pemilik, satu shipment berstatus `delivered` dapat menghasilkan satu draft invoice; pengiriman parsial dapat memiliki invoice terpisah. RPC `create_customer_invoice` menautkan setiap invoice ke shipment, SO dan customer; setiap baris menelusuri `shipment_line → PO-line → SO-line`, memakai harga dan status override dari SO, serta memeriksa kuantitas invoice kumulatif agar tidak melampaui SO-line. Nilai bersih dialokasikan proporsional; sisa pembulatan dibukukan ke pengiriman terakhir untuk SO-line tersebut. Draft dapat di-void dengan alasan, pengguna dan waktu; data tidak dihapus.
+
+Halaman `/invoice-pelanggan` membaca data Supabase, membuat draft dari shipment delivered, menampilkan pratinjau cetak yang dapat disimpan sebagai PDF melalui dialog browser, serta menyiapkan teks WhatsApp tanpa mengirim otomatis atau melampirkan PDF. Nomor dokumen diawali `DRAFT-INV`; dokumen diberi label belum diterbitkan dan bukan Faktur Pajak. Migration dan UI tidak menghitung PPN, membuat piutang/pendapatan, memposting jurnal, menyimpan berkas PDF, atau melakukan pengiriman eksternal. Karena dataset TEST saat ini berhenti di PO draft dan tidak ada shipment delivered, belum ada invoice TEST.
