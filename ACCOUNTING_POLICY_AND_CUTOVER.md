@@ -45,9 +45,9 @@ Pemetaan COA, pembebanan biaya kirim, diskon header, retur, uang muka, margin ne
 
 ## Pembayaran dan alokasi
 
-Rancangan perlindungan database: RPC server-side memvalidasi role Owner/Admin; tanggal dan rekening; jumlah positif; penguncian pembayaran/invoice saat alokasi; jumlah total alokasi tidak melampaui dana tersedia atau saldo invoice; tidak mengalokasikan ke draft/void; multi-invoice dan pembayaran cicilan boleh; kredit lebih/uang muka terpisah; pembatalan hanya dengan reversal/void beralasan. Viewer hanya baca. Bukti pembayaran disimpan sebagai dokumen privat dengan kontrol akses, bukan URL publik.
+Keputusan tahap pembayaran: Owner/Admin dapat mencatat penerimaan pelanggan dan pengeluaran supplier yang telah terverifikasi, dengan referensi dan metode; sisa dana tetap sebagai uang muka yang belum teralokasi. RPC server-side memvalidasi role, nominal positif IDR, dan audit reason untuk void. Idempotency key juga mencegah retry capture menggandakan transaksi. Batch alokasi parsial/multi-invoice hanya menerima invoice pelanggan `issued` atau faktur supplier `posted`; transaksi mengunci pembayaran dan dokumen, memeriksa saldo, dan idempotency key mencegah duplikasi request. Void pembayaran membatalkan batch aktifnya dengan alasan/audit yang tercatat. Viewer hanya baca. Uang muka supplier tidak boleh dialokasikan ke faktur draft.
 
-Belum ada tabel/RPC UI pembayaran yang aktif dan invoice pelanggan masih draft-only. Maka pembayaran belum dapat dicatat atau dialokasikan tanpa lebih dulu menyetujui serta menerapkan siklus invoice resmi dan ledger.
+Tabel/RPC/UI capture pembayaran serta RPC alokasi guarded tersedia dalam migration PR terpisah, tetapi migration belum diterapkan. Dokumen remote saat ini masih draft-only; karena itu sistem dapat mencatat dana sebagai receipt/disbursement operasional dan uang muka, namun belum ada dokumen yang eligible untuk alokasi. Posting AP/AR, pengakuan pajak, bank, dan jurnal tetap menunggu langkah 3 serta persetujuan akuntansi.
 
 ## Jurnal, tutup buku, audit dan dokumen
 
@@ -73,7 +73,7 @@ Gunakan project non-production dengan akun Owner, Admin, dan Viewer terpisah ser
 - Faktur supplier duplikat, mismatch PO/supplier/quantity/tax arithmetic, void dan rekonsiliasi diskon/ongkos.
 - Shipment parsial beberapa kali; shipment yang issue/cancelled; invoice draft terpisah per delivered; jumlah invoiced tidak melebihi SO; sisa pembulatan tepat; void/recreate.
 - Setiap klasifikasi PPN termasuk produk belum ditinjau, PKP/non-PKP, inclusive/exclusive, DPP aktual/nilai lain, pembulatan, tanggal efektif, pengecualian dan reversal diuji oleh akuntan/pajak.
-- Invoice resmi, posting AP/HPP/pendapatan, pembayaran parsial/multi-invoice, overpayment, supplier prepayment, race allocation, jurnal seimbang/idempoten, reversal dan tutup/reopen periode.
+- Invoice resmi, posting AP/HPP/pendapatan, penerimaan/pembayaran parsial dan multi-invoice, saldo uang muka, alokasi yang bersaing, void beralasan, jurnal seimbang/idempoten, reversal dan tutup/reopen periode.
 - Role/RLS untuk semua tabel dan RPC: Viewer tidak dapat menulis; user tanpa role ditolak; perubahan API langsung tidak dapat melewati RPC.
 - Ekspor laporan, audit, lampiran, backup dan restore diverifikasi. Jalankan UAT desktop/mobile, keyboard/screen reader, error/loading/empty states dan alur cetak.
 
