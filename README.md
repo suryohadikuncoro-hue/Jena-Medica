@@ -1,42 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Jena Medical Center Business Suite
 
-## Getting Started
+Aplikasi web manajemen bisnis B2B untuk Jena Medical Center, distributor alat/barang medis dengan model **drop-ship**: supplier mengirim langsung ke pelanggan dan Jena tidak menyimpan stok fisik.
 
-First, run the development server:
+## Status
+
+Repo sedang dalam tahap refaktor UI pada branch `feat/dropship-ui-foundation`. Layar yang ada adalah prototipe dengan data contoh. Belum tersedia autentikasi, persistensi transaksi, jurnal otomatis, PDF invoice, integrasi WhatsApp API, atau laporan dari buku besar. Jangan gunakan nilai demo untuk keputusan operasional atau pembukuan.
+
+Supabase proyek `Jena Medical Center` diperiksa pada 16 Oktober 2026; schema `public` terlihat kosong. Tidak ada migration, tabel, secret, atau koneksi produksi yang dibuat pada perubahan UI ini.
+
+## Model bisnis
+
+Alur sasaran: Pesanan Pelanggan → PO ke satu atau beberapa supplier → Faktur Supplier → Pengiriman supplier langsung ke pelanggan → Invoice Pelanggan → Pembayaran → jurnal dan laporan. Tidak ada menu atau proses penerimaan stok, batch, gudang, FEFO, expiry atau saldo persediaan fisik.
+
+## Menjalankan lokal
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka `http://localhost:3000`. Pemeriksaan proyek:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Struktur layar
 
-## Learn More
+- `/dashboard` — ringkasan drop-ship dan tindakan
+- `/` — daftar Pesanan Pelanggan
+- `/invoice-pelanggan` — daftar dan pratinjau invoice pelanggan
+- `/operasional` — Order ke Supplier dan Faktur Supplier
+- `/pengiriman-piutang` — pengiriman langsung dan pembayaran/piutang
+- `/master-data` — pelanggan, supplier, barang, harga per pelanggan dan COA
+- `/keuangan` — ringkasan keuangan dan prototipe laporan
 
-To learn more about Next.js, take a look at the following resources:
+App shell bersama berada di `app/components/app-shell.tsx`; tema dan design tokens global berada di `app/globals.css`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out the [Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Konfigurasi Cloudflare Workers/OpenNext tersedia di `wrangler.jsonc` dan `open-next.config.ts`. Untuk membuat Worker build gunakan `npm run build:worker`; deployment memerlukan konfigurasi akun/secret yang sesuai. Jangan menyimpan credential di Git.
 
-## Deploy on Cloudflare Workers
+## Prinsip integrasi lanjutan
 
-This project uses the OpenNext Cloudflare adapter. Configure Cloudflare Workers Builds with `npm run build:worker` as the build command and `npm run deploy` as the production deploy command. For pull request previews, use `npm run build:worker` as the preview build command and `npx wrangler preview` as the preview deploy command.
-
-To validate locally, run `npm run build:worker` and then `npx wrangler deploy --dry-run`. The Wrangler configuration includes the `WORKER_SELF_REFERENCE` service binding for the `jena-medica` Worker.
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Skema database dan aturan posting harus mengikuti domain drop-ship, bukan dokumen stok lama. Sebelum menghubungkan transaksi, tetapkan autentikasi/RLS, migrasi, snapshot harga/pajak, pencatatan modal aktual, titik pengakuan HPP/pendapatan, pembayaran/alokasi, jurnal, audit, backup, dan test lintas dokumen. Supabase belum dimodifikasi oleh branch ini.
