@@ -1,45 +1,49 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
 **Diperbarui:** 16 Oktober 2026
-**Status:** Tahap awal Supabase terpasang; belum siap untuk pembukuan/produksi.
+**Status:** Tahap persistensi transaksi dan harga khusus berjalan; belum siap untuk pembukuan/produksi.
 **Project:** `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif.
 
-## Perubahan tahap ini
+## Migration dan skema
 
-Dua migration tercatat pada proyek Supabase:
+Tiga migration tercatat pada Supabase:
 
-- `20261016125928_dropship_suppliers_orders` — tujuh tabel referensi/transaksi, relasi, snapshot dan RPC.
-- `20261016130021_dropship_foreign_key_indexes` — indeks yang direkomendasikan untuk foreign key.
+- `20261016125928_dropship_suppliers_orders` — master, SO/PO, snapshot, RPC dan RLS.
+- `20261016130021_dropship_foreign_key_indexes` — indeks foreign key.
+- `20261016132858_customer_product_price_history` — daftar harga pelanggan/barang, histori masa berlaku dan referensi harga pada baris SO.
 
-Tabel `public.customers`, `suppliers`, `products`, `sales_orders`, `sales_order_lines`, `purchase_orders`, dan `purchase_order_lines` berhasil diverifikasi. RLS aktif di seluruh tabel dan jumlah baris awal **0**. Tidak ada seed/data demo, tabel stok, atau data yang ditimpa.
+Delapan tabel public terverifikasi: `customers`, `suppliers`, `products`, `customer_product_prices`, `sales_orders`, `sales_order_lines`, `purchase_orders`, `purchase_order_lines`. Semuanya memakai RLS dan masih berisi **0 baris**. Tidak ada seed data, stok fisik atau perubahan/penghapusan data lama.
 
-Layar login, master Pelanggan/Supplier/Barang, SO, dan draft PO terhubung ke Supabase. Alur SO→PO memakai snapshot alamat/barang, nomor dokumen sequence, RPC transaksional, serta validasi agar kuantitas agregat PO tidak melebihi baris SO.
+Satu project diasumsikan untuk satu perusahaan; skema belum memiliki isolasi multi-tenant.
 
-## Keamanan dan akses
+## Alur yang sudah tersambung
 
-- Aplikasi memakai publishable key saja; tidak ada service-role key di client.
-- Semua tabel exposed memakai RLS. `app_private.has_business_role` memeriksa JWT `app_metadata.business_role`, bukan `user_metadata`.
-- `owner`/`admin` dapat mengelola master dan menjalankan RPC order; `viewer` hanya dapat membaca. User tanpa role tertutup secara default.
-- Tidak ada hard-delete grant/policy. Master dinonaktifkan melalui `is_active`.
-- RPC SO/PO memakai `SECURITY DEFINER` karena tabel transaksi tidak memberikan write langsung ke client; fungsi memeriksa role di server, memakai `search_path` kosong, dan execute hanya diberikan ke role `authenticated`. Advisor keamanan tetap memberi peringatan untuk 3 RPC tersebut karena bisa dipanggil oleh sesi authenticated. Ini disengaja agar UI dapat memakai transaksi atomik; warning perlu ditinjau lagi sebelum produksi.
-- Advisor performa tidak lagi melaporkan foreign key tanpa indeks. Advisor masih melaporkan indeks sebagai “unused”; tabel baru masih kosong sehingga statistik penggunaan belum bermakna.
+- Login Supabase Auth dan master Pelanggan/Supplier/Barang.
+- Harga khusus per customer-product: riwayat append-only, IDR, rentang efektif tidak tumpang tindih. Penetapan harga hanya melalui RPC Owner/Admin; versi baru menutup versi terbuka sehari sebelumnya. Versi tidak dapat di-backdate atau diganti pada tanggal berlaku yang sama.
+- SO mengambil harga yang berlaku pada tanggal pesanan secara default. Admin dapat mengubah harga manual; RPC menyimpan harga snapshot, referensi rate bila dipakai, dan `price_overridden`. RPC memvalidasi rate/customer/product/tanggal di database.
+- PO draft dari SO terkonfirmasi dengan batas kuantitas split dan locking di database.
 
-## Keputusan domain dan batasan
+Harga adalah nilai pra-pajak. Perubahan rate tidak memutasi snapshot SO lama. Rate customer-product dan SO/PO belum menghasilkan jurnal.
 
-Model yang diminta adalah **drop-ship tanpa stok fisik Jena**. Supplier mengirim langsung ke alamat pelanggan; spesifikasi gudang, batch, FEFO, expiry, karantina, picking dan stock ledger tidak berlaku.
+## Keamanan
 
-Fase awal membatasi mata uang pada IDR, tidak menghitung PPN, tidak membuat jurnal, dan meminta harga jual dimasukkan manual (master harga khusus pelanggan belum dibuat). Belum ada supplier invoice, pengiriman, sales invoice, pembayaran, alokasi, COA, audit event atau attachment. Faktur Supplier di UI secara eksplisit belum terhubung.
+- Aplikasi hanya memakai publishable key; tidak ada service-role key di client.
+- RLS memeriksa JWT `app_metadata.business_role` (`owner`, `admin`, `viewer`); tanpa role akses tertutup.
+- Owner/Admin dapat mengubah master, menetapkan versi harga dan menjalankan transaksi; Viewer hanya membaca. Tidak ada hard-delete API.
+- Empat RPC `SECURITY DEFINER` di schema `public` dapat dipanggil oleh sesi authenticated; setiap fungsi memeriksa role di database, menggunakan `search_path` kosong, dan hanya diberi execute ke authenticated. Supabase Security Advisor menandai pola tersebut sebagai warning; tinjau lagi sebelum produksi.
+- Performance Advisor tidak lagi melaporkan FK tanpa index. Temuan “unused index” masih wajar karena tabel baru kosong.
 
-## Prasyarat akses untuk memakai preview
+## Batasan & prasyarat pengujian
 
-Proyek tidak berisi akun aplikasi atau data master awal. Administrator perlu membuat/mengundang pengguna di Supabase Auth dan memberi `app_metadata.business_role` (`owner`, `admin`, atau `viewer`) melalui mekanisme admin tepercaya. Setelah itu siapkan satu pelanggan dan satu barang sebelum membuat SO, serta satu supplier sebelum membuat PO. Perubahan role memerlukan JWT yang diperbarui/login ulang.
+Belum ada akun aplikasi atau data master. Administrator perlu mengundang pengguna dan mengatur app metadata, lalu membuat master sebelum menguji SO/PO/harga.
 
-## Pengujian dan status kesiapan
+Harga versi baru hanya dapat mulai hari ini atau mendatang dan harus lebih baru dari versi terakhir; koreksi harga backdate atau penggantian versi pada hari yang sama belum didukung. Keputusan pajak/PPN, COA dan titik pengakuan pendapatan/HPP/AP masih terbuka. Faktur supplier/customer, shipment, pembayaran, jurnal, audit trail, lampiran, backup/restore dan uji end-to-end belum dibuat.
+
+## Validasi
 
 - `npm run lint`: lulus.
-- `npm run build`: lulus.
-- Schema/list migration: berhasil diverifikasi via Supabase.
-- Semua tabel kosong; belum ada kredensial pengguna untuk menguji RLS secara end-to-end lewat UI.
-- Belum dilakukan simulasi transaksi nyata karena tidak ada user/seed data. Uji role Owner/Admin/Viewer dan split PO perlu dilakukan setelah admin memprovisikan akun dan master.
+- `npm run build`: lulus setelah perubahan kode.
+- `list_tables`/`list_migrations`: tabel, RLS dan migration harga berhasil diverifikasi di Supabase.
+- Semua tabel masih kosong; belum ada kredensial ber-role untuk menjalankan uji alur UI sebagai Owner/Admin/Viewer.
 
-Ini adalah tahap persistensi non-akuntansi, bukan persetujuan cutover. Sebelum produksi: sepakati PPN/COA dan titik pengakuan pendapatan/HPP/AP; implementasikan invoice/pengiriman/pembayaran/jurnal/audit; tambahkan test idempotensi, concurrency, backup/restore dan reversal.
+Fitur ini bukan persetujuan cutover atau pembukuan produksi. Sebelum itu, selesaikan aturan pajak/COA, siklus faktur/pengiriman/pembayaran/jurnal, audit, backup/restore, dan pengujian idempotensi/concurrency/reversal.

@@ -4,27 +4,30 @@ Aplikasi web B2B untuk Jena Medical Center dengan model **drop-ship**: supplier 
 
 ## Status implementasi
 
-Branch `feat/supabase-orders-suppliers` berisi integrasi tahap pertama ke proyek Supabase **Jena Medical Center**. Dua migration sudah diterapkan dan disimpan di `supabase/migrations/`. Tabel baru masih kosong; tidak ada data demo yang ditanam.
+Branch `feat/customer-product-pricing` melanjutkan integrasi Supabase pada proyek **Jena Medical Center**. Tiga migration telah diterapkan. Delapan tabel tetap kosong; tidak ada data demo yang ditanam.
 
 Sudah terhubung:
 
 - `/login` — login email/password Supabase Auth; pendaftaran akun tidak dibuka di UI.
-- `/` — daftar SO aktual, pembuatan draft SO atomik, dan konfirmasi SO.
-- `/master-data#customers` — baca/tambah/nonaktifkan pelanggan.
-- `/master-data#suppliers` — baca/tambah/nonaktifkan supplier.
-- `/master-data#products` — baca/tambah/nonaktifkan barang.
-- `/operasional` — baca dan buat draft PO supplier dari SO terkonfirmasi; SO-line dapat di-split antar-PO dengan batas kuantitas ditegakkan database.
+- `/` — baca, buat dan konfirmasi SO; draft SO disimpan atomik.
+- `/master-data#customers`, `/master-data#suppliers`, `/master-data#products` — kelola master aktif melalui Supabase.
+- `/master-data#prices` — riwayat harga jual per pelanggan/barang; versi baru efektif hari ini atau tanggal mendatang.
+- `/operasional` — baca dan buat draft PO dari SO terkonfirmasi; kuantitas split dibatasi database.
 
-Rute dan modul lain—harga per pelanggan, faktur supplier, pengiriman, invoice pelanggan, pembayaran, jurnal, dan laporan—masih berupa prototipe atau belum terhubung. PPN dan jurnal tidak dihitung pada tahap ini. Nilai SO adalah nilai pra-pajak, dan harga jual diinput manual karena tabel harga per pelanggan belum dibuat.
+Saat membuat SO, harga khusus yang berlaku pada tanggal SO otomatis dipilih. Admin dapat mengubah harga secara manual; sumber harga dan flag override disimpan sebagai snapshot pada SO line. Perubahan rate tidak mengubah SO lama.
+
+Faktur supplier, pengiriman, invoice pelanggan, pembayaran, pajak, jurnal dan laporan keuangan masih prototipe atau belum terhubung. Nilai SO tetap pra-pajak.
 
 ## Supabase dan akses
 
 1. Salin `.env.example` menjadi `.env.local` dan isi `NEXT_PUBLIC_SUPABASE_URL` serta `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 2. Jangan gunakan atau menyimpan service-role key di browser/Git. `.env.local` diabaikan Git.
-3. Buat/undang pengguna melalui Supabase Auth, lalu tetapkan claim tepercaya `app_metadata.business_role` menjadi `owner`, `admin`, atau `viewer`. UI tidak menyediakan pendaftaran maupun pengaturan role sendiri. User harus refresh/login ulang setelah perubahan claim.
-4. Semua tabel `public` baru menggunakan RLS. Tanpa sesi dan claim role yang sesuai, akses ditolak. Owner/Admin dapat menulis master dan memanggil RPC SO/PO; Viewer hanya membaca. Tidak ada hard-delete API; master dinonaktifkan.
+3. Administrator membuat/mengundang pengguna di Supabase Auth dan menetapkan claim tepercaya `app_metadata.business_role` menjadi `owner`, `admin`, atau `viewer`. UI tidak membuka pendaftaran atau pengaturan role.
+4. Seluruh tabel memakai RLS. Owner/Admin dapat menulis master, menetapkan harga, dan menjalankan RPC transaksi; Viewer hanya membaca. Tidak ada hard-delete API.
 
-Detail model, migration, perilaku RLS, advisory keamanan, dan batasan uji ada di [`SUPABASE_INTEGRATION.md`](SUPABASE_INTEGRATION.md) dan [`DATABASE_INTEGRATION_READINESS.md`](DATABASE_INTEGRATION_READINESS.md).
+Harga baru hanya dapat berlaku mulai hari ini atau tanggal mendatang dan harus lebih baru dari versi terakhir; rate terbuka sebelumnya berakhir sehari sebelum versi baru. Koreksi mundur atau mengganti versi yang sudah dibuat pada hari yang sama belum didukung.
+
+Detail model, migration, RLS, advisor dan batas pengujian ada di [`SUPABASE_INTEGRATION.md`](SUPABASE_INTEGRATION.md) serta [`DATABASE_INTEGRATION_READINESS.md`](DATABASE_INTEGRATION_READINESS.md).
 
 ## Menjalankan lokal
 
@@ -40,6 +43,7 @@ Buka `http://localhost:3000`. Pemeriksaan proyek:
 ```bash
 npm run lint
 npm run build
+npm run build:worker
 ```
 
 ## Rute aplikasi
@@ -47,7 +51,7 @@ npm run build
 - `/dashboard` — ringkasan UI; sebagian metrik belum menjadi read model database.
 - `/` — Pesanan Pelanggan (Supabase).
 - `/operasional` — Order Supplier (Supabase); Faktur Supplier belum diintegrasikan.
-- `/master-data` — Pelanggan, Supplier dan Barang (Supabase); harga per pelanggan dan COA belum terhubung.
+- `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA masih prototipe.
 - `/invoice-pelanggan` — prototipe invoice pelanggan.
 - `/pengiriman-piutang` — prototipe pengiriman langsung dan pembayaran/piutang.
 - `/keuangan` — prototipe ringkasan keuangan/laporan.
