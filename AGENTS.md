@@ -24,7 +24,7 @@ Jika dokumen atau instruksi bertentangan, yang di atas menang:
 - Kebijakan pajak dan akuntansi disetujui dalam `PRODUCT_SPEC.md` dan `ACCOUNTING_POLICY_AND_CUTOVER.md`, tetapi itu **bukan** berarti konfigurasi perusahaan sudah diisi atau posting sudah aktif. Jangan melewati approval gate: profile saat ini masih `draft`, mapping akun dan periode belum ada. Jangan membuat asumsi status PKP atau klasifikasi pajak barang.
 - Hitungan sistem pada faktur suplier hanya **usulan**. Angka tercetak di faktur asli tetap sumber kebenaran, dan selisih harus nol sebelum dicatat ke pembukuan (D-01).
 - Tidak ada stok, gudang, batch, FEFO, atau persediaan fisik. Jangan ditambahkan.
-- **Tidak ada pencatatan pengiriman** (D-09, sudah disetujui): jangan menambahkan resi, surat jalan, kurir, status kirim, atau penerimaan barang. Modul/tabel/RPC/trigger lama masih ada dan menunggu implementasi penghapusan; jangan mengembangkannya.
+- **Tidak ada pencatatan pengiriman** (D-09, sudah disetujui): jangan menambahkan resi, surat jalan, kurir, status kirim, atau penerimaan barang. Hapus langsung modul/tabel/RPC/trigger dan record shipment legacy sesuai instruksi pemilik; penghapusan tidak menunggu backup sebagai prasyarat. Pertahankan tabel dan record pembayaran pelanggan/supplier.
 - **Invoice pelanggan** (D-10, sudah disetujui): targetnya dibuat manual dari SO terkonfirmasi, boleh beberapa kali per SO, kuantitas/nilai kumulatif dibatasi database, tanpa `shipment_id`. Implementasi remote sekarang masih mengikat invoice ke shipment; jangan menyamakan status keputusan dengan implementasi selesai. Perubahan perlu PR teknis terpisah.
 - Harga jual berbeda per pelanggan dengan riwayat tanggal berlaku. Simpan salinan harga di baris transaksi; transaksi lama tidak boleh berubah.
 - Tidak ada hapus permanen pada transaksi. Gunakan batalkan (void) dengan alasan, jurnal balik, dan periode tutup.
@@ -46,7 +46,7 @@ Jika dokumen atau instruksi bertentangan, yang di atas menang:
 ## 6. Cara kerja
 - Kerjakan bertahap dan berurutan sesuai backlog di `PRODUCT_SPEC.md` bagian 5. Satu PR = satu tujuan jelas.
 - Penamaan cabang mengikuti pola repo: `feat/...`, `fix/...`, `docs/...`. Pesan commit: `feat:`, `fix:`, `docs:`.
-- Perubahan skema mengikuti D-11: perubahan diterapkan terkontrol langsung pada satu proyek Supabase setelah ada persetujuan dan PR yang menjelaskan dampak data serta verifikasi. File `supabase/migrations/` adalah arsip; version prefix harus sama dengan remote history. Isi SQL migration yang sudah diterapkan tidak boleh diedit; koreksi nama arsip hanya untuk menyamakan version ID tanpa mengubah konten. Jangan menjalankan `supabase db push` atau menghapus data tanpa persetujuan eksplisit.
+- Perubahan skema mengikuti D-11: perubahan diterapkan langsung pada satu proyek Supabase dan dicatat dengan arsip migration yang version ID-nya sesuai remote history. Isi migration yang sudah diterapkan tidak boleh diedit. D-09 adalah persetujuan eksplisit pemilik untuk menghapus objek/record shipment legacy tanpa menunggu backup sebagai prasyarat; record pembayaran tetap dipertahankan. Untuk perubahan destructive lain di luar D-09, tetap minta persetujuan pemilik.
 - Jika ragu antara dua pendekatan, jelaskan opsinya di deskripsi PR dan tanyakan.
 
 ## 7. Checklist setiap PR
