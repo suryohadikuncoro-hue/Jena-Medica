@@ -52,7 +52,7 @@ Kondisi saat audit: schema `sales_invoices` masih mengharuskan `shipment_id`; RP
 
 ### D-11 — arsip migration
 
-Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsip yang harus menggunakan version ID remote dan isi SQL yang sama untuk migration yang sudah diterapkan. Dalam PR dokumentasi ini, empat nama arsip diselaraskan ke version ID remote tanpa mengubah konten SQL. Jangan mengubah isi migration lama atau menjalankan `supabase db push` tanpa persetujuan dan prosedur perubahan yang terkontrol.
+Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsip yang harus menggunakan version ID remote dan isi SQL yang sama untuk migration yang sudah diterapkan. Empat nama arsip diselaraskan ke version ID remote tanpa mengubah konten SQL. Migration baru D-09/D-10 di bawah belum ada pada remote. Jangan mengubah isi migration yang telah diterapkan atau menjalankan migration baru sebelum kode dan schema siap dilepas bersama.
 
 ## 5. Daftar migration remote
 
@@ -66,7 +66,7 @@ Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsi
 - `supabase/migrations/20261016215508_payments_and_invoice_allocations.sql`
 - `supabase/migrations/20261016225329_accounting_posting_framework.sql`
 
-Tidak ada DDL, db push, atau migration yang dijalankan dalam PR dokumentasi ini. Penyesuaian nama arsip bukan perubahan schema remote.
+**Migration baru, belum diterapkan:** `supabase/migrations/20261017150000_d10_invoice_from_sales_order_drop_shipment_module.sql`. Migration ini menghapus modul shipment beserta data shipment legacy, menanggalkan `shipment_id`/`shipment_line_id` dari invoice, dan mengganti RPC invoice menjadi manual dari SO. Pembayaran pelanggan/supplier tidak dihapus. Remote masih berisi 9 migration dan schema legacy sampai migration baru diterapkan; empat rename arsip di atas tidak mengubah schema.
 
 ## 6. Integrasi dan otorisasi
 
@@ -74,7 +74,7 @@ Tidak ada DDL, db push, atau migration yang dijalankan dalam PR dokumentasi ini.
 - `create_sales_order` dan `confirm_sales_order` membuat/mengonfirmasi SO dan menyimpan snapshot di database.
 - `create_purchase_order` membuat PO dari SO terkonfirmasi, mendukung split dan memakai locking untuk batas kuantitas SO.
 - `create_supplier_invoice` / `void_supplier_invoice` mencatat atau membatalkan draft faktur supplier; nilai berasal dari dokumen sumber.
-- RPC shipment dan trigger invoice berbasis delivered masih merupakan **implementasi legacy** hingga D-09/D-10 ditangani.
+- RPC shipment dan trigger invoice berbasis delivered masih ada pada remote audit; migration pending pada branch ini menghapusnya. Kode aplikasi branch ini tidak lagi mengandalkan shipment.
 - Capture pembayaran/alokasi memiliki RPC server-side dan idempotency. Alokasi operasional tidak otomatis membuat jurnal.
 - Fungsi posting akuntansi hanya boleh digunakan setelah profil, referensi kebijakan, mapping akun, dan periode memenuhi gate database. COA belum disahkan/mapping belum ada pada snapshot audit.
 - Perubahan transaksi harus memakai RPC dan pemeriksaan role. Viewer hanya baca. Jangan mengandalkan sekadar menyembunyikan tombol di UI.
@@ -87,7 +87,7 @@ Temuan lain: perlindungan kata sandi bocor Supabase Auth dinonaktifkan; Performa
 
 ## 8. Route dan batas fitur
 
-Route pada aplikasi saat audit menggambarkan perilaku lama: `/pengiriman-piutang` menggabungkan shipment dan pembayaran; `/invoice-pelanggan` menampilkan draft invoice per shipment delivered. Keduanya belum mencerminkan target D-09/D-10. UI target tidak menampilkan modul Pengiriman dan harus menyediakan invoice manual dari SO, serta route mandiri untuk pembayaran/piutang.
+Pada kode branch ini, route shipment lama sudah dihapus; invoice pelanggan dibuat manual dari SO, dan pembayaran tersedia mandiri di `/pembayaran`. Supabase remote masih memakai schema legacy sampai migration pending diterapkan. Karena itu, invoice baru tidak dapat dibuat melalui RPC SO-based hingga migration tersebut diterapkan.
 
 Belum boleh diklaim selesai: Faktur Pajak/e-Faktur dari aplikasi, penghitungan pajak tervalidasi otomatis, nota kredit lengkap, seluruh pengakuan HPP aktual, laporan GL/laba-rugi/neraca penuh, rekonsiliasi bank, audit log umum, workflow lampiran, backup/restore teruji, dan UAT role-based end-to-end. Lihat `ACCOUNTING_POLICY_AND_CUTOVER.md` untuk prasyarat cutover.
 
