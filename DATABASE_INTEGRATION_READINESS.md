@@ -66,7 +66,7 @@ Shipment berstatus `shipped` bukan berarti delivered. Catatan pembayaran `record
 
 ## 4. D-09 dan D-10: keputusan target vs kondisi saat ini
 
-**D-09 — tidak ada pencatatan pengiriman.** Objek legacy saat audit masih ada: tabel `shipments`, `shipment_lines`, `shipment_status_events`, RPC terkait, dan trigger auto-invoice pada status delivered. Penghapusan membutuhkan perubahan schema/kode yang direncanakan, ditinjau, dan diterapkan secara terkontrol sesuai D-11.
+**D-09 — tidak ada pencatatan pengiriman.** Snapshot remote audit masih menemukan tabel `shipments`, `shipment_lines`, `shipment_status_events`, RPC terkait, dan trigger auto-invoice pada status delivered. Instruksi pemilik adalah menghapus langsung objek dan record shipment legacy; backup bukan prasyarat D-09. Migration tersedia pada branch ini tetapi belum diterapkan ke Supabase remote.
 
 **D-10 — invoice manual berbasis SO.** Schema saat ini masih mengharuskan `sales_invoices.shipment_id` dan RPC/trigger invoice draft bergantung pada shipment. Targetnya invoice manual dari SO terkonfirmasi, tanpa `shipment_id`, dapat parsial, dengan batas jumlah/nilai kumulatif yang dijaga database. Perubahan ini belum diimplementasikan hanya dengan menyetujui dokumen.
 
