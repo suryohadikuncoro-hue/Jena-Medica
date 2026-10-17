@@ -11,7 +11,7 @@ const groups = [
   { title: "Akuntansi", items: [["Jurnal Umum", "/keuangan#jurnal"], ["Buku Besar", "/keuangan#buku-besar"], ["Biaya Operasional", "/keuangan#biaya"], ["Tutup Buku", "/keuangan#tutup-buku"]] },
   { title: "Laporan", items: [["Laba Rugi", "/keuangan#laba-rugi"], ["Neraca", "/keuangan#neraca"], ["Arus Kas", "/keuangan#arus-kas"], ["Piutang & Hutang", "/pembayaran"], ["PPN", "/keuangan#ppn"]] },
 ] as const;
-const quickActions = [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pengiriman-piutang#payments"], ["Biaya Operasional", "/keuangan#biaya"]] as const;
+const quickActions = [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pembayaran"], ["Biaya Operasional", "/keuangan#biaya"]] as const;
 const searchItems = [...groups.flatMap(g => g.items.map(([label, href]) => ({ label, href }))), { label: "Dashboard", href: "/dashboard" }];
 
 export function AppShell({ children }: { children: ReactNode }) {
