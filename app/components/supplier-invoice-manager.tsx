@@ -193,7 +193,7 @@ export function SupplierInvoiceManager() {
     finally { setVoidSaving(false); }
   }
 
-  return <main className="page-wrap">
+  return <main className="page-wrap supplier-invoice-screen">
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div><p className="page-kicker">Transaksi · Pembelian drop-ship</p><h1 className="page-title">Faktur Supplier</h1><p className="page-description">Catat faktur supplier dan pasangkan item ke PO. Posting AP tersedia setelah COA, kebijakan, dan periode disetujui di Keuangan.</p></div>
       <div className="flex gap-2"><Link className="tab-button" href="/operasional">← Order Supplier</Link><Link className="tab-button" href="/keuangan#jurnal">Posting AP →</Link>{canWrite && <button className="primary-button" type="button" onClick={() => { setShowForm(value => !value); setError(""); setNotice(""); setDraft(blankInvoice(localDate())); }}>＋ Catat Faktur</button>}</div>
@@ -209,7 +209,7 @@ export function SupplierInvoiceManager() {
       <Kpi label="Total terlapor · belum posting" value={money(reportedAmount)} />
     </section>
 
-    {showForm && <form className="card card-pad mb-5" onSubmit={submitInvoice}>
+    {showForm && <form className="card card-pad mb-5 supplier-invoice-form" onSubmit={submitInvoice}>
       <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">Draft faktur dari dokumen supplier</h2><p className="mt-1 text-xs text-[var(--muted)]">Satu faktur dapat memuat PO-line dari beberapa PO milik supplier yang sama. Angka harus disalin dan diverifikasi terhadap dokumen sumber.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs text-[var(--muted)] sm:col-span-2">Supplier<select required className="field mt-1" value={draft.supplier_id} onChange={event => chooseSupplier(event.target.value)}><option value="">Pilih supplier…</option>{suppliers.filter(item => item.tax_status !== undefined).map(item => <option key={item.id} value={item.id}>{item.code} · {item.legal_name}</option>)}</select></label>
@@ -261,7 +261,7 @@ export function SupplierInvoiceManager() {
 
     {voiding && <section className="card card-pad mb-5 border border-amber-300"><h2 className="font-semibold">Batalkan draft {voiding.supplier_invoice_number}</h2><p className="mt-1 text-sm text-[var(--muted)]">Data tidak dihapus. Nomor faktur dapat dicatat ulang setelah draft ini dibatalkan.</p><label className="mt-3 block text-xs text-[var(--muted)]">Alasan pembatalan<textarea className="field mt-1 min-h-20 py-2" value={voidReason} onChange={event => setVoidReason(event.target.value)} minLength={3} maxLength={500} required /></label><div className="mt-3 flex justify-end gap-2"><button type="button" className="tab-button" onClick={() => { setVoiding(null); setVoidReason(""); }}>Kembali</button><button type="button" className="primary-button" disabled={voidSaving || voidReason.trim().length < 3} onClick={() => void voidInvoice()}>{voidSaving ? "Membatalkan…" : "Batalkan draft"}</button></div></section>}
 
-    <section className="card card-pad">
+    <section className="card card-pad supplier-invoice-list">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Daftar faktur supplier</h2><p className="text-xs text-[var(--muted)]">Semua nominal adalah nilai yang dilaporkan supplier; draft/void belum membentuk hutang atau arus kas.</p></div><div className="flex gap-2"><input className="field sm:w-64" value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari nomor, supplier, PO" aria-label="Cari faktur supplier"/><button className="tab-button" onClick={() => void load()} disabled={loading}>Muat ulang</button></div></div>
       <div className="hidden overflow-x-auto md:block"><table className="w-full"><thead><tr className="table-head">{["Nomor faktur", "Supplier", "Tanggal / tempo", "Baris / PO", "Total dilaporkan", "Status", "Aksi"].map(item => <th key={item} className="py-3 pr-3">{item}</th>)}</tr></thead><tbody>{visibleInvoices.map(invoice => {
         const lines = linesByInvoice.get(invoice.id) ?? [];

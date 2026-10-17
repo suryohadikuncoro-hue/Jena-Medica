@@ -63,6 +63,7 @@ export function CustomerInvoiceManager() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | InvoiceStatus>("all");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
   const [salesOrderId, setSalesOrderId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
@@ -132,13 +133,14 @@ export function CustomerInvoiceManager() {
   const availableOrderLines = selectedOrderLines.map(line => ({
     ...line, available: Math.max(0, Number(line.quantity) - (invoicedQuantityByOrderLine.get(line.id) ?? 0)),
   })).filter(line => line.available > 0);
-  const selectedInvoice = invoices.find(row => row.id === selectedInvoiceId) ?? invoices[0] ?? null;
-  const selectedInvoiceOrder = selectedInvoice ? salesOrderById.get(selectedInvoice.sales_order_id) : undefined;
-  const selectedInvoiceLines = selectedInvoice ? linesByInvoice.get(selectedInvoice.id) ?? [] : [];
   const visibleInvoices = invoices.filter(row => {
+    if (statusFilter !== "all" && row.status !== statusFilter) return false;
     const order = salesOrderById.get(row.sales_order_id);
     return `${row.invoice_number} ${row.customer_name_snapshot} ${order?.order_number ?? ""}`.toLowerCase().includes(query.toLowerCase());
   });
+  const selectedInvoice = visibleInvoices.find(row => row.id === selectedInvoiceId) ?? visibleInvoices[0] ?? null;
+  const selectedInvoiceOrder = selectedInvoice ? salesOrderById.get(selectedInvoice.sales_order_id) : undefined;
+  const selectedInvoiceLines = selectedInvoice ? linesByInvoice.get(selectedInvoice.id) ?? [] : [];
   const invoiceNumber = selectedInvoice ? (selectedInvoice.issued_invoice_number ?? selectedInvoice.invoice_number) : "";
   const phone = whatsappNumber(selectedInvoice?.customer_phone_snapshot ?? null);
   const whatsappText = selectedInvoice
@@ -196,7 +198,7 @@ export function CustomerInvoiceManager() {
     finally { setVoidSaving(false); }
   }
 
-  return <main className="page-wrap">
+  return <main className="page-wrap customer-invoice-screen">
     <div className="screen-only mb-6 flex flex-wrap items-end justify-between gap-4">
       <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Buat invoice secara manual dari SO terkonfirmasi. Satu SO dapat ditagih beberapa kali sesuai sisa kuantitasnya.</p></div>
       {canWrite && <button className="primary-button" type="button" onClick={openCreateForm}>＋ Buat invoice</button>}
@@ -205,7 +207,7 @@ export function CustomerInvoiceManager() {
     {error && <p role="alert" className="screen-only mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
     {notice && <p role="status" className="screen-only mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
 
-    {showForm && <form className="screen-only card card-pad mb-5" onSubmit={createInvoice}>
+    {showForm && <form className="screen-only card card-pad mb-5 customer-invoice-form" onSubmit={createInvoice}>
       <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">Buat invoice dari pesanan</h2><p className="mt-1 text-xs text-[var(--muted)]">Pilih SO terkonfirmasi dan isi kuantitas yang ditagihkan pada setiap baris. Database menjaga batas kumulatif invoice terhadap SO.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-xs text-[var(--muted)]">Pesanan terkonfirmasi<select required className="field mt-1" value={salesOrderId} onChange={event => { setSalesOrderId(event.target.value); setLineQuantities({}); }}><option value="">Pilih SO…</option>{salesOrders.filter(row => row.status === "confirmed").map(row => <option key={row.id} value={row.id}>{row.order_number} · {customerById.get(row.customer_id)?.legal_name ?? "Pelanggan"} · {money(row.total_amount)}</option>)}</select></label><label className="text-xs text-[var(--muted)]">Tanggal invoice<input required className="field mt-1" type="date" value={invoiceDate} onChange={event => setInvoiceDate(event.target.value)} /></label></div>
       {selectedOrder && <div className="mt-3 rounded-xl bg-[var(--surface-muted)] p-3 text-sm"><strong>{customerById.get(selectedOrder.customer_id)?.legal_name ?? "Pelanggan"}</strong><p className="mt-1 text-xs text-[var(--muted)]">SO {selectedOrder.order_number} · tanggal {displayDate(selectedOrder.order_date)} · jatuh tempo SO {displayDate(selectedOrder.due_date)}</p><p className="mt-1 text-xs text-[var(--muted)]">{selectedOrder.ship_to_address_snapshot}</p></div>}
@@ -221,8 +223,9 @@ export function CustomerInvoiceManager() {
     </section>
 
     <section className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
-      <div className="screen-only card card-pad">
+      <div className="screen-only card card-pad customer-invoice-list">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Daftar invoice</h2><p className="mt-1 text-xs text-[var(--muted)]">{invoices.length} dokumen dari Supabase</p></div><input className="field max-w-52" value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari invoice/SO…" aria-label="Cari invoice pelanggan" /></div>
+        <div className="customer-invoice-tabs" role="group" aria-label="Filter status invoice">{([{ value: "all", label: "Semua" }, { value: "draft", label: "Draft" }, { value: "issued", label: "Terbit" }, { value: "void", label: "Batal" }] as const).map(tab => <button key={tab.value} type="button" aria-pressed={statusFilter === tab.value} onClick={() => setStatusFilter(tab.value)}>{tab.label}</button>)}</div>
         {loading ? <p className="py-6 text-sm text-[var(--muted)]">Memuat invoice…</p> : visibleInvoices.length === 0 ? <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center"><p className="font-medium">Belum ada invoice</p><p className="mt-1 text-xs text-[var(--muted)]">Pilih SO terkonfirmasi untuk membuat draft invoice.</p></div> : <div className="space-y-2">{visibleInvoices.map(row => {
           const order = salesOrderById.get(row.sales_order_id);
           return <button key={row.id} type="button" onClick={() => { setSelectedInvoiceId(row.id); setShowVoidForm(false); }} className={`w-full rounded-xl border p-3 text-left ${selectedInvoice?.id === row.id ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)] hover:bg-[var(--surface-muted)]"}`}>

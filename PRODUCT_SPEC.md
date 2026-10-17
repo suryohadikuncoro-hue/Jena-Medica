@@ -44,6 +44,7 @@ Status berikut adalah **kondisi teramati per 17 Oktober 2026**, bukan target des
 
 | Area | Kondisi remote yang teramati | Target/pekerjaan tersisa |
 |---|---|---|
+| Dashboard operasional | Tidak dinilai terpisah pada audit remote 17 Oktober 2026 | Branch `feat/dashboard-mockup` menambahkan filter 7 hari/30 hari/tahun berjalan, ringkasan status dan antrean tindakan berbasis hitungan server Supabase, serta grafik aktivitas 7 hari. Deployment dan verifikasi data aktual masih diperlukan. |
 | Master pelanggan/supplier/barang dan harga khusus | Ada dan aktif | UAT role-based dan verifikasi data sebelum cutover |
 | SO/PO split dan capture faktur supplier | Ada | Validasi akhir sesuai D-01/D-02 dan alur invoice supplier |
 | Shipment/pengiriman | Remote audit: tabel dan RPC ada, 1 record `shipped`; kode branch ini telah menghapus UI shipment | Migration D-09 menghapus tabel/record/RPC/trigger; belum diterapkan remote |

@@ -84,7 +84,7 @@ Centang dan hapus bila selesai. Urutan = prioritas.
 - [ ] U-02 Ganti navigasi hash menjadi rute sungguhan; tab memperbarui URL
 - [ ] U-03 Dropdown menu: tutup saat klik luar/ganti rute/Escape, satu terbuka, penanda grup aktif, `aria-current`
 - [ ] U-04 Kontras `--muted-soft` dan ukuran teks 10 sampai 11px
-- [ ] U-05 Dashboard: daftar tindakan, filter periode, pipeline status; hitungan dari server (bukan batas 2000 baris)
+- [x] U-05 Dashboard: daftar tindakan, filter periode, pipeline status; hitungan dari server (bukan batas 2000 baris)
 - [ ] U-06 Faktur suplier: hitung usulan, selisih langsung, modal efektif per item (D-01, D-02)
 - [ ] U-07 Invoice cetak: pisahkan catatan internal, tambah rekening/instruksi pembayaran; tautan PDF di WhatsApp
 - [ ] U-08 Definisikan gaya input tunggal (`field-input`/`field-label` tidak terdefinisi di Pembayaran dan Buku Besar)
