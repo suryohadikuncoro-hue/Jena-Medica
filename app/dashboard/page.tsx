@@ -42,10 +42,10 @@ export default function DashboardPage() {
         setSnapshot({
           customers: customers.count ?? 0,
           openOrders: (orders.data ?? []).filter(row => row.status === "confirmed").length,
-          inTransit: (shipments.data ?? []).filter(row => row.status === "shipped" || row.status === "issue").length,
-          deliveredUninvoiced: delivered.filter(row => !invoiced.has(row.id)).length,
           supplierDrafts: (supplierInvoices.data ?? []).filter(row => row.status === "draft").length,
           salesDrafts: (invoices.data ?? []).filter(row => row.status === "draft").length,
+          customerPayments: (customerPayments.data ?? []).filter(row => row.status === "recorded").length,
+          supplierPayments: (supplierPayments.data ?? []).filter(row => row.status === "recorded").length,
         });
       } catch (cause) { if (live) setMessage(cause instanceof Error ? cause.message : "Ringkasan tidak dapat dimuat dari Supabase."); }
       finally { if (live) setLoading(false); }
