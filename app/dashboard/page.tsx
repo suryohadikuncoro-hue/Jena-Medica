@@ -29,16 +29,15 @@ export default function DashboardPage() {
         if (!session) { setMessage("Masuk untuk melihat ringkasan transaksi yang aktual."); setLoading(false); return; }
         const role = String(session.user.app_metadata?.business_role ?? "");
         if (!["owner", "admin", "viewer"].includes(role)) { setMessage("Akun ini belum memiliki role bisnis yang valid."); setLoading(false); return; }
-        const [customers, orders, shipments, invoices, supplierInvoices] = await Promise.all([
+        const [customers, orders, invoices, supplierInvoices, customerPayments, supplierPayments] = await Promise.all([
           supabase.from("customers").select("id", { count: "exact", head: true }).eq("is_active", true),
           supabase.from("sales_orders").select("status").limit(2000),
-          supabase.from("shipments").select("id,status").limit(2000),
-          supabase.from("sales_invoices").select("shipment_id,status").limit(2000),
+          supabase.from("sales_invoices").select("status").limit(2000),
           supabase.from("supplier_invoices").select("id,status").limit(2000),
+          supabase.from("customer_payments").select("id,status").limit(2000),
+          supabase.from("supplier_payments").select("id,status").limit(2000),
         ]);
-        for (const result of [customers, orders, shipments, invoices, supplierInvoices]) if (result.error) throw result.error;
-        const delivered = (shipments.data ?? []).filter(row => row.status === "delivered");
-        const invoiced = new Set((invoices.data ?? []).filter(row => row.status !== "void").map(row => row.shipment_id));
+        for (const result of [customers, orders, invoices, supplierInvoices, customerPayments, supplierPayments]) if (result.error) throw result.error;
         if (!live) return;
         setSnapshot({
           customers: customers.count ?? 0,
