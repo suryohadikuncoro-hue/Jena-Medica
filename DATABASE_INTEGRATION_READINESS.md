@@ -1,69 +1,101 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
-**Diperbarui:** 17 Oktober 2026
-**Status:** SO/PO, harga khusus, shipment langsung, capture draft Faktur Supplier, serta capture/alokasi pembayaran aktif; framework posting AP/AR/jurnal berada pada PR baru dan belum diterapkan remote.
-**Project:** `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status aktif.
+**Diperbarui:** 17 Oktober 2026  
+**Mode audit:** baca-saja; tidak menjalankan DDL, migration, pembersihan data, atau deployment.  
+**Project:** `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status Supabase `ACTIVE_HEALTHY`, region `ap-northeast-1`.  
+**Aturan:** keputusan produk yang disahkan ada di `PRODUCT_SPEC.md`; dokumen ini merekam kondisi remote teramati dan tidak menggantikan keputusan tersebut.
 
-## Migration dan skema
+## 1. Status skema dan migration remote
 
-Delapan migration tercatat pada Supabase (termasuk auto-invoice dan pembayaran):
+Audit mencatat **9 migration remote** dan **27 tabel publik**. Semua tabel publik memiliki RLS aktif dan policy; audit juga tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`.
 
-- `20261016125928_dropship_suppliers_orders` — master, SO/PO, snapshot, RPC dan RLS.
-- `20261016130021_dropship_foreign_key_indexes` — indeks foreign key.
-- `20261016132858_customer_product_price_history` — daftar harga pelanggan/barang, histori masa berlaku dan referensi harga pada baris SO.
-- `20261016134859_supplier_invoice_capture` — header/baris draft faktur supplier, relasi ke PO-line, RLS, RPC create/void.
-- `20261016171001_dropship_shipment_tracking` — metadata status PO, shipment/header/baris/timeline, validasi kuantitas, RLS dan RPC.
-- `20261016175827_customer_invoices_per_delivery_drafts` — invoice draft per shipment delivered, snapshot dan RPC create/void.
-- `20261016205342_auto_customer_invoice_on_delivery_drafts` — trigger invoice draft atomik pada shipment delivered.
-- `20261017130000_payments_and_invoice_allocations` — capture receipt/disbursement, uang muka, alokasi guarded; sudah diterapkan remote.
-- `20261017140000_accounting_posting_framework` — COA, approval/policy gate, periods, journal ledger, posting AP/AR, jurnal pembayaran/alokasi; PR ini, belum diterapkan remote.
+Versi migration berikut adalah versi yang tercatat di Supabase. Arsip di `supabase/migrations/` harus memakai version ID yang sama dengan remote (D-11).
 
-Dua puluh satu tabel public terverifikasi memakai RLS. Project memiliki data TEST terbatas (1 customer, 1 supplier, 1 product, SO/PO dan harga); faktur supplier, shipment, invoice pelanggan dan payment sources tidak berisi transaksi TEST yang dipakai untuk pembukuan. Tidak ada saldo persediaan. Accounting migration pada PR belum terpasang remote.
+| Version ID | Migration | Status remote |
+|---|---|---|
+| `20261016125928` | `dropship_suppliers_orders` | Tercatat |
+| `20261016130021` | `dropship_foreign_key_indexes` | Tercatat |
+| `20261016132858` | `customer_product_price_history` | Tercatat |
+| `20261016134859` | `supplier_invoice_capture` | Tercatat |
+| `20261016171001` | `dropship_shipment_tracking` | Tercatat; objeknya akan dihapus sesuai D-09 |
+| `20261016175827` | `customer_invoices_per_delivery_drafts` | Tercatat; desain invoice lama akan diubah sesuai D-10 |
+| `20261016205342` | `auto_customer_invoice_on_delivery_drafts` | Tercatat; trigger lama ditargetkan dihapus sesuai D-09/D-10 |
+| `20261016215508` | `payments_and_invoice_allocations` | Tercatat |
+| `20261016225329` | `accounting_posting_framework` | Tercatat; framework ada tetapi gate posting belum dibuka |
 
-Satu project diasumsikan untuk satu perusahaan; skema belum memiliki isolasi multi-tenant.
+PR dokumentasi memperbaiki nama arsip migration yang sebelumnya tidak sama dengan version ID remote. Isi SQL pada migration yang sudah diterapkan tidak berubah. Perubahan nama arsip bukan migration database dan tidak mengubah schema/data remote.
 
-## Alur yang sudah tersambung
+## 2. Snapshot data remote yang diaudit
 
-- Login Supabase Auth dan master Pelanggan/Supplier/Barang.
-- Harga khusus per customer-product: histori append-only, IDR, rentang efektif tidak tumpang tindih. Penetapan harga hanya melalui RPC Owner/Admin.
-- SO mengambil harga yang berlaku pada tanggal pesanan sebagai default; server menyimpan snapshot dan memvalidasi referensi harga.
-- PO draft dari SO terkonfirmasi dengan batas kuantitas split dan locking di database.
-- PO dapat ditandai terkirim lalu dikonfirmasi supplier melalui RPC. Ini pencatatan manual setelah komunikasi di luar aplikasi; tidak ada email/dokumen yang dikirim otomatis.
-- Draft Faktur Supplier disimpan atomik bersama baris yang tertaut ke PO-line supplier yang sama. Angka dokumen disimpan apa adanya, bukan dihitung ulang atau diposting.
-- Shipment langsung dari supplier ke alamat snapshot pelanggan, dengan kuantitas parsial per PO-line. Database mengunci PO/line dan mencegah jumlah kumulatif draft/kiriman non-batal melebihi kuantitas PO. Pembatalan draft melepas alokasi.
-- Status shipment dan timeline: draft → dikirim → diterima; kendala dapat dicatat dan dilanjutkan. Pembatalan hanya untuk draft dan selalu menyimpan alasan. Tidak ada komunikasi otomatis dengan supplier/kurir.
-- Shipment tidak menghasilkan penerimaan, AP/HPP, invoice resmi, pajak, atau jurnal. Auto-draft invoice dan capture/alokasi pembayaran tercatat remote; accounting migration berikutnya masih pada PR.
+Hitungan berikut berasal dari query baca-saja pada 17 Oktober 2026:
 
-## Keamanan
+| Tabel/kelompok | Jumlah / status yang teramati |
+|---|---|
+| `customers` | 1 |
+| `suppliers` | 1 |
+| `products` | 2 |
+| `customer_product_prices` | 1 |
+| `sales_orders` | 2; keduanya `confirmed` |
+| `sales_order_lines` | 2 |
+| `purchase_orders` | 1; status `sent` |
+| `shipments` | 1; status `shipped` |
+| `sales_invoices` | 0 |
+| `supplier_invoices` | 0 |
+| `customer_payments` | 1; status `recorded` |
+| `supplier_payments` | 1; status `recorded` |
+| `chart_of_accounts` | 10 akun |
+| `accounting_posting_profile` | 1; status `draft` |
+| `accounting_account_mappings` | 0 |
+| `accounting_periods` | 0 |
+| `journal_entries` / `journal_lines` | 0 / 0 |
 
-- Aplikasi hanya memakai publishable key; tidak ada service-role key di client.
-- RLS memeriksa JWT `app_metadata.business_role` (`owner`, `admin`, `viewer`); tanpa role akses tertutup.
-- Owner/Admin dapat mengubah master, membuat/mengonfirmasi SO, membuat PO, mencatat status PO, membuat/transisi shipment, serta membuat/void draft faktur. Viewer hanya membaca. Tabel shipment dan faktur tidak memberi hak tulis langsung.
-- RPC `set_purchase_order_status`, `create_shipment`, dan `transition_shipment` membatasi transisi dan memeriksa role server-side. Fungsi `create_shipment` memverifikasi PO status, pemetaan PO-line dan batas kuantitas dengan locking.
-- Security Advisor menampilkan 9 warning `authenticated_security_definer_function_executable` untuk RPC yang memang dipanggil sesi authenticated; setiap fungsi memeriksa role, menggunakan `search_path` kosong, dan execute dibatasi ke `authenticated`. Tinjau lagi sebelum produksi. [Panduan advisor Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
-- Performance Advisor tidak melaporkan foreign key tanpa indeks. Temuan `unused index` masih wajar karena tabel baru kosong.
+Shipment berstatus `shipped` bukan berarti delivered. Catatan pembayaran `recorded` adalah pencatatan operasional, bukan otomatis jurnal kas/bank atau bukti pelunasan invoice.
 
-## Batasan & prasyarat pengujian
+**Penting sebelum D-09 atau pembersihan data:** keputusan produk menargetkan penghapusan modul pengiriman. Namun audit menemukan 1 shipment dan masing-masing 1 record pembayaran pelanggan/supplier. Status apakah record tersebut data uji atau transaksi yang harus dipertahankan **belum terkonfirmasi**. Jangan menghapus tabel/baris atau melakukan cascade sebelum pemilik mengonfirmasi klasifikasi, backup, dan rencana retensi.
 
-Project memiliki akun/data TEST, tetapi uji end-to-end UI dengan sesi ber-role Owner/Admin/Viewer tetap harus dijalankan.
+## 3. Status kebijakan dan posting
 
-Belum tersedia pengiriman dokumen PO, integrasi kurir/resi, upload bukti/surat jalan, edit draft shipment, atau posting/jurnal pada Production. Capture receipt/disbursement dan RPC alokasi guarded sudah terpasang; karena remote masih draft-only, dana tetap uang muka dan belum ada alokasi eligible. PR accounting menyediakan kerangka posting AP/AR dan jurnal dengan gate persetujuan, tetapi belum diterapkan remote.
+- Migration kerangka akuntansi sudah tercatat remote; tidak benar menyebutnya “belum diterapkan”.
+- Profile posting masih `draft`; referensi kebijakan/approval belum lengkap.
+- COA memiliki 10 baris, tetapi perlu disahkan dan dipetakan.
+- Mapping akun: 0; periode: 0; jurnal: 0.
+- Tidak ada invoice pelanggan atau faktur supplier pada snapshot audit; karena itu belum ada invoice/AP yang diposting atau jurnal dari transaksi.
+- Kerangka hanya mendukung jalur yang implementasinya ada dalam migration saat ini. Pengakuan HPP, nota kredit, laporan buku besar lengkap, audit log umum, dan workflow lain yang disebut kebijakan tidak boleh diklaim selesai bila belum dibangun.
 
-Faktur supplier belum membatasi kuantitas kumulatif terhadap PO dan tidak menguji aritmetika subtotal/PPN/total. Keputusan pajak/PPN, alokasi diskon/ongkos, COA serta titik pengakuan pendapatan/HPP/AP harus ditetapkan oleh pemilik/akuntan sebelum approval gate dibuka. Status shipment tidak memicu posting atau invoice resmi.
+## 4. D-09 dan D-10: keputusan target vs kondisi saat ini
 
-## Validasi
+**D-09 — tidak ada pencatatan pengiriman.** Objek legacy saat audit masih ada: tabel `shipments`, `shipment_lines`, `shipment_status_events`, RPC terkait, dan trigger auto-invoice pada status delivered. Penghapusan membutuhkan perubahan schema/kode yang direncanakan, ditinjau, dan diterapkan secara terkontrol sesuai D-11.
 
-- `npm run lint`: lulus untuk framework accounting dan UI invoice.
-- `npm run build`: lulus; route `/keuangan`, `/invoice-pelanggan`, dan `/operasional` terkompilasi.
-- `npm run build:worker`: lulus pada OpenNext/Cloudflare.
-- Framework accounting diparse dan diterapkan pada PostgreSQL 16 lokal disposable; end-to-end test memeriksa gate approval, issue AR, posting AP/clearing, payment journals, alokasi parsial dua arah, idempotensi, balanced journal, close guard, dan reversal allocation. Tidak menyentuh Supabase Production.
-- `list_migrations`: delapan migration tercatat remote, termasuk auto-invoice versi `20261016205342` dan payment capture/alokasi `20261017130000`; accounting migration pada PR ini belum diterapkan.
-- `list_tables`: 21 tabel public terverifikasi memakai RLS; data TEST ada di master, harga, SO dan PO; invoice/shipment/payment transaction tetap tanpa data pembukuan.
-- Security Advisor sebelumnya melaporkan 9 warning terkait SECURITY DEFINER yang dapat dipanggil authenticated pada skema sebelum accounting; role checks tetap berada di database. Jalankan ulang Advisor setelah accounting migration diterapkan.
-- Uji alur UI Owner/Admin/Viewer end-to-end pada project non-production belum dilakukan.
+**D-10 — invoice manual berbasis SO.** Schema saat ini masih mengharuskan `sales_invoices.shipment_id` dan RPC/trigger invoice draft bergantung pada shipment. Targetnya invoice manual dari SO terkonfirmasi, tanpa `shipment_id`, dapat parsial, dengan batas jumlah/nilai kumulatif yang dijaga database. Perubahan ini belum diimplementasikan hanya dengan menyetujui dokumen.
 
-Fitur ini bukan persetujuan cutover atau pembukuan produksi. Accounting migration pada PR ini tetap harus diterapkan terpisah setelah merge; approval oleh Owner/Admin dan pembukaan periode juga diperlukan sebelum posting. Langkah berikutnya: keputusan akuntan/pajak, HPP dan revenue final, laporan, audit umum, lampiran, backup/restore, serta UAT role-based/concurrency/reversal pada environment non-production.
+Jangan mengembangkan alur shipment baru. Jangan mulai perubahan schema sebelum data terdampak diinventarisasi dan backup dapat dipulihkan. PR ini tidak menjalankan perubahan database.
 
-## Pembaruan PR invoice otomatis
+## 5. Keamanan dan Advisor
 
-Migration lokal `20261017120000_auto_customer_invoice_on_delivery_drafts.sql` memasang trigger setelah status shipment berubah menjadi `delivered`. Remote mencatat migration ini sebagai versi `20261016205342`; trigger membuat draft dalam transaksi yang sama. Shipment parsial masing-masing menghasilkan draft sendiri. Shipment delivered yang sudah ada tidak di-backfill. UAT/concurrency test terhadap database non-production belum dilakukan.
+Audit baca-saja mendapatkan:
+
+- Semua 27 tabel publik: RLS aktif, masing-masing memiliki policy, dan tidak ditemukan grant `SELECT` tabel publik untuk `anon`.
+- 33 public `SECURITY DEFINER` function yang dapat dieksekusi oleh `authenticated` dilaporkan Advisor. Pemeriksaan SQL menemukan role check Owner/Admin di fungsi-fungsi tersebut dan tidak menemukan public RPC yang executable oleh `anon`. Warning Advisor tetap perlu ditinjau, bukan diabaikan otomatis.
+- Supabase Auth: perlindungan kata sandi bocor dinonaktifkan; perlu review dan keputusan administrator.
+- Performance Advisor: 20 foreign key tanpa indeks dan 46 indeks unused. Jangan membuat indeks atau menghapus indeks secara otomatis berdasarkan warning saja; verifikasi beban query dan dampaknya dahulu.
+
+Ini snapshot advisor saat audit; jalankan ulang setelah perubahan schema dan sebelum cutover.
+
+## 6. Aplikasi, validasi, dan batas verifikasi
+
+- Aplikasi memakai Supabase JS di browser dengan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Service-role key tidak boleh dipakai di browser.
+- Route `/pengiriman-piutang` dan `/invoice-pelanggan` saat ini merepresentasikan implementasi lama berbasis shipment dan harus disesuaikan setelah D-09/D-10 diterapkan.
+- Framework akuntansi memiliki approval gate, tetapi UAT UI end-to-end ber-role Owner/Admin/Viewer terhadap alur baru belum dilakukan.
+- Audit ini tidak memverifikasi domain Cloudflare live, tidak menjalankan build, dan tidak menguji transaksi UI.
+- Jangan mengklaim lint/build lulus dari dokumen historis tanpa menjalankannya kembali pada commit yang sedang direview.
+
+## 7. Prasyarat sebelum cutover
+
+1. Backup database lengkap dan uji pemulihan pada project terisolasi.
+2. Klasifikasikan seluruh record yang akan dipertahankan/dibersihkan, khususnya shipment dan pembayaran yang terlihat pada snapshot.
+3. Terapkan D-09/D-10 melalui perubahan schema/kode yang ditinjau, lalu verifikasi ulang RLS, policy, constraint, RPC, trigger, jumlah baris, dan route.
+4. Isi profil pajak dari dokumen perusahaan, review klasifikasi barang, setujui/mapping COA, referensi kebijakan, dan periode.
+5. UAT bisnis dan role-based, rekonsiliasi, pengujian idempotensi/concurrency/reversal, dan review Advisor.
+6. Catat persetujuan Owner dan hasil pemeriksaan sebelum mengaktifkan posting atau menganggap sistem siap operasional.
+
+Tidak ada perubahan database, data, atau deployment dilakukan dalam audit maupun PR dokumentasi ini.
