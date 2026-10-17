@@ -106,7 +106,7 @@ Version ID yang benar pada remote (arsip lokal harus memakai prefix yang sama):
 8. 20261016215508_payments_and_invoice_allocations
 9. 20261016225329_accounting_posting_framework
 
-D-11 menetapkan arsip migration harus sesuai history remote. Rename file pada PR ini hanya menyamakan version ID; isi SQL tidak berubah, dan tidak ada migration/DDL dijalankan ke database.
+D-11 menetapkan arsip migration harus sesuai history remote. Empat rename arsip yang sudah diterapkan ke remote hanya menyamakan version ID dan mempertahankan isi SQL. Branch ini juga menambahkan migration baru `20261017150000_d10_invoice_from_sales_order_drop_shipment_module.sql`; migration tersebut **belum diterapkan remote**. Saat migration itu diterapkan, ia menghapus objek/record shipment legacy, melepas relasi shipment dari invoice, dan mengganti RPC agar invoice dibuat manual dari SO. Pembayaran pelanggan/supplier dipertahankan.
 
 ## 8. Kondisi security/performance yang perlu ditinjau
 
