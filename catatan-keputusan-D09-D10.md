@@ -38,12 +38,11 @@ Keputusan:
 
 ## Urutan implementasi yang harus diikuti
 
-1. Inventarisasi shipment, SO/PO, invoice, dan payment terkait; Owner mengklasifikasikan data yang harus dipertahankan atau dibersihkan.
-2. Buat backup dan uji restore pada lingkungan terisolasi.
-3. Siapkan PR teknis D-09/D-10 berisi perubahan UI, RPC, trigger, relasi/constraint, dan schema target.
-4. Review dampak perubahan; rencanakan pemulihan dan dokumentasikan langkah penerapan terkontrol.
-5. Terapkan perubahan hanya setelah disetujui, lalu verifikasi RLS/policy, constraint, RPC/trigger, jumlah record, alur invoice parsial, dan role Owner/Admin/Viewer.
-6. Perbarui status fitur dan hasil UAT di dokumentasi. Keputusan yang telah disetujui tidak boleh ditulis sebagai implementasi selesai sampai diverifikasi.
+1. Terapkan D-09: hapus objek dan seluruh record shipment legacy beserta RPC/trigger terkait sesuai keputusan pemilik; tidak perlu menunggu backup sebagai prasyarat.
+2. Terapkan D-10 dalam perubahan yang terkoordinasi: invoice manual dari SO terkonfirmasi, kuantitas/nilai kumulatif dibatasi database, tanpa shipment_id.
+3. Pertahankan tabel dan record pembayaran pelanggan/supplier.
+4. Verifikasi RLS/policy, constraint, RPC/trigger, jumlah record yang tersisa, alur invoice parsial, dan role Owner/Admin/Viewer.
+5. Perbarui status fitur dan hasil UAT di dokumentasi setelah implementasi benar-benar diverifikasi.
 
 ## Dokumen terkait
 
