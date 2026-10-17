@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AuthStatus } from "@/app/components/auth-status";
 
 const groups = [
-  { title: "Transaksi", items: [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Pengiriman", "/pengiriman-piutang"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pengiriman-piutang#payments"]] },
+  { title: "Transaksi", items: [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pembayaran"]] },
   { title: "Master Data", items: [["Pelanggan", "/master-data#customers"], ["Supplier", "/master-data#suppliers"], ["Barang", "/master-data#products"], ["Harga per Pelanggan", "/master-data#prices"], ["Daftar Akun", "/master-data#accounts"]] },
   { title: "Akuntansi", items: [["Jurnal Umum", "/keuangan#jurnal"], ["Buku Besar", "/keuangan#buku-besar"], ["Biaya Operasional", "/keuangan#biaya"], ["Tutup Buku", "/keuangan#tutup-buku"]] },
   { title: "Laporan", items: [["Laba Rugi", "/keuangan#laba-rugi"], ["Neraca", "/keuangan#neraca"], ["Arus Kas", "/keuangan#arus-kas"], ["Piutang & Hutang", "/pengiriman-piutang#payments"], ["PPN", "/keuangan#ppn"]] },
