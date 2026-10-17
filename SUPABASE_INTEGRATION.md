@@ -30,7 +30,7 @@ Satu project mewakili satu perusahaan/data bisnis; belum ada isolasi multi-tenan
 | `customer_payments` / `supplier_payments` | Capture receipt/disbursement IDR dengan idempotency key; saldo yang belum diposting diperlakukan sebagai uang muka. |
 | `customer_payment_allocation_batches` / `customer_payment_allocations`; `supplier_payment_allocation_batches` / `supplier_payment_allocations` | Alokasi parsial/multi-invoice yang hanya dapat diarahkan ke invoice pelanggan `issued` atau faktur supplier `posted`; jurnalnya diposting terpisah. |
 
-Delapan migration telah tercatat pada Supabase. Dua puluh satu tabel public ber-RLS tersedia, dengan data TEST terbatas pada master, harga, SO dan PO; tabel shipment, invoice pelanggan, dan faktur supplier masih kosong. SO/PO/invoice menggunakan IDR; nilai SO dan invoice draft belum menghitung PPN. Capture pembayaran dan batch alokasi sudah termigrasi, namun belum ada dokumen eligible untuk alokasi.
+Sembilan migration telah tercatat pada Supabase. Dua puluh tujuh tabel public ber-RLS tersedia, dengan data TEST terbatas pada master, harga, SO dan PO; tabel shipment, invoice pelanggan, dan faktur supplier masih kosong. SO/PO/invoice menggunakan IDR; nilai SO dan invoice draft belum menghitung PPN. Capture pembayaran dan batch alokasi sudah termigrasi, namun belum ada dokumen eligible untuk alokasi.
 
 ## Aturan harga dan faktur
 
@@ -47,14 +47,14 @@ Faktur supplier tahap ini hanya **capture dokumen**: nilai disimpan seperti terc
 - `set_purchase_order_status` hanya mengizinkan `draft → sent → acknowledged`, menyimpan pengguna/waktu untuk kedua transisi. UI meminta Owner/Admin mencatat tindakan yang dilakukan di luar aplikasi; RPC tidak mengirim email/dokumen.
 - `create_supplier_invoice` memeriksa Owner/Admin, supplier aktif, nomor faktur unik per supplier, tanggal, nilai nonnegatif dan setiap PO-line berasal dari supplier yang sama serta PO tidak dibatalkan. Header/baris dibuat atomik dalam status draft. `void_supplier_invoice` hanya membatalkan draft dan wajib menyimpan alasan, pengguna serta waktu.
 - `create_shipment` hanya menerima PO status `sent` atau `acknowledged`, menyalin relasi dan alamat tujuan dari PO, menyimpan line snapshot, dan mengizinkan kuantitas parsial. RPC mengunci PO dan setiap PO-line, memeriksa alokasi shipment non-batal terdahulu, serta menolak jumlah di atas kuantitas PO. Draft shipment ikut mencadangkan kuantitas; pembatalan draft melepaskannya.
-- `transition_shipment` hanya mengizinkan transisi `draft → shipped/cancelled`, `shipped → delivered/issue`, atau `issue → shipped/delivered`. Alasan wajib untuk kendala/pembatalan, tanggal diperiksa, dan setiap perubahan mencatat event. Hanya draft dapat dibatalkan; tidak ada reversal setelah delivered. Setelah migration `20261017120000_auto_customer_invoice_on_delivery_drafts` diterapkan, transisi ke `delivered` membuat satu draft invoice secara atomik. Setiap shipment parsial menghasilkan draft tersendiri. Jika pembuatan draft gagal, transisi delivery ikut rollback.
+- `transition_shipment` hanya mengizinkan transisi `draft → shipped/cancelled`, `shipped → delivered/issue`, atau `issue → shipped/delivered`. Alasan wajib untuk kendala/pembatalan, tanggal diperiksa, dan setiap perubahan mencatat event. Hanya draft dapat dibatalkan; tidak ada reversal setelah delivered. Setelah migration `20261016205342_auto_customer_invoice_on_delivery_drafts` diterapkan, transisi ke `delivered` membuat satu draft invoice secara atomik. Setiap shipment parsial menghasilkan draft tersendiri. Jika pembuatan draft gagal, transisi delivery ikut rollback.
 - `create_customer_invoice` hanya menerima shipment berstatus `delivered`, membuat satu draft per shipment, menyalin customer/alamat serta harga dari snapshot transaksi, membatasi kuantitas invoice kumulatif terhadap SO-line, dan mengalokasikan nilai bersih SO secara proporsional untuk kiriman parsial dengan sisa pembulatan pada kiriman terakhir. `void_customer_invoice` membatalkan draft dengan alasan, pengguna, dan waktu; draft void tetap tersimpan dan shipment dapat dibuatkan draft baru.
-- Invoice pelanggan remote masih berstatus `draft`/`void`; nomor diawali `DRAFT-INV`. Migration otomatis tidak backfill shipment delivered lama; draft yang hilang dapat dibuat manual oleh Owner/Admin. Capture receipt/disbursement dan RPC alokasi sudah diterapkan; alokasi guarded hanya menerima dokumen `issued`/`posted`, sehingga saldo pembayaran saat ini tetap uang muka. Framework accounting berikutnya berada di PR dan belum diterapkan. Posting AP hanya lolos jika header subtotal/diskon/biaya/PPN merekonsiliasi: mode `exclusive` menambah pajak pada subtotal neto, sedangkan mode `inclusive` menganggap nilai pajak telah tercakup subtotal. Belum ada e-Faktur, kalkulasi pajak otomatis, HPP, laporan GL atau audit umum. UI memakai dialog cetak browser untuk Save as PDF; WhatsApp hanya membuka teks siap kirim dan tidak melampirkan PDF.
+- Invoice pelanggan remote masih berstatus `draft`/`void`; nomor diawali `DRAFT-INV`. Migration otomatis tidak backfill shipment delivered lama; draft yang hilang dapat dibuat manual oleh Owner/Admin. Capture receipt/disbursement dan RPC alokasi sudah diterapkan; alokasi guarded hanya menerima dokumen `issued`/`posted`, sehingga saldo pembayaran saat ini tetap uang muka. Framework accounting sudah tercatat di database, tetapi posting masih terkunci oleh konfigurasi approval. Posting AP hanya lolos jika header subtotal/diskon/biaya/PPN merekonsiliasi: mode `exclusive` menambah pajak pada subtotal neto, sedangkan mode `inclusive` menganggap nilai pajak telah tercakup subtotal. Belum ada e-Faktur, kalkulasi pajak otomatis, HPP, laporan GL atau audit umum. UI memakai dialog cetak browser untuk Save as PDF; WhatsApp hanya membuka teks siap kirim dan tidak melampirkan PDF.
 - Shipment mencatat direct delivery supplier-ke-pelanggan; shipment sendiri tidak membuat penerimaan, saldo, AP/HPP, invoice, pajak, pembayaran atau jurnal.
 - Faktur supplier tidak membatasi kuantitas kumulatif terhadap PO dan tidak menguji aritmetika subtotal/PPN/total; selisih masih harus diperiksa manual.
 - RPC `SECURITY DEFINER` memakai `SET search_path = ''`, memeriksa role di database dan mencabut execute dari `PUBLIC`/`anon`; execute diberikan hanya ke `authenticated`.
 - Security Advisor dapat menandai RPC `SECURITY DEFINER` yang memang dipanggil sesi authenticated; tiap RPC memeriksa role server-side. Tinjau ulang laporan advisor setelah migration baru dan sebelum rilis. [Panduan advisor Supabase](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
-- Performance Advisor sebelumnya tidak melaporkan FK tanpa indeks. `Unused index` dapat terjadi pada tabel baru/bervolume rendah; tinjau ulang setelah penggunaan bertambah.
+- Performance Advisor saat audit menandai 20 foreign key tanpa indeks pendukung dan 46 indeks belum terpakai. Dengan volume data yang masih kecil, tinjau index FK yang diperlukan; jangan menghapus index hanya berdasarkan peringatan `unused`.
 
 RLS memakai `app_metadata`, bukan `user_metadata`. Rujukan: [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
@@ -65,12 +65,12 @@ RLS memakai `app_metadata`, bukan `user_metadata`. Rujukan: [Supabase Row Level 
 - `supabase/migrations/20261016132858_customer_product_price_history.sql`
 - `supabase/migrations/20261016134859_supplier_invoice_capture.sql`
 - `supabase/migrations/20261016171001_dropship_shipment_tracking.sql`
-- `supabase/migrations/20261017100000_customer_invoices_per_delivery_drafts.sql`
-- `supabase/migrations/20261017120000_auto_customer_invoice_on_delivery_drafts.sql` (**file lokal; remote mencatat auto-invoice pada versi `20261016205342`**)
-- `supabase/migrations/20261017130000_payments_and_invoice_allocations.sql` (**sudah diterapkan ke Supabase**)
-- `supabase/migrations/20261017140000_accounting_posting_framework.sql` (**framework AP/AR dan jurnal; PR ini, belum diterapkan ke Supabase**)
+- `supabase/migrations/20261016175827_customer_invoices_per_delivery_drafts.sql`
+- `supabase/migrations/20261016205342_auto_customer_invoice_on_delivery_drafts.sql` (**file lokal; remote mencatat auto-invoice pada versi `20261016205342`**)
+- `supabase/migrations/20261016215508_payments_and_invoice_allocations.sql` (**sudah diterapkan ke Supabase**)
+- `supabase/migrations/20261016225329_accounting_posting_framework.sql` (**framework AP/AR dan jurnal; sudah tercatat remote, posting tetap terkunci oleh approval gate**)
 
-Delapan migration tercatat pada remote; auto-invoice diterapkan dengan versi remote `20261016205342`, dan capture/alokasi pembayaran tercatat dari migration `20261017130000`. Migration accounting `20261017140000` pada PR ini **belum diterapkan ke Supabase**. Setelah merge, penerapan migration tetap merupakan langkah terpisah. Framework ini menambahkan posting AP/AR/jurnal dengan approval gate; tidak menghitung tarif pajak, tidak menerbitkan e-Faktur dan belum melakukan reklasifikasi HPP.
+Sembilan migration tercatat pada remote. Empat nama file migration terakhir sekarang diselaraskan dengan version identifier remote untuk mencegah `supabase db push` mencoba menjalankannya ulang. Migration `20261016225329_accounting_posting_framework` sudah tercatat remote; tidak perlu menerapkannya ulang. Framework ini menambahkan posting AP/AR/jurnal dengan approval gate; tidak menghitung tarif pajak, tidak menerbitkan e-Faktur dan belum melakukan reklasifikasi HPP.
 
 ## UI yang terhubung
 
@@ -85,7 +85,7 @@ Delapan migration tercatat pada remote; auto-invoice diterapkan dengan versi rem
 
 ## Belum termasuk
 
-E-Faktur, perhitungan/pemetaan PPN otomatis, reklasifikasi clearing ke HPP, laporan buku besar/laba-rugi/neraca lengkap, rekonsiliasi bank, audit log umum, lampiran, backup/restore, serta UAT role-based. Framework posting AP/AR dan jurnal ada di PR accounting dan masih terkunci sampai konfigurasi disetujui serta periode dibuka. Jangan gunakan invoice draft atau status shipment sebagai pencatatan keuangan final.
+E-Faktur, perhitungan/pemetaan PPN otomatis, reklasifikasi clearing ke HPP, laporan buku besar/laba-rugi/neraca lengkap, rekonsiliasi bank, audit log umum, lampiran, backup/restore, serta UAT role-based. Framework posting AP/AR dan jurnal sudah terpasang remote, tetapi masih terkunci sampai mapping akun, kebijakan/approval disetujui dan periode dibuka. Jangan gunakan invoice draft atau status shipment sebagai pencatatan keuangan final.
 
 ## Catatan dependensi
 

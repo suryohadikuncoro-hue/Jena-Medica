@@ -1,6 +1,6 @@
 # Kebijakan Akuntansi & Gerbang Cutover — Jena Medical Center
 
-**Status:** kerangka posting AP/AR dan jurnal ada pada migration PR `20261017140000`; belum diterapkan ke Supabase dan belum disetujui pemilik/akuntan.
+**Status (audit read-only 17 Oktober 2026):** migration `20261016225329_accounting_posting_framework` sudah tercatat pada Supabase. Posting masih terkunci dan belum disetujui pemilik/akuntan: profile berstatus `draft`, 10 akun COA sudah ada, mapping akun kosong, periode belum dibuat, dan belum ada jurnal.
 **Model:** drop-ship langsung dari supplier ke pelanggan; sistem tidak mengelola persediaan fisik.
 
 ## Aturan yang sudah dapat dipakai
@@ -47,11 +47,11 @@ Pemetaan COA, pembebanan biaya kirim, diskon header, retur, HPP aktual, uang muk
 
 Keputusan tahap pembayaran: Owner/Admin dapat mencatat penerimaan pelanggan dan pengeluaran supplier yang telah terverifikasi, dengan referensi dan metode; sisa dana tetap sebagai uang muka yang belum teralokasi. RPC server-side memvalidasi role, nominal positif IDR, dan audit reason untuk void. Idempotency key juga mencegah retry capture menggandakan transaksi. Batch alokasi parsial/multi-invoice hanya menerima invoice pelanggan `issued` atau faktur supplier `posted`; transaksi mengunci pembayaran dan dokumen, memeriksa saldo, dan idempotency key mencegah duplikasi request. Void pembayaran membatalkan batch aktifnya dengan alasan/audit yang tercatat. Viewer hanya baca. Uang muka supplier tidak boleh dialokasikan ke faktur draft.
 
-Migration pembayaran `20261017130000` sudah diterapkan: receipt/disbursement dapat dicatat dan alokasi dibatasi ke dokumen posted. Karena remote masih draft-only, belum ada invoice/AP eligible untuk alokasi. Accounting migration `20261017140000` di PR ini menambahkan posting dan jurnal, namun belum diterapkan remote; pembayaran belum memengaruhi ledger sampai jurnal diposting setelah approval.
+Migration pembayaran `20261016215508` sudah tercatat remote: receipt/disbursement dapat dicatat dan alokasi dibatasi ke dokumen posted. Belum ada invoice/faktur eligible untuk alokasi. Accounting migration `20261016225329` juga sudah tercatat remote; pembayaran belum memengaruhi ledger sampai jurnal diposting setelah konfigurasi dan approval disahkan.
 
 ## Jurnal, tutup buku, audit dan dokumen
 
-- COA harus disetujui pemilik/akuntan; framework mencatat nomor jurnal, sumber, periode, pengguna, tanggal, IDR, total debit/kredit dan status posted/reversed. Tidak ada akun/mapping default. Approval gate membutuhkan 10 mapping, empat referensi kebijakan, referensi persetujuan, dan periode terbuka.
+- COA harus disetujui pemilik/akuntan; framework mencatat nomor jurnal, sumber, periode, pengguna, tanggal, IDR, total debit/kredit dan status posted/reversed. Migration tidak men-seed COA/mapping; audit remote menemukan 10 akun COA sudah ada tetapi belum direview, sementara mapping masih kosong. Approval gate membutuhkan 10 mapping, empat referensi kebijakan, referensi persetujuan, dan periode terbuka.
 - Jurnal posted tidak diedit/dihapus. Posting payment/allocations hanya memiliki jalur reversal terhubung ke transaksi sumber; invoice reversal/credit note belum didukung. Tutup periode dasar menolak source draft dan jurnal tidak seimbang, tetapi **tidak menggantikan** rekonsiliasi bank, AR/AP, pajak, trial balance, jurnal manual dan pemeriksaan cutoff. Reopen workflow belum tersedia.
 - Audit umum mencatat actor, timestamp, aksi, entitas, nilai sebelum/sesudah yang aman, dan alasan. Jangan simpan password, token, nomor kartu, atau rahasia dalam log.
 - Metadata lampiran harus terhubung ke object storage privat, memakai signed URL singkat, MIME/size allowlist, checksum, pemindaian file, retensi dan audit unduh.
@@ -79,4 +79,4 @@ Gunakan project non-production dengan akun Owner, Admin, dan Viewer terpisah ser
 
 ## Status cutover saat ini
 
-Project yang diperiksa didokumentasikan sebagai Production dan berisi data uji pada tabel operasional. Migration pembayaran sudah terpasang, tetapi invoice/AP remote masih draft-only sehingga saldo belum dapat dialokasikan. Accounting migration pada PR ini belum diterapkan. Framework menyediakan issue invoice komersial dan posting AP/AR/jurnal setelah konfigurasi disetujui, tetapi bukan e-Faktur, belum menghitung pajak otomatis, belum mengakui HPP aktual, dan belum menyediakan laporan GL, audit umum, backup/restore atau UAT role-based penuh. Jangan mengoperasikan pembukuan atau cutover sebelum kebijakan dan seluruh UAT disetujui dan dilaksanakan.
+Project yang diperiksa berstatus aktif dan memiliki record operasional terbatas: 1 shipment dan 1 record masing-masing penerimaan pelanggan/pembayaran supplier, sedangkan invoice pelanggan, faktur supplier, mapping, periode, dan jurnal masih kosong. Pastikan record yang ada diklasifikasikan sebagai data uji atau transaksi yang perlu dipertahankan. Accounting migration sudah tercatat remote; framework menyediakan posting AP/AR/jurnal setelah konfigurasi disetujui, tetapi bukan e-Faktur, belum menghitung pajak otomatis, belum mengakui HPP aktual, dan belum menyediakan laporan GL, audit umum, backup/restore atau UAT role-based penuh. Jangan mengoperasikan pembukuan atau cutover sebelum kebijakan dan seluruh UAT disetujui dan dilaksanakan.

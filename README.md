@@ -4,7 +4,7 @@ Aplikasi web B2B untuk Jena Medical Center dengan model **drop-ship**: supplier 
 
 ## Status implementasi
 
-Integrasi Supabase mencakup SO/PO, harga khusus pelanggan, capture draft Faktur Supplier, serta **pengiriman langsung supplier-ke-pelanggan**. Delapan migration telah tercatat pada Supabase; 21 tabel public memakai RLS dan berisi data TEST terbatas.
+Integrasi Supabase mencakup SO/PO, harga khusus pelanggan, capture draft Faktur Supplier, serta **pengiriman langsung supplier-ke-pelanggan**. Sembilan migration tercatat pada Supabase dan 27 tabel public mengaktifkan RLS. Database sudah berisi sejumlah record operasional; status setiap record sebagai data uji atau transaksi yang harus dipertahankan perlu dipastikan sebelum cutover.
 
 Sudah terhubung:
 
@@ -14,7 +14,7 @@ Sudah terhubung:
 - `/master-data#prices` — riwayat harga jual per pelanggan/barang.
 - `/operasional` — baca dan buat PO; kuantitas sumber divalidasi database.
 - `/operasional#invoices` — catat draft faktur supplier dan pasangkan baris faktur ke PO-line supplier yang sama.
-- `/pengiriman-piutang` — buat shipment parsial dan catat penerimaan pelanggan/pembayaran supplier terverifikasi sebagai kas/uang muka. Alokasi hanya menerima invoice pelanggan `issued` atau faktur supplier `posted`; posting status tersebut tersedia dalam framework accounting di PR terpisah.
+- `/pengiriman-piutang` — buat shipment parsial dan catat penerimaan pelanggan/pembayaran supplier terverifikasi sebagai kas/uang muka. Alokasi hanya menerima invoice pelanggan `issued` atau faktur supplier `posted`; workflow posting AP/AR tersedia di database, tetapi tetap terkunci sampai mapping akun, kebijakan dan persetujuan akuntansi diverifikasi.
 
 Saat membuat SO, harga khusus yang berlaku pada tanggal SO otomatis dipilih. Admin dapat mengubah harga secara manual; sumber harga dan flag override disimpan sebagai snapshot pada SO line. Perubahan rate tidak mengubah SO lama.
 
@@ -22,7 +22,7 @@ Status PO dikendalikan manual: Owner/Admin menandai PO telah dikirim setelah men
 
 Shipment mencadangkan kuantitas PO secara atomik dan mendukung pemenuhan parsial. Database mencegah jumlah kumulatif shipment non-batal melebihi kuantitas PO; pembatalan draft melepaskan kuantitas yang dicadangkan. Perubahan status memiliki timeline. Dengan migration invoice otomatis, pencatatan shipment sebagai diterima pelanggan membuat satu draft invoice dalam transaksi yang sama. Tiap kiriman parsial ditagih terpisah saat diterima; shipment tidak membuat invoice resmi, pajak, pembayaran, AP/HPP atau jurnal.
 
-Faktur supplier tetap **capture dokumen**: angka disimpan sebagaimana dokumen sumber—belum dihitung ulang atau diposting. Draft invoice pelanggan belum diterbitkan. Capture pembayaran dan alokasi guarded sudah tersedia di database; framework AP/AR dan jurnal masih dalam PR dan belum diterapkan. Pajak, HPP, laporan keuangan, audit dan rekonsiliasi bank belum siap untuk cutover.
+Faktur supplier tetap **capture dokumen**: angka disimpan sebagaimana dokumen sumber—belum dihitung ulang atau diposting. Draft invoice pelanggan belum diterbitkan. Capture pembayaran dan alokasi guarded sudah tersedia. Framework AP/AR dan jurnal juga sudah tercatat pada Supabase, tetapi posting masih terkunci: posting profile berstatus `draft`, mapping akun belum diisi, periode belum dibuat, dan belum ada jurnal. Pajak, HPP, laporan keuangan, audit dan rekonsiliasi bank belum siap untuk cutover.
 
 ## Supabase dan akses
 
@@ -58,17 +58,17 @@ npm run build:worker
 - `/` — Pesanan Pelanggan (Supabase).
 - `/operasional` — Order Supplier (Supabase); status PO dicatat manual dan tidak mengirim dokumen.
 - `/operasional#invoices` — draft capture Faktur Supplier.
-- `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA berada pada framework accounting PR, belum terpasang remote.
-- `/pengiriman-piutang` — pengiriman langsung dan capture receipt/disbursement (Supabase); alokasi aman ke dokumen posted, menunggu workflow posting AP/AR pada PR accounting.
+- `/master-data` — Pelanggan, Supplier, Barang, dan Harga per Pelanggan (Supabase); COA dan framework accounting sudah tersedia di Supabase; mapping dan persetujuan akuntansi belum diselesaikan.
+- `/pengiriman-piutang` — pengiriman langsung dan capture receipt/disbursement (Supabase); alokasi aman ke dokumen posted, posting AP/AR tetap terkunci sampai kebijakan dan mapping disetujui serta periode dibuka.
 - `/invoice-pelanggan` — satu draft per shipment delivered; draft shipment lama dapat dibuat manual oleh Owner/Admin. Otomatisasi draft aktif; invoice belum resmi atau diposting.
-- `/keuangan` — status dokumen aktual tanpa angka demo; framework COA, posting, jurnal dan tutup periode dasar ada di PR accounting, sementara laporan GL belum tersedia.
+- `/keuangan` — status dokumen aktual tanpa angka demo; framework COA, posting, jurnal dan tutup periode dasar sudah ada di database, tetapi posting masih terkunci dan laporan GL lengkap belum tersedia.
 
 ## Model bisnis dan batas akuntansi
 
 Alur sasaran: Pesanan Pelanggan → PO supplier → Faktur Supplier → Pengiriman langsung supplier-ke-pelanggan → Invoice Pelanggan → Pembayaran → jurnal/laporan. PO dapat dipecah lintas supplier; pengiriman dapat parsial per item. Tidak ada modul gudang, batch, FEFO, expiry, penerimaan, picking, atau persediaan fisik.
 
-Belum siap untuk produksi pembukuan: e-Faktur, klasifikasi pajak tervalidasi, HPP aktual, pengakuan pendapatan final, laporan lengkap, audit umum, lampiran, backup/restore, serta UAT role-based. Capture pembayaran dan alokasi sudah terpasang; migration accounting pada PR belum diterapkan. Pembayaran tetap bukan saldo buku besar sebelum jurnal di-post melalui konfigurasi yang disetujui. Rancangan aturan dan daftar cutover ada di [`ACCOUNTING_POLICY_AND_CUTOVER.md`](ACCOUNTING_POLICY_AND_CUTOVER.md).
+Belum siap untuk produksi pembukuan: e-Faktur, klasifikasi pajak tervalidasi, HPP aktual, pengakuan pendapatan final, laporan lengkap, audit umum, lampiran, backup/restore, serta UAT role-based. Capture pembayaran dan alokasi sudah terpasang; migration accounting sudah tercatat remote, tetapi posting belum aktif sampai konfigurasi dan kebijakan disahkan. Pembayaran tetap bukan saldo buku besar sebelum jurnal di-post melalui konfigurasi yang disetujui. Rancangan aturan dan daftar cutover ada di [`ACCOUNTING_POLICY_AND_CUTOVER.md`](ACCOUNTING_POLICY_AND_CUTOVER.md).
 
 ## Deployment
 
-Konfigurasi Cloudflare Workers/OpenNext tersedia di `wrangler.jsonc` dan `open-next.config.ts`. Deployment memerlukan environment variable publik di environment target dan konfigurasi akun yang sesuai. Jangan commit kredensial.
+Konfigurasi Cloudflare Workers/OpenNext tersedia di `wrangler.jsonc` dan `open-next.config.ts` dengan nama Worker `jena-medica`. Status deployment URL live belum dapat diverifikasi pada audit read-only ini; tidak ada deployment yang dilakukan. Deployment memerlukan environment variable publik di environment target dan konfigurasi akun yang sesuai. Jangan commit kredensial.
