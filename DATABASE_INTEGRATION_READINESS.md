@@ -94,7 +94,7 @@ Ini snapshot advisor saat audit; jalankan ulang setelah perubahan schema dan seb
 ## 7. Prasyarat sebelum cutover
 
 1. Backup database lengkap dan uji pemulihan pada project terisolasi.
-2. Klasifikasikan seluruh record yang akan dipertahankan/dibersihkan, khususnya shipment dan pembayaran yang terlihat pada snapshot.
+2. Terapkan instruksi D-09 dengan menghapus shipment legacy dan record shipment. Pertahankan tabel/record pembayaran. Untuk cutover akuntansi, tetap verifikasi record pembayaran serta transaksi bisnis lain yang perlu dipertahankan.
 3. Terapkan D-09/D-10 melalui perubahan schema/kode yang ditinjau, lalu verifikasi ulang RLS, policy, constraint, RPC, trigger, jumlah baris, dan route.
 4. Isi profil pajak dari dokumen perusahaan, review klasifikasi barang, setujui/mapping COA, referensi kebijakan, dan periode.
 5. UAT bisnis dan role-based, rekonsiliasi, pengujian idempotensi/concurrency/reversal, dan review Advisor.
