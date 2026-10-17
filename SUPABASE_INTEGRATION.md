@@ -48,7 +48,7 @@ Kondisi remote saat audit: objek shipment legacy masih ada, sementara kode pada 
 
 Keputusan final: Owner/Admin membuat invoice secara manual dari SO yang telah dikonfirmasi. Satu SO dapat memiliki beberapa invoice, dengan batas kumulatif kuantitas/nilai di database. Invoice tidak memiliki `shipment_id`; draft tidak mengakui pendapatan. Pendapatan dan piutang timbul saat invoice diterbitkan, sesuai `ACCOUNTING_POLICY_AND_CUTOVER.md`.
 
-Kondisi saat audit: schema `sales_invoices` masih mengharuskan `shipment_id`; RPC dan trigger invoice draft masih bergantung pada shipment. Perubahan ke model invoice berbasis SO belum dilakukan. Dokumen ini tidak mengubah database.
+Snapshot remote saat audit: schema `sales_invoices` masih mengharuskan `shipment_id`; RPC dan trigger invoice draft masih bergantung pada shipment. Branch PR ini menyediakan migration untuk mengubah model ke invoice manual berbasis SO, tetapi migration belum diterapkan ke Supabase remote.
 
 ### D-11 — arsip migration
 
