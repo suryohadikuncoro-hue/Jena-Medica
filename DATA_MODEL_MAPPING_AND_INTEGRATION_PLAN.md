@@ -1,36 +1,42 @@
-# Pemetaan Model Data dan Blueprint Integrasi — Drop-Ship
+# Pemetaan Model Data dan Rencana Integrasi — Jena Medical Center
 
-**Diperbarui:** 17 Oktober 2026
-**Status:** SO/PO, harga khusus pelanggan, capture-only Faktur Supplier, shipment, draft invoice per shipment, serta capture/alokasi pembayaran telah diterapkan bertahap. Framework issue/posting AP/AR dan jurnal berada pada migration PR `20261017140000`; keputusan kebijakan dan UAT produksi masih tertunda.
-**Menggantikan:** blueprint lama yang mengasumsikan penerimaan stok, batch, FEFO, dan inventaris. Semua asumsi stok fisik dinyatakan tidak berlaku.
+**Diperbarui:** 17 Oktober 2026  
+**Tujuan dokumen:** membedakan model target yang disetujui dari skema legacy yang masih terpasang.  
+**Sumber keputusan:** PRODUCT_SPEC.md (D-01–D-11), kebijakan rinci di ACCOUNTING_POLICY_AND_CUTOVER.md.  
+**Snapshot remote:** gunakan DATABASE_INTEGRATION_READINESS.md dan SUPABASE_INTEGRATION.md; jangan memakai uraian fase historis di bagian 10 sebagai status terkini.
 
-## 1. Prinsip domain
+## 1. Prinsip domain target
 
-Jena tidak memiliki gudang atau stok fisik pada sistem. Supplier mengirim langsung kepada pelanggan. Sumber referensi transaksi adalah customer, supplier, product, dan harga jual efektif per pasangan customer-product. Snapshot harga, satuan, diskon, pajak, alamat kirim, serta nilai biaya supplier disimpan pada dokumen agar perubahan master tidak mengubah histori.
+Jena adalah distributor barang medis B2B dengan model drop-ship. Supplier mengirim langsung ke pelanggan di luar sistem. Aplikasi tidak mencatat pengiriman, penerimaan barang, stok gudang, batch, atau FEFO.
 
-Alur utama: `sales_order` → satu atau beberapa `purchase_order` → `supplier_invoice` → `shipment` langsung supplier ke pelanggan → `sales_invoice` → customer/supplier payments dan allocations → `journal_entry`/`journal_line`.
+Alur target:
 
-## 2. Pemetaan layar ke entitas
+sales_order → satu atau beberapa purchase_order → supplier_invoice → satu atau beberapa sales_invoice yang dibuat manual dari SO → customer/supplier payments dan allocations → journal_entries / journal_lines → laporan.
 
-| Layar | Entitas konseptual | Aturan inti |
+Invoice pelanggan tidak mempunyai relasi ke shipment. Satu SO dapat memiliki beberapa invoice; database harus menjaga bahwa total kuantitas dan nilai dari invoice aktif tidak melampaui SO. Harga transaksi mengambil snapshot pada SO. Draft invoice tidak menghasilkan pendapatan/piutang; pendapatan dan piutang timbul saat invoice diterbitkan sesuai kebijakan akuntansi.
+
+**Perbedaan penting:** schema remote pada snapshot audit masih berisi modul shipment dan relasi invoice ke shipment. Itu adalah implementasi legacy, bukan model target, dan belum dihapus oleh PR dokumentasi.
+
+## 2. Pemetaan layar ke entitas target
+
+| Layar target | Entitas utama | Aturan inti |
 |---|---|---|
-| Dashboard | Read model dari SO/PO/invoice/shipment/payment/journal | Tidak menyimpan transaksi; tunjukkan periode, waktu pembaruan, serta label aktual/demo. Tidak ada KPI stok. |
-| Pelanggan | `customer`, `customer_contact`, `customer_product_price` | Kode unik, alamat kirim, kontak/WA, NPWP opsional, termin, limit kredit, status aktif. |
-| Supplier | `supplier`, `supplier_contact`, `supplier_bank_account` | Status PKP, termin, rekening, status aktif. |
-| Barang | `product`, `product_unit`, `product_category` | Kode dan satuan; tidak ada saldo stok atau batch. |
-| Harga per Pelanggan | `customer_product_price` dan versi/masa berlaku | Harga jual efektif per pelanggan+barang, riwayat; snapshot di SO. Modal supplier terakhir hanya pembanding. |
-| Pesanan Pelanggan | `sales_order`, `sales_order_line` | Harga default dari harga khusus, override dapat dicatat, snapshot harga/discount/tax; belum otomatis pendapatan/cash. |
-| Order ke Supplier | `purchase_order`, `purchase_order_line` | Dibuat dari SO; split supplier didukung. Setiap line melacak SO-line. Alamat ship-to pelanggan wajib. PO tidak menambah stok. |
-| Faktur Supplier | `supplier_invoice`, `supplier_invoice_line` | Nomor unik per supplier; faktur aktual ditautkan ke PO/line. PPN masukan terpisah; diskon faktur dialokasikan secara eksplisit ke modal aktual. |
-| Pengiriman | `shipment`, `shipment_line`, `shipment_status_event` | Supplier adalah pengirim, customer tujuan; lacak tanggal, resi/surat jalan, line dan kuantitas. Tidak ada penerimaan gudang. |
-| Invoice Pelanggan | `sales_invoice`, `sales_invoice_line`, `tax_transaction_line` | Nomor berurutan, harga snapshot, diskon, PPN keluaran; sumber kuantitas/trigger invoice perlu dipastikan. PDF/WA adalah attachment/link/delivery event terpisah. |
-| Pembayaran | `customer_payment`, `customer_payment_allocation`, `supplier_payment`, `supplier_payment_allocation` | Pembayaran parsial dan multi-alokasi; metode, tanggal, rekening, bukti. Uang muka/kelebihan dicatat sebagai kredit terpisah, bukan memaksa alokasi. |
-| Akuntansi | `chart_of_accounts`, `accounting_account_mappings`, `accounting_posting_profile`, `journal_entries`, `journal_lines`, `accounting_periods` | Framework tersedia dalam PR: approval gate, COA/mapping manual, jurnal balance dan period close dasar; audit umum, laporan, dan reopen belum lengkap. |
-| Audit & dokumen | `audit_event`, `attachment`, `attachment_link`, `idempotency_key`, `document_sequence` | Aksi sensitif dapat ditelusuri; rahasia tidak disimpan pada audit. |
+| Dashboard | Read model SO/PO/invoice/payment/journal | KPI keuangan hanya dari jurnal yang sudah dibukukan; data operasional diberi label |
+| Pelanggan | customers, kontak dan harga pelanggan | Identitas, termin, limit kredit opsional, status aktif |
+| Supplier | suppliers | Identitas, kontak, status pajak/termin dan rekening bila dibutuhkan |
+| Barang | products | Kode/satuan; bukan saldo stok/batch |
+| Harga per pelanggan | customer_product_prices | Histori harga efektif dan snapshot pada baris SO |
+| Pesanan pelanggan | sales_orders, sales_order_lines | Harga snapshot, diskon, quantity dan override yang terlacak |
+| Order supplier | purchase_orders, purchase_order_lines | Bisa split supplier; setiap baris melacak SO-line; tidak menambah stok |
+| Faktur supplier | supplier_invoices, supplier_invoice_lines | Capture angka faktur asli, relasi PO-line, hitung usulan dan rekonsiliasi sesuai D-01 |
+| Invoice pelanggan | sales_invoices, sales_invoice_lines | Dibuat manual dari SO terkonfirmasi; boleh parsial; tanpa shipment_id; kuantitas/nilai kumulatif dibatasi SO |
+| Pembayaran | customer_payments, supplier_payments dan tabel allocation | Capture gerakan dana, uang muka, alokasi parsial/multi-invoice dengan locking/idempotency |
+| Akuntansi | chart_of_accounts, accounting_posting_profile, accounting_account_mappings, accounting_periods, journal_entries, journal_lines | Approval gate, jurnal seimbang dan periode terbuka; konfigurasi wajib sebelum posting |
+| Audit/dokumen | audit event, attachment, document sequence | Implementasi hanya dianggap aktif setelah schema, access control, storage, dan retensi terverifikasi |
 
-## 3. ERD konseptual
+## 3. ERD konseptual target
 
-```mermaid
+~~~mermaid
 erDiagram
   CUSTOMER ||--o{ CUSTOMER_PRODUCT_PRICE : priced
   PRODUCT ||--o{ CUSTOMER_PRODUCT_PRICE : priced
@@ -43,11 +49,6 @@ erDiagram
   SUPPLIER ||--o{ SUPPLIER_INVOICE : issues
   SUPPLIER_INVOICE ||--|{ SUPPLIER_INVOICE_LINE : contains
   PURCHASE_ORDER_LINE ||--o{ SUPPLIER_INVOICE_LINE : matched_to
-  SALES_ORDER_LINE ||--o{ SUPPLIER_INVOICE_LINE : cost_reference
-  SUPPLIER ||--o{ SHIPMENT : dispatches
-  CUSTOMER ||--o{ SHIPMENT : receives
-  SHIPMENT ||--|{ SHIPMENT_LINE : contains
-  PURCHASE_ORDER_LINE ||--o{ SHIPMENT_LINE : fulfills
   SALES_ORDER ||--o{ SALES_INVOICE : billed_by
   SALES_INVOICE ||--|{ SALES_INVOICE_LINE : contains
   SALES_ORDER_LINE ||--o{ SALES_INVOICE_LINE : billed_from
@@ -57,109 +58,72 @@ erDiagram
   SUPPLIER_INVOICE ||--o{ SUPPLIER_PAYMENT_ALLOCATION : settled
   JOURNAL_ENTRY ||--|{ JOURNAL_LINE : has
   ACCOUNT ||--o{ JOURNAL_LINE : account
-```
+~~~
 
-Diagram ini konseptual. Pengiriman dan invoice parsial/multi-supplier perlu line-level foreign keys serta batas unik/quantity agregat agar tidak mengirim atau menagih dua kali. Pilihan pemodelan tax, account dan journal harus diuji terhadap aturan bisnis yang disepakati.
+ERD ini menggambarkan model target. Nama tabel/fungsi aktual harus diperiksa dari schema Supabase sebelum menulis perubahan. Tidak boleh sekadar menghapus shipment_id tanpa memeriksa constraint, RPC, trigger, foreign key, route, dan data terkait.
 
-## 4. Aturan konsistensi dan keamanan yang harus dirancang
+## 4. Aturan integritas data target
 
-- Unique document numbers: SO/PO/sales invoice/payment berurutan; supplier invoice unik per supplier.
-- Snapshot: sales price, supplier cost, unit, discount, tax rate, destination dan due term tidak berubah setelah transaksi diposting.
-- Split PO: PO line menjaga referensi ke satu sales order line; kuantitas gabungan PO/shipment tidak melampaui jumlah SO tanpa override tercatat.
-- Direct delivery: shipment wajib supplier dan alamat pelanggan; tidak menulis tabel stok.
-- Invoice: untuk fase draft, satu invoice dibuat per shipment yang tercatat delivered; pengiriman parsial dapat ditagih bertahap. Database mengunci SO-line, mencegah kuantitas invoice agregat melampaui SO, dan membagi nilai bersih pro-rata dengan sisa pembulatan pada kiriman terakhir. Kebijakan penerbitan resmi, pajak, dan posting tetap perlu ditinjau.
-- Payments: alokasi total <= payment available dan <= invoice outstanding; dukung banyak invoice dan cicilan dengan proteksi concurrency.
-- Journal: validasi debit=kredit; posting satu transaksi atomik dan idempotent; periode tutup tidak dapat dimutasi biasa.
-- Auth: server-side role checks dan RLS untuk Owner/Admin/Viewer; UI-only hiding tidak memadai.
-- Audit: rekam user/time/action/old-new/reason bagi perubahan sensitif; dokumen final dibatalkan dengan reversal/void yang terlacak.
+- Nomor dokumen harus unik dan dihasilkan dengan cara aman terhadap request bersamaan.
+- Snapshot harga, produk, satuan dan nilai transaksi tidak boleh berubah bila master berubah.
+- PO dapat dipecah antar supplier, tetapi kuantitas gabungan PO-line terkait tidak boleh melewati kuantitas SO kecuali ada aturan override eksplisit yang disetujui.
+- Invoice pelanggan dibuat manual dari SO terkonfirmasi; per-barang dan nilai kumulatif invoice aktif tidak boleh melampaui SO. Setiap invoice menautkan SO-line, bukan shipment-line.
+- Faktur supplier adalah capture angka sesuai dokumen sumber. Selisih dan perlakuan pajak mengikuti ACCOUNTING_POLICY_AND_CUTOVER.md; tidak menebak pajak dari status supplier.
+- Alokasi pembayaran tidak boleh melebihi sisa dana atau saldo invoice. Gunakan locking dan idempotency.
+- Posting jurnal harus debit=kredit, atomik, idempotent, terhubung ke sumber, dan hanya pada periode terbuka. Jurnal yang sudah dibukukan tidak diubah/hapus.
+- RLS dan role check server-side harus tetap berlaku pada semua tabel/RPC; menyembunyikan tombol di UI bukan kontrol otorisasi.
 
-## 5. Keputusan akuntansi dan pajak yang masih terbuka
+## 5. Aturan akuntansi target
 
-1. Status PKP, profil pajak, jenis transaksi kena pajak, tarif efektif dan aturan rounding perlu diverifikasi.
-2. Tentukan kapan AP dan modal aktual dicatat jika supplier invoice diterima sebelum shipment.
-3. Tentukan titik pengakuan pendapatan dan HPP pada transaksi direct delivery: pengiriman supplier, bukti pelanggan menerima, atau aturan lain.
-4. Keputusan fase draft: invoice per shipment delivered, termasuk pengiriman parsial. Tentukan kebijakan pajak dan pengakuan sebelum invoice resmi atau jurnal dibuka.
-5. Tetapkan perlakuan diskon total, ongkos kirim, supplier credit/retur, selisih kuantitas, uang muka, PPN masukan/keluaran dan jurnal reversal.
-6. COA awal ada dalam dokumen Fase 0; pemetaan final harus ditinjau pemilik/akuntan.
+Detail formula dan contoh jurnal berada di ACCOUNTING_POLICY_AND_CUTOVER.md; ringkasannya:
 
-## 6. Urutan integrasi yang diusulkan
+- AP supplier diakui melalui posting faktur supplier yang lolos rekonsiliasi dan gate.
+- Clearing supplier tidak sama dengan stok gudang. Reklasifikasi ke HPP mengikuti kebijakan modal efektif dan saat penerbitan invoice.
+- Pendapatan/piutang diakui ketika invoice pelanggan diterbitkan, bukan ketika SO dikonfirmasi atau draft dibuat.
+- Pembayaran awal yang belum dialokasikan tetap uang muka; receipt/disbursement operasional tidak otomatis menghasilkan jurnal.
+- Retur/koreksi invoice terbit memerlukan nota kredit atau dokumen koreksi yang terhubung. Jangan mengubah jurnal lama secara langsung.
+- Dashboard tidak boleh menampilkan KPI laba/kas/piutang sebagai angka buku besar bila sumbernya hanya dokumen operasional.
 
-1. Review domain, aturan pajak, pengakuan dan COA; konfirmasi target Supabase sebagai dev/test atau produksi.
-2. Buat migrasi awal hanya setelah desain fisik, role/RLS, backup/rollback dan approval migrasi siap.
-3. Implementasi autentikasi/otorisasi dan master customer, supplier, product, price history serta account.
-4. Implementasi SO dan PO supplier split, validasi batas kuantitas, alamat tujuan dan nomor dokumen.
-5. Capture faktur supplier dari dokumen sumber telah dimulai; lanjutkan validasi pajak/PPN, alokasi diskon ke modal aktual, AP dan pembayaran setelah kebijakan disepakati.
-6. Shipment langsung dan draft invoice per shipment delivered sudah diimplementasikan. Lanjutkan penerbitan resmi, pajak, customer payment allocation, dan posting setelah aturan hukum/akuntansi disepakati.
-7. Implementasi posting jurnal dan laporan berbasis ledger; audit, close period, ekspor dan dashboard.
-8. Uji end-to-end cash/credit, split supplier, partial ship/invoice/payment, margin negatif, pajak, reversal, role, backup/restore.
+## 6. Snapshot schema dan data remote (17 Oktober 2026)
 
-## 7. Status lingkungan database
+Project Jena Medical Center (sjiezdyxylwvqessyvml) berstatus aktif. Audit baca-saja mengonfirmasi 9 migration remote dan 27 tabel publik, semuanya memakai RLS dan memiliki policy.
 
-Per 17 Oktober 2026, Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`) berstatus aktif. Delapan migration telah diterapkan untuk SO/PO, harga khusus pelanggan, capture Faktur Supplier, shipment, invoice draft otomatis, dan capture/alokasi pembayaran; 21 tabel memakai RLS. Dataset TEST Production mencakup master TEST, harga, satu SO confirmed, dan satu PO draft; tabel invoice tetap kosong sampai ada shipment delivered. Pajak dan akuntansi tetap memerlukan keputusan sebelum posting.
+Record yang teramati: 1 customer, 1 supplier, 2 produk, 1 harga khusus, 2 SO confirmed, 2 baris SO, 1 PO sent, 1 shipment shipped, 1 customer payment recorded, 1 supplier payment recorded, 10 akun COA, profile posting draft, 0 account mapping, 0 periode, 0 jurnal, 0 invoice pelanggan, dan 0 faktur supplier.
 
+**Tindakan wajib sebelum D-09:** konfirmasi apakah shipment dan pembayaran itu data uji atau harus dipertahankan. Backup dan pemulihan harus diuji sebelum menghapus tabel/relasi atau membersihkan data. Jangan melakukan penghapusan cascade berdasarkan asumsi.
 
-## 8. Status implementasi fase pertama (16 Oktober 2026)
+## 7. Migration remote
 
-Blueprint tahap awal diterapkan pada Supabase project `Jena Medical Center` melalui migration `20261016125928_dropship_suppliers_orders` dan `20261016130021_dropship_foreign_key_indexes`. Tabel fisik: `customers`, `suppliers`, `products`, `sales_orders`, `sales_order_lines`, `purchase_orders`, dan `purchase_order_lines`. Seluruh tabel memakai RLS dan masih kosong; tidak ada data contoh atau tabel persediaan.
+Version ID yang benar pada remote (arsip lokal harus memakai prefix yang sama):
 
-Alur UI yang telah tersambung: login Supabase Auth, master Pelanggan/Supplier/Barang, pembuatan dan konfirmasi SO, serta pembuatan draft PO supplier dari SO terkonfirmasi. Rincian kebijakan role, RPC, advisor dan environment ada di `SUPABASE_INTEGRATION.md`.
+1. 20261016125928_dropship_suppliers_orders
+2. 20261016130021_dropship_foreign_key_indexes
+3. 20261016132858_customer_product_price_history
+4. 20261016134859_supplier_invoice_capture
+5. 20261016171001_dropship_shipment_tracking — legacy, akan dihapus mengikuti D-09.
+6. 20261016175827_customer_invoices_per_delivery_drafts — legacy, akan diubah mengikuti D-10.
+7. 20261016205342_auto_customer_invoice_on_delivery_drafts — legacy, akan dihapus mengikuti D-09/D-10.
+8. 20261016215508_payments_and_invoice_allocations
+9. 20261016225329_accounting_posting_framework
 
-**Batas fase ini:** mata uang IDR; SO belum menghitung PPN/jurnal; Faktur Supplier hanya capture raw values dan belum mengakui AP/HPP atau pembayaran. Shipment, sales invoice, pembayaran, audit dan lampiran belum dibuat. Jangan menganggap blueprint seluruh siklus akuntansi telah selesai.
+D-11 menetapkan arsip migration harus sesuai history remote. Rename file pada PR ini hanya menyamakan version ID; isi SQL tidak berubah, dan tidak ada migration/DDL dijalankan ke database.
 
-## 9. Langkah berikutnya
+## 8. Kondisi security/performance yang perlu ditinjau
 
-1. Akun TEST Supabase Auth dan claim `app_metadata.business_role` telah disiapkan; penerimaan undangan dan uji login UI masih menunggu.
-2. Uji database Production menggunakan data TEST telah membuat SO confirmed dan PO draft, lalu memverifikasi harga snapshot, total dan relasi. PO belum dikirim ke supplier; shipment belum dibuat.
-3. Uji customer-product price history bersama pemilik; finalisasi tax/PPN, termin dan COA bersama pemilik/akuntan.
-4. Uji shipment dengan PO split/parsial setelah supplier benar-benar dikirimi PO. Draft invoice kini mengikuti setiap shipment delivered; sebelum penerbitan resmi, sepakati PPN, profil legal, dan aturan posting. Setelah itu lanjut payments/allocations, audit log dan jurnal idempotent.
-5. Tambahkan test concurrency, backup/restore, audit dan reversal sebelum rilis produksi.
+- 27 tabel publik memakai RLS aktif dan memiliki policy; tidak ditemukan grant SELECT tabel publik untuk anon.
+- Advisor menampilkan 33 warning fungsi SECURITY DEFINER yang dapat dieksekusi role authenticated. Audit role check pada fungsi-fungsi itu tidak menemukan RPC publik yang executable oleh anon; tetap lakukan review ulang.
+- Supabase Auth leaked-password protection nonaktif.
+- Performance Advisor menandai 20 foreign key tanpa indeks dan 46 indeks unused. Jangan melakukan perubahan massal tanpa evaluasi dampak.
+- Backup/restore, audit log umum, laporan GL lengkap, dan UAT role-based end-to-end belum terverifikasi sebagai siap cutover.
 
+## 9. Rencana implementasi berikutnya
 
-## 10. Tahap kedua — harga khusus pelanggan (16 Oktober 2026)
+1. Selesaikan backup serta klasifikasi data yang ada.
+2. Dalam PR teknis terpisah, hapus modul shipment beserta RPC/trigger/relasinya sesuai D-09 setelah data terdampak disetujui.
+3. Ubah schema/RPC/UI invoice supaya dibuat manual dari SO terkonfirmasi, dengan batas kumulatif database sesuai D-10.
+4. Uji migrasi dan alur baru; verifikasi RLS, policy, constraint, fungsi/trigger, hitungan record dan route.
+5. Konfigurasi profil pajak, COA/mapping, approval policy, dan periode; jalankan UAT/rekonsiliasi sebelum posting atau cutover.
 
-Migration `20261016132858_customer_product_price_history` menambahkan `customer_product_prices`, referensi rate pada `sales_order_lines.customer_product_price_id`, dan flag `price_overridden`. Harga khusus per customer-product memakai rentang tanggal efektif, IDR dan catatan opsional. RLS memungkinkan baca role bisnis; penetapan rate hanya melalui RPC Owner/Admin. Versi baru menutup rate terbuka sehari sebelumnya dan tidak boleh backdated atau mengganti versi di tanggal yang sama.
+## 10. Catatan historis pengembangan (bukan status terkini)
 
-SO memilih harga yang berlaku pada tanggal SO secara default. Bila rate dipilih, server memvalidasi customer, product dan tanggal lalu menyimpan snapshot harga serta ID rate. Admin dapat mengubah harga manual; server menandai baris sebagai override dan tetap menyimpan harga sebagai snapshot. Perubahan rate tidak mengubah SO lama.
-
-Semua tarif masih **pra-pajak**. Tahap harga tidak menentukan status PKP, PPN, pembulatan, atau jurnal. Sepuluh tabel Supabase tetap kosong; akun uji ber-role dan data master belum diprovisikan.
-
-## 11. Batas operasional setelah tahap harga
-
-- Uji harga berlaku, rate terjadwal, pergantian rate, SO yang memakai rate, dan override manual setelah akun ber-role tersedia.
-- Koreksi historis/backdate atau mengganti versi pada tanggal yang sama belum didukung; jangan menghapus riwayat lewat SQL untuk memperbaikinya.
-- Capture draft Faktur Supplier, shipment langsung, dan draft invoice per shipment delivered tersedia. Keputusan pajak/PPN, COA, alokasi diskon/ongkos, serta titik pengakuan HPP/pendapatan/AP tetap memerlukan pemilik/akuntan sebelum dokumen resmi atau posting.
-
-## 12. Tahap ketiga — capture Faktur Supplier (16 Oktober 2026)
-
-Migration `20261016134859_supplier_invoice_capture` menambahkan `supplier_invoices` dan `supplier_invoice_lines`. Header menyimpan nomor faktur unik per supplier (case/trim-insensitive), tanggal, tempo, status/mode pajak, tarif yang tercetak, tipe/nilai diskon, subtotal, PPN, biaya lain, total, catatan, dan status `draft`/`void`. Baris menyimpan kuantitas dan nominal sesuai dokumen serta snapshot produk yang ditautkan ke PO-line non-dibatalkan milik supplier yang sama.
-
-Semua tabel ber-RLS; data hanya bisa dibuat lewat RPC Owner/Admin `create_supplier_invoice`. Draft hanya dapat di-void melalui `void_supplier_invoice` dengan alasan, pengguna, dan waktu; data tidak dihapus. Viewer dapat membaca. Semua sepuluh tabel masih kosong.
-
-**Batas penting:** capture ini bukan posting akuntansi. UI sekarang tidak menebak tarif dari status PKP; semua angka pajak harus disalin dari faktur sumber. Sistem tidak menghitung PPN, tidak mengalokasikan diskon/ongkos ke HPP, dan tidak membatasi kuantitas faktur kumulatif terhadap PO. Review semua selisih secara manual sebelum posting.
-
-## 13. Tahap keempat — shipment langsung supplier-ke-pelanggan (17 Oktober 2026)
-
-Migration `20261016171001_dropship_shipment_tracking` menambahkan `shipments`, `shipment_lines`, dan `shipment_status_events`, serta metadata `sent_at/sent_by` dan `acknowledged_at/acknowledged_by` pada PO. Owner/Admin menandai PO terkirim lalu mencatat konfirmasi supplier secara manual; sistem tidak mengirim dokumen atau email.
-
-Shipment hanya dapat dibuat dari PO yang sudah berstatus `sent` atau `acknowledged`. Header mengambil supplier, customer, SO dan alamat tujuan dari snapshot PO. Baris mengacu ke PO-line, menyimpan snapshot item, dan mendukung pengiriman parsial. RPC mengunci PO/line dan menghitung kuantitas pada shipment draft/non-batal untuk mencegah overship; pembatalan draft melepaskan kuantitas. Semua tabel ber-RLS, hanya dapat ditulis lewat RPC Owner/Admin, dan seluruh 13 tabel tetap kosong.
-
-Status yang dicatat: `draft`, `shipped`, `delivered`, `issue`, dan `cancelled`. Timeline menyimpan perubahan, tanggal, catatan, pengguna dan waktu pencatatan. Draft dapat dibatalkan dengan alasan; shipment yang sudah dikirim tidak dapat dibatalkan lewat alur ini. Migration invoice otomatis yang diajukan terpisah membuat draft invoice per shipment pada saat transisi `delivered`; setiap pengiriman parsial ditagih terpisah. Shipment membuat draft invoice; tidak menerbitkan invoice komersial atau membuat hutang/AP, HPP, pajak, pembayaran atau jurnal. Belum ada integrasi kurir atau upload bukti.
-
-## 14. Tahap kelima — draft invoice pelanggan per shipment delivered (17 Oktober 2026)
-
-Migration `20261017100000_customer_invoices_per_delivery_drafts` menambahkan `sales_invoices` dan `sales_invoice_lines`. Berdasarkan keputusan pemilik, satu shipment berstatus `delivered` dapat menghasilkan satu draft invoice; pengiriman parsial dapat memiliki invoice terpisah. RPC `create_customer_invoice` menautkan setiap invoice ke shipment, SO dan customer; setiap baris menelusuri `shipment_line → PO-line → SO-line`, memakai harga dan status override dari SO, serta memeriksa kuantitas invoice kumulatif agar tidak melampaui SO-line. Nilai bersih dialokasikan proporsional; sisa pembulatan dibukukan ke pengiriman terakhir untuk SO-line tersebut. Draft dapat di-void dengan alasan, pengguna dan waktu; data tidak dihapus.
-
-Halaman `/invoice-pelanggan` membaca data Supabase, menampilkan draft dari shipment delivered, pratinjau cetak yang dapat disimpan sebagai PDF melalui dialog browser, serta teks WhatsApp tanpa kirim otomatis atau lampiran PDF. Nomor draft diawali `DRAFT-INV`; draft bukan invoice komersial atau Faktur Pajak. Migration otomatis telah diterapkan remote (versi tercatat `20261016205342`) dan tidak membackfill shipment lama. Draft belum menghitung PPN, membuat piutang/pendapatan, memposting jurnal, menyimpan PDF, atau mengirim dokumen eksternal.
-
-## 15. Tahap keenam — draft invoice otomatis saat pelanggan menerima shipment
-
-Keputusan proses: buat satu draft invoice segera setelah penerimaan pelanggan dicatat pada shipment. Jika SO dipenuhi beberapa shipment parsial, setiap shipment yang delivered mempunyai draft terpisah; tidak menunggu seluruh SO selesai. Draft tetap dapat ditinjau/di-void Owner/Admin dan belum menjadi invoice resmi, Faktur Pajak, piutang, pendapatan atau jurnal.
-
-Migration `20261017120000_auto_customer_invoice_on_delivery_drafts` memasang trigger database setelah perubahan status shipment ke `delivered`. Trigger memanggil RPC `create_customer_invoice` dalam transaksi yang sama dengan update status. Bila pembuatan invoice gagal, perubahan status delivery ikut rollback agar tidak ada shipment delivered yang luput dari draft. Shipment delivered yang sudah ada sebelum migration tidak di-backfill; halaman invoice memberi jalur manual untuk membuat draft yang belum ada. Migration sudah diterapkan remote dengan versi tercatat `20261016205342`; UAT role-based non-production tetap diperlukan.
-
-
-## 16. Tahap ketujuh — kerangka posting AP/AR dan jurnal (17 Oktober 2026)
-
-Migration `20261017130000_payments_and_invoice_allocations` sudah diterapkan remote untuk receipt/disbursement dan batch alokasi guarded. Migration baru `20261017140000_accounting_posting_framework.sql` menambahkan COA dan mapping manual, referensi kebijakan dengan approval gate, periode posting, jurnal posted yang tidak dapat diedit/hapus, workflow issue invoice pelanggan ke AR, posting faktur supplier ke AP + akun clearing (belum HPP), serta jurnal receipt/disbursement/alokasi. Jurnal debit/kredit seimbang dan diposting atomik; reversal payment/allocation menaut ke jurnal sumber.
-
-Posting tidak diaktifkan otomatis. Owner/Admin harus memasukkan COA/mapping dan referensi, menyetujui kebijakan, serta membuka periode; invoice pelanggan meminta input pajak manual dan tidak menerbitkan e-Faktur. AP hanya dapat diposting jika angka header cocok dengan mode inclusive/exclusive dan keputusan PPN masukan direview. Migration accounting ada pada PR terpisah dan **belum diterapkan Supabase**. Laporan laba rugi/neraca/GL, HPP aktual, audit umum, lampiran, backup/restore, reopen, keputusan pajak final, dan UAT role-based masih pekerjaan berikutnya.
+Bagian fase dalam versi lama dokumen ini (harga khusus, capture Faktur Supplier, shipment, invoice per shipment, trigger auto-invoice, dan framework posting) adalah rekam jejak pengembangan. Bagian historis tentang shipment, invoice per shipment, serta auto-invoice berbasis delivered **dibatalkan sebagai desain target pada 17 Oktober 2026 oleh D-09/D-10**. Implementasi legacy tetap tercatat di database sampai perubahan teknis terkontrol dijalankan. Untuk kondisi saat ini gunakan bagian 6–8 dan DATABASE_INTEGRATION_READINESS.md.
