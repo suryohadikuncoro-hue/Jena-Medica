@@ -41,7 +41,7 @@ Catatan pembayaran operasional bukan otomatis jurnal kas/bank, dan draft invoice
 
 Aplikasi memakai Supabase Auth/Postgres/RLS/RPC dan publishable key pada browser. Service-role key tidak boleh berada pada client, Git, atau log. Role bisnis dibaca dari `app_metadata.business_role` (`owner`, `admin`, `viewer`); viewer hanya baca.
 
-Untuk perubahan aplikasi, jalankan `npm run lint`, `npm run build`, dan `npm run build:worker` pada commit yang direview, lalu tulis hasil aktualnya di PR. Untuk migration, verifikasi constraint, RLS/policy, fungsi/trigger, hitungan record serta alur invoice SO berbasis kuantitas kumulatif. Status build/deployment live belum diverifikasi oleh PR dokumentasi ini.
+Untuk perubahan aplikasi, jalankan `npm run lint`, `npm run build`, dan `npm run build:worker` pada commit yang direview, lalu tulis hasil aktualnya di PR. Untuk migration, verifikasi constraint, RLS/policy, fungsi/trigger, hitungan record serta alur invoice SO berbasis kuantitas kumulatif. Status build/deployment live belum diverifikasi oleh PR #31.
 
 ## Menjalankan lokal
 
