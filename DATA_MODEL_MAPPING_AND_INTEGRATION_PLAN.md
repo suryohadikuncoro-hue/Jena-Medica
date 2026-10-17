@@ -118,10 +118,10 @@ D-11 menetapkan arsip migration harus sesuai history remote. Rename file pada PR
 
 ## 9. Rencana implementasi berikutnya
 
-1. Selesaikan backup serta klasifikasi data yang ada.
-2. Dalam PR teknis terpisah, hapus modul shipment beserta RPC/trigger/relasinya sesuai D-09 setelah data terdampak disetujui.
-3. Ubah schema/RPC/UI invoice supaya dibuat manual dari SO terkonfirmasi, dengan batas kumulatif database sesuai D-10.
-4. Uji migrasi dan alur baru; verifikasi RLS, policy, constraint, fungsi/trigger, hitungan record dan route.
+1. Jalankan D-09: hapus objek serta record shipment legacy dan RPC/trigger terkait; penghapusan tidak menunggu backup sebagai prasyarat.
+2. Jalankan D-10 bersamaan: ubah schema/RPC/UI invoice agar dibuat manual dari SO terkonfirmasi dengan batas kumulatif database.
+3. Pertahankan tabel dan record pembayaran pelanggan/supplier.
+4. Verifikasi RLS, policy, constraint, fungsi/trigger, hitungan data yang tersisa dan route.
 5. Konfigurasi profil pajak, COA/mapping, approval policy, dan periode; jalankan UAT/rekonsiliasi sebelum posting atau cutover.
 
 ## 10. Catatan historis pengembangan (bukan status terkini)
