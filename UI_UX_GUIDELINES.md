@@ -1,6 +1,6 @@
 # Pedoman UI/UX — Jena Medical Center Business Suite
 
-**Peran:** satu-satunya rujukan tampilan dan interaksi. Keputusan bisnis ada di `docs/PRODUCT_SPEC.md`.
+**Peran:** satu-satunya rujukan tampilan dan interaksi. Keputusan bisnis ada di `PRODUCT_SPEC.md`.
 Pengguna utama adalah pemilik bisnis yang sering membuka dari HP, bukan akuntan.
 
 ## 1. Prinsip
