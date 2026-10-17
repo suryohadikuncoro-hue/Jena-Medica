@@ -57,7 +57,7 @@ Data yang teramati juga mencakup 1 customer, 1 supplier, 2 produk, 2 SO berstatu
 ## 5. Urutan pengerjaan
 
 1. Selesaikan rekonsiliasi dokumentasi dan pastikan lokasi dokumen tunggal di root repository ini.
-2. Implementasikan D-09 dan D-10 pada perubahan teknis: hapus modul/tabel/RPC/trigger shipment dan record shipment yang terkait; ubah schema/RPC/UI invoice menjadi manual berbasis SO, dengan batas kumulatif di database. Data shipment dinyatakan data uji oleh pemilik. Tabel pembayaran tidak ikut dihapus.
+2. PR #31 menyiapkan implementasi D-09/D-10: UI shipment dihapus, route pembayaran dipisahkan, UI invoice berbasis SO, dan migration schema menghapus objek serta record shipment legacy tanpa menghapus pembayaran. Migration masih pending pada Supabase remote; terapkan bersama release kode yang sesuai setelah review PR selesai.
 3. Lengkapi validasi faktur Supplier: hitungan usulan, angka tercetak, selisih, modal efektif, dan aturan posting D-01/D-02.
 4. Lengkapi invoice komersial, pratinjau/cetak bersih, dan tautan PDF WhatsApp sesuai D-06.
 5. Konfigurasikan profil pajak dan COA, mapping akun, referensi approval, serta periode akuntansi. Kerangka posting yang ada masih terkunci oleh konfigurasi.
