@@ -25,7 +25,7 @@ Branch ini menambahkan migration **belum diterapkan** `20261017150000_d10_invoic
 | `20261016215508` | `payments_and_invoice_allocations` | Tercatat |
 | `20261016225329` | `accounting_posting_framework` | Tercatat; framework ada tetapi gate posting belum dibuka |
 
-PR dokumentasi memperbaiki nama arsip migration yang sebelumnya tidak sama dengan version ID remote. Isi SQL pada migration yang sudah diterapkan tidak berubah. Perubahan nama arsip bukan migration database dan tidak mengubah schema/data remote.
+PR #31 memperbaiki nama arsip migration yang sebelumnya tidak sama dengan version ID remote. Isi SQL pada migration yang sudah diterapkan tidak berubah. Perubahan nama arsip bukan migration database dan tidak mengubah schema/data remote.
 
 ## 2. Snapshot data remote yang diaudit
 
