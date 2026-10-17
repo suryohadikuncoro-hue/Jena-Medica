@@ -51,7 +51,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Navigasi utama">
           <Link className={`top-link ${pathname === "/dashboard" ? "top-link-active" : ""}`} href="/dashboard">Dashboard</Link>
           {groups.map(group => <details key={group.title} className="nav-menu"><summary className="top-link cursor-pointer">{group.title}<span aria-hidden="true" className="ml-1 text-xs">⌄</span></summary><div className="nav-popover">{group.items.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}</div></details>)}
-          <Link className={`top-link ${pathname === "/pengiriman-piutang" ? "top-link-active" : ""}`} href="/pengiriman-piutang">Pengiriman</Link>
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
           <button className="search-trigger hidden sm:flex" type="button" onClick={() => setPaletteOpen(true)}><span aria-hidden="true">⌕</span><span className="hidden xl:inline">Cari transaksi…</span><kbd>⌘ K</kbd></button>
