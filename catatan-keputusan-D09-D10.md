@@ -2,7 +2,7 @@
 
 **Tanggal keputusan:** 17 Oktober 2026  
 **Pemutus:** Suryo (pemilik)  
-**Status:** keputusan disahkan; implementasi teknis masih perlu PR terpisah. Catatan ini adalah rekam keputusan, bukan daftar instruksi yang harus ditempel secara manual ke dokumen lain.
+**Status:** keputusan disahkan. Implementasi UI dan migration teknis disiapkan pada PR #31; migration masih pending terhadap Supabase remote. Catatan ini adalah rekam keputusan, bukan daftar instruksi yang harus ditempel secara manual ke dokumen lain.
 
 Sumber kebenaran keputusan produk adalah PRODUCT_SPEC.md. Kebijakan akuntansi dan pajak rinci ada di ACCOUNTING_POLICY_AND_CUTOVER.md. Kondisi schema remote diperiksa di DATABASE_INTEGRATION_READINESS.md dan SUPABASE_INTEGRATION.md.
 
