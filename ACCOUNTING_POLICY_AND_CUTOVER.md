@@ -1,6 +1,6 @@
 # Kebijakan Akuntansi dan Cutover — Jena Medical Center Business Suite
 
-**Status:** disahkan pemilik (Suryo), 17 Oktober 2026. Tidak ada butir terbuka. Dokumen ini menjawab seluruh pertanyaan di `docs/PRODUCT_SPEC.md` bagian 6 dan menjadi dasar D-01, D-02, D-03, D-10.
+**Status:** disahkan pemilik (Suryo), 17 Oktober 2026. Tidak ada butir terbuka. Dokumen ini menjawab seluruh pertanyaan di `PRODUCT_SPEC.md` bagian 6 dan menjadi dasar D-01, D-02, D-03, D-10.
 **Peran:** sumber kebenaran untuk akuntansi dan pajak. Jika kode atau dokumen lain bertentangan, dokumen ini menang (urutan kedua setelah keputusan pemilik di PRODUCT_SPEC).
 **Perubahan kebijakan:** hanya lewat revisi dokumen ini yang disetujui pemilik, dengan tanggal dan alasan di bagian 13.
 
@@ -41,7 +41,7 @@ Aturan dasar (diverifikasi dari sumber DJP dan media perpajakan pada 17 Oktober 
 - PPN dihitung **per dokumen** dari total DPP dokumen, bukan per baris, lalu dibulatkan ke rupiah terdekat.
 - Harga jual per pelanggan **belum termasuk PPN** (pra-pajak). Invoice menampilkan DPP, PPN, dan total.
 - Saat terutang: pada saat penyerahan barang, atau saat pembayaran diterima jika lebih dulu. Karena itu berlaku aturan bagian 7 (invoice terbit saat penyerahan, dan pembayaran tidak boleh mendahului invoice tanpa faktur pajak).
-- **Faktur Pajak/e-Faktur dibuat di Coretax secara manual oleh Owner.** Sistem tidak membuat e-Faktur. Tanggal faktur pajak sama dengan tanggal invoice. Unggah/persetujuan paling lambat tanggal 15 bulan berikutnya (batas tercepat dari sumber yang ada, dipakai agar aman). Nomor faktur pajak dicatat di kolom catatan invoice.
+- **Faktur Pajak/e-Faktur dibuat di Coretax secara manual oleh Owner.** Sistem tidak membuat e-Faktur. Tanggal faktur pajak sama dengan tanggal invoice. Unggah dan memperoleh persetujuan DJP paling lambat tanggal 20 bulan berikutnya setelah tanggal pembuatan e-Faktur, sesuai PER-11/PJ/2025 Pasal 44 ([sumber resmi DJP](https://pajak.go.id/index.php/id/peraturan/ketentuan-pelaporan-pajak-penghasilan-pajak-pertambahan-nilai-pajak-penjualan-atas-barang)). Periksa kembali ketentuan yang berlaku sebelum menyusun SOP pajak perusahaan. Nomor faktur pajak dicatat di kolom catatan invoice.
 - Dokumen untuk pelanggan tidak boleh memuat istilah internal (D-06).
 
 ## 4. PPN masukan (pembelian)
