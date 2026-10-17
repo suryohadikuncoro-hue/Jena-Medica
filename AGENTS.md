@@ -25,7 +25,7 @@ Jika dokumen atau instruksi bertentangan, yang di atas menang:
 - Hitungan sistem pada faktur suplier hanya **usulan**. Angka tercetak di faktur asli tetap sumber kebenaran, dan selisih harus nol sebelum dicatat ke pembukuan (D-01).
 - Tidak ada stok, gudang, batch, FEFO, atau persediaan fisik. Jangan ditambahkan.
 - **Tidak ada pencatatan pengiriman** (D-09, sudah disetujui): jangan menambahkan resi, surat jalan, kurir, status kirim, atau penerimaan barang. Hapus langsung modul/tabel/RPC/trigger dan record shipment legacy sesuai instruksi pemilik; penghapusan tidak menunggu backup sebagai prasyarat. Pertahankan tabel dan record pembayaran pelanggan/supplier.
-- **Invoice pelanggan** (D-10, sudah disetujui): targetnya dibuat manual dari SO terkonfirmasi, boleh beberapa kali per SO, kuantitas/nilai kumulatif dibatasi database, tanpa `shipment_id`. Implementasi remote sekarang masih mengikat invoice ke shipment; jangan menyamakan status keputusan dengan implementasi selesai. Perubahan perlu PR teknis terpisah.
+- **Invoice pelanggan** (D-10, sudah disetujui): invoice dibuat manual dari SO terkonfirmasi, dapat parsial, batas kuantitas/nilai kumulatif dijaga database, tanpa `shipment_id`. Kode UI/RPC target ada pada branch PR ini; schema Supabase remote masih legacy sampai migration baru diterapkan. Jangan mengklaim siap dipakai terhadap Production sebelum kode dan migration dirilis bersama.
 - Harga jual berbeda per pelanggan dengan riwayat tanggal berlaku. Simpan salinan harga di baris transaksi; transaksi lama tidak boleh berubah.
 - Tidak ada hapus permanen pada transaksi. Gunakan batalkan (void) dengan alasan, jurnal balik, dan periode tutup.
 - Jangan menambahkan kontrol palsu atau yang belum berfungsi di UI.
