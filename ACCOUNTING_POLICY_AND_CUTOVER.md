@@ -1,82 +1,147 @@
-# Kebijakan Akuntansi & Gerbang Cutover — Jena Medical Center
+# Kebijakan Akuntansi dan Cutover — Jena Medical Center Business Suite
 
-**Status:** kerangka posting AP/AR dan jurnal ada pada migration PR `20261017140000`; belum diterapkan ke Supabase dan belum disetujui pemilik/akuntan.
-**Model:** drop-ship langsung dari supplier ke pelanggan; sistem tidak mengelola persediaan fisik.
+**Status:** disahkan pemilik (Suryo), 17 Oktober 2026. Tidak ada butir terbuka. Dokumen ini menjawab seluruh pertanyaan di `docs/PRODUCT_SPEC.md` bagian 6 dan menjadi dasar D-01, D-02, D-03, D-10.
+**Peran:** sumber kebenaran untuk akuntansi dan pajak. Jika kode atau dokumen lain bertentangan, dokumen ini menang (urutan kedua setelah keputusan pemilik di PRODUCT_SPEC).
+**Perubahan kebijakan:** hanya lewat revisi dokumen ini yang disetujui pemilik, dengan tanggal dan alasan di bagian 13.
 
-## Aturan yang sudah dapat dipakai
+## 1. Prinsip umum
 
-- **Invoice pelanggan:** satu draft per shipment yang dicatat `delivered`; setiap shipment parsial dapat ditagih dengan draft terpisah. Nilai neto berasal dari snapshot SO, dialokasikan pro-rata pada baris, dan sisa pembulatan masuk ke shipment terakhir. Void hanya untuk draft dan menyimpan alasan. Draft bukan invoice resmi, Faktur Pajak, piutang, atau pendapatan.
-- **Titik operasional penagihan:** status delivered berarti penerimaan pelanggan telah dicatat pada shipment dan membuat draft invoice secara atomik. Perubahan tersebut tidak menerbitkan invoice komersial atau jurnal; issue & posting AR harus dijalankan setelah kebijakan/COA disetujui dan tanggal invoice masuk periode terbuka. Aturan pengakuan harus cocok dengan kontrak dan bukti penyerahan hak/kendali.
-- **Dokumen supplier:** capture angka faktur seperti sumbernya. Posting AP tersedia dalam kerangka baru setelah review manual; total supplier didebit ke akun clearing biaya (bukan HPP) dan dikreditkan ke AP. Header harus merekonsiliasi: untuk `exclusive`, `subtotal − diskon + PPN + biaya lain = total`; untuk `inclusive`, subtotal sudah memuat PPN sehingga `subtotal − diskon + biaya lain = total`. PPN masukan hanya didebit ke akun PPN masukan setelah perlakuan `recoverable` direview; selisih kuantitas/harga terhadap PO tetap harus direkonsiliasi manual.
+- Mata uang IDR, tanpa desimal. Semua nilai dibulatkan ke rupiah terdekat (0,5 ke atas naik).
+- Dasar akrual. Jena bertindak sebagai **principal** pada penjualan drop-ship: Jena menetapkan harga jual per pelanggan, memilih supplier, dan menanggung risiko tagihan ke pelanggan. Pendapatan dicatat **bruto** (nilai jual), HPP dicatat terpisah.
+- Tidak ada persediaan. Barang yang sudah difaktur supplier tetapi belum ditagihkan ke pelanggan ditampung di akun clearing, bukan persediaan.
+- Angka tercetak di dokumen asli (faktur supplier, faktur pajak) adalah sumber kebenaran. Hitungan sistem hanya usulan (D-01).
+- Tidak ada hapus permanen. Koreksi lewat batalkan, nota kredit, atau jurnal balik (D-07).
 
-## Pajak/PPN: kontrol sistem yang diperlukan
+## 2. Profil pajak perusahaan
 
-Pada 2025 tarif PPN umum berubah menjadi 12%. Untuk sejumlah penyerahan barang/jasa non-mewah, aturan memakai DPP Nilai Lain sebesar 11/12 sehingga beban efektif umumnya 11%; PMK 11/2025 juga mengatur jenis DPP Nilai Lain/Besaran Tertentu lainnya. Karena perlakuan tergantung kategori barang/jasa dan syarat transaksi, sistem **tidak boleh menganggap semua produk medis mengikuti rumus umum**. Kategori barang medis dapat memiliki pengecualian atau syarat khusus yang perlu diperiksa per klasifikasi.
+Status pajak adalah **pengaturan perusahaan**, diisi satu kali oleh Owner sesuai surat pengukuhan, bukan keputusan yang menunggu. Sistem mendukung dua keadaan dan perilakunya sudah ditetapkan di bawah.
 
-Rancangan kontrol sebelum penerbitan:
+| Pengaturan | Nilai yang didukung |
+|---|---|
+| Status PKP | `PKP` atau `Non-PKP` |
+| Tanggal mulai status | tanggal pengukuhan (untuk PKP) |
 
-1. Profil legal perusahaan: nama, alamat, NPWP, status PKP, nomor seri/otorisasi Faktur Pajak dan identitas penerbit. Tanpa konfigurasi tervalidasi, penerbitan resmi dinonaktifkan.
-2. Tax code berversi berdasarkan tanggal efektif: tidak kena pajak/dikecualikan, umum dengan DPP aktual, umum dengan DPP Nilai Lain 11/12, besaran tertentu, atau perlakuan khusus. Tax code menyimpan dasar hukum, tarif nominal, faktor DPP, cara pembulatan, dan persetujuan.
-3. Produk berstatus `unreviewed` secara default. Penerbitan invoice diblokir sampai klasifikasi produk dan status PKP penjual/pembeli ditinjau oleh pihak berwenang. Tarif PPN di faktur supplier tetap data laporan dokumen, bukan konfigurasi pajak jual.
-4. Simpan snapshot tax code, tarif, faktor DPP, dasar pajak, nilai PPN dan aturan pembulatan pada invoice; perubahan kebijakan tidak mengubah invoice yang sudah diterbitkan.
-5. Jangan menerbitkan e-Faktur atau menyatakan faktur valid pajak hanya dengan PDF cetak browser. Integrasi/otorisasi platform DJP merupakan alur terpisah.
+Aturan dasar (diverifikasi dari sumber DJP dan media perpajakan pada 17 Oktober 2026):
 
-**Belum ada tarif atau klasifikasi pajak yang diaktifkan dalam aplikasi.** Sumber resmi DJP: [PMK 11/2025—DPP Nilai Lain dan Besaran Tertentu PPN](https://www.pajak.go.id/en/node/114038). Dokumen produk dan ketentuan terbaru tetap harus diperiksa sebelum aktivasi.
+- Pengusaha dengan peredaran bruto lebih dari Rp4,8 miliar dalam satu tahun buku wajib dikukuhkan sebagai PKP. Di bawah itu boleh memilih PKP secara sukarela.
+- **Jika Non-PKP:** invoice pelanggan tanpa PPN; PPN pada faktur supplier menjadi bagian modal (bagian 4).
+- **Jika PKP:** berlaku bagian 3 dan 4.
+- Bila omzet kumulatif tahun berjalan mencapai Rp4,0 miliar, Dashboard menampilkan peringatan agar Owner menyiapkan pengukuhan PKP. Pengajuan paling lambat akhir tahun buku saat omzet melewati Rp4,8 miliar.
 
-## Rancangan pengakuan AP/HPP/pendapatan
+## 3. PPN keluaran (penjualan)
 
-Ini kebijakan usulan untuk direview, bukan saran akuntansi final:
+**Tax code berversi** (tidak ditulis permanen di kode), disimpan di tabel kode pajak dengan tanggal efektif:
 
-- **Utang supplier (AP):** diakui ketika faktur supplier valid telah dicocokkan dan diposting, bukan ketika PO dibuat. Jika barang sudah dikirim ke pelanggan sebelum tagihan supplier diterima, gunakan akun akrual biaya langsung/utang barang diterima belum ditagih berdasarkan bukti dan kebijakan cut-off; reklasifikasi ketika faktur supplier diposting.
-- **Modal/HPP:** tidak membuat saldo persediaan gudang. Biaya aktual supplier, diskon dan ongkos yang dapat diatribusikan ditautkan ke PO-line dan dialokasikan konsisten pada jumlah unit. Akui HPP pada titik transfer kendali/pemenuhan pelanggan sesuai kontrak dan bukti penerimaan. Jika faktur supplier belum tersedia saat itu, gunakan estimasi yang disetujui lalu catat selisih terhadap biaya aktual sebagai penyesuaian terjejak. Jangan menampilkan HPP aktual dari `quoted_unit_cost` PO.
-- **Pendapatan/AR:** pada penyerahan yang memenuhi syarat pengakuan sesuai kontrak (default rancangan: penerimaan pelanggan yang terdokumentasi), buat invoice resmi dan jurnal. Status `delivered` saja tidak membuktikan kewajiban hukum/pajak terpenuhi.
-- **PPN keluaran/masukan:** pisahkan dari pendapatan dan biaya hanya setelah klasifikasi serta kelayakan kredit pajak disahkan. PPN masukan pada capture invoice supplier belum otomatis dapat dikreditkan.
-- **Pembayaran pelanggan:** capture operasional yang sudah termigrasi menyimpan receipt sebagai dana terverifikasi; saat journal-post, debit kas/bank dan kredit uang muka pelanggan. Alokasi yang dijurnal kemudian mendebit uang muka dan mengkredit AR invoice; sisa dana tetap kredit pelanggan. **Pembayaran supplier:** saat journal-post debit uang muka supplier dan kredit kas/bank; alokasi kemudian mendebit AP dan mengkredit uang muka supplier. Alokasi operasional tidak otomatis membuat jurnal.
-- **Biaya total/diskon:** alokasikan ke baris memakai basis yang konsisten dan simpan metode serta angka pembulatan; sisa sen dikoreksi deterministik pada baris terakhir. Credit note/retur setelah posting harus memakai dokumen reversal/penyesuaian, bukan mengedit transaksi lama.
+| Kode | Perhitungan | Efektif mulai | Keterangan |
+|---|---|---|---|
+| `PPN_UMUM` | PPN = 12% × (11/12 × DPP) = 11% × DPP | 2025-01-01 | Barang kena pajak non-mewah. Alat kesehatan Jena termasuk non-mewah. |
+| `PPN_BEBAS` | PPN = 0 | selalu | Barang yang ditandai Owner sebagai tidak kena PPN, wajib mengisi alasan tertulis di master barang. |
 
-Jurnal contoh untuk diputuskan bersama akuntan:
+- Default setiap barang adalah `PPN_UMUM`. Perubahan tarif di masa depan dilakukan dengan menambah baris kode pajak baru bertanggal efektif, bukan mengubah kode program.
+- PPN dihitung **per dokumen** dari total DPP dokumen, bukan per baris, lalu dibulatkan ke rupiah terdekat.
+- Harga jual per pelanggan **belum termasuk PPN** (pra-pajak). Invoice menampilkan DPP, PPN, dan total.
+- Saat terutang: pada saat penyerahan barang, atau saat pembayaran diterima jika lebih dulu. Karena itu berlaku aturan bagian 7 (invoice terbit saat penyerahan, dan pembayaran tidak boleh mendahului invoice tanpa faktur pajak).
+- **Faktur Pajak/e-Faktur dibuat di Coretax secara manual oleh Owner.** Sistem tidak membuat e-Faktur. Tanggal faktur pajak sama dengan tanggal invoice. Unggah/persetujuan paling lambat tanggal 15 bulan berikutnya (batas tercepat dari sumber yang ada, dipakai agar aman). Nomor faktur pajak dicatat di kolom catatan invoice.
+- Dokumen untuk pelanggan tidak boleh memuat istilah internal (D-06).
 
-- Saat invoice pelanggan resmi: Dr Piutang; Cr Pendapatan neto; Cr PPN Keluaran (jika berlaku).
-- Saat pengakuan biaya direct-delivery: Dr HPP; Cr AP atau akrual biaya belum ditagih. Tidak ada akun persediaan fisik.
-- Saat faktur supplier diposting setelah akrual: Dr akrual biaya belum ditagih/akun penyesuaian biaya dan Dr PPN Masukan yang memenuhi syarat; Cr AP.
-- Saat penerimaan pelanggan: Dr Bank/Kas; Cr Piutang. Saat bayar supplier: Dr AP; Cr Bank/Kas.
+## 4. PPN masukan (pembelian)
 
-Pemetaan COA, pembebanan biaya kirim, diskon header, retur, HPP aktual, uang muka, margin negatif, rounding dan akun selisih belum disahkan. Kerangka posting memakai referensi kebijakan, debit=kredit, transaksi atomik, source idempotency untuk payment, dan reversal yang menaut ke jurnal asal. DPP/nominal/rate invoice pelanggan harus presisi sesuai skala rupiah; tarif dan DPP tidak dihitung otomatis. `cash` dan `bank_transfer` didukung; metode check/card/other tidak memiliki pemetaan ledger dan belum boleh diposting.
+- PPN pada faktur supplier **ditranskripsi dari faktur sumber**, tidak ditebak dari status PKP supplier (aturan yang sudah berlaku di sistem).
+- **Dapat dikreditkan** hanya jika semuanya benar: (1) Jena berstatus PKP; (2) ada faktur pajak masukan yang sah dan sudah dicatat nomornya; (3) barang dipakai untuk penyerahan kena pajak. Maka dicatat ke akun **PPN Masukan**.
+- Selain itu (Jena Non-PKP, tidak ada faktur pajak, atau barang `PPN_BEBAS`): PPN **tidak dikreditkan** dan **menjadi bagian modal** barang (masuk ke clearing bersama harga barang).
+- Flag `recoverable` per faktur supplier ditetapkan Owner/Admin saat mencatat, dengan default mengikuti aturan di atas. Perubahan setelah posting hanya lewat jurnal koreksi.
 
-## Pembayaran dan alokasi
+## 5. Faktur supplier: hitung usulan dan rekonsiliasi (D-01)
 
-Keputusan tahap pembayaran: Owner/Admin dapat mencatat penerimaan pelanggan dan pengeluaran supplier yang telah terverifikasi, dengan referensi dan metode; sisa dana tetap sebagai uang muka yang belum teralokasi. RPC server-side memvalidasi role, nominal positif IDR, dan audit reason untuk void. Idempotency key juga mencegah retry capture menggandakan transaksi. Batch alokasi parsial/multi-invoice hanya menerima invoice pelanggan `issued` atau faktur supplier `posted`; transaksi mengunci pembayaran dan dokumen, memeriksa saldo, dan idempotency key mencegah duplikasi request. Void pembayaran membatalkan batch aktifnya dengan alasan/audit yang tercatat. Viewer hanya baca. Uang muka supplier tidak boleh dialokasikan ke faktur draft.
+Sistem menampilkan **hitungan usulan** di samping **angka tercetak**, beserta selisih.
 
-Migration pembayaran `20261017130000` sudah diterapkan: receipt/disbursement dapat dicatat dan alokasi dibatasi ke dokumen posted. Karena remote masih draft-only, belum ada invoice/AP eligible untuk alokasi. Accounting migration `20261017140000` di PR ini menambahkan posting dan jurnal, namun belum diterapkan remote; pembayaran belum memengaruhi ledger sampai jurnal diposting setelah approval.
+**Mode eksklusif** (harga belum termasuk PPN):
+- Subtotal neto = Σ (harga × qty − diskon baris) − diskon faktur
+- Total usulan = subtotal neto + PPN + biaya lain (ongkir dan sejenisnya)
 
-## Jurnal, tutup buku, audit dan dokumen
+**Mode inklusif** (harga sudah termasuk PPN):
+- PPN = total × 11/111, dibulatkan; DPP = total − PPN
+- Total usulan = subtotal neto + biaya lain (PPN sudah tercakup di subtotal)
 
-- COA harus disetujui pemilik/akuntan; framework mencatat nomor jurnal, sumber, periode, pengguna, tanggal, IDR, total debit/kredit dan status posted/reversed. Tidak ada akun/mapping default. Approval gate membutuhkan 10 mapping, empat referensi kebijakan, referensi persetujuan, dan periode terbuka.
-- Jurnal posted tidak diedit/dihapus. Posting payment/allocations hanya memiliki jalur reversal terhubung ke transaksi sumber; invoice reversal/credit note belum didukung. Tutup periode dasar menolak source draft dan jurnal tidak seimbang, tetapi **tidak menggantikan** rekonsiliasi bank, AR/AP, pajak, trial balance, jurnal manual dan pemeriksaan cutoff. Reopen workflow belum tersedia.
-- Audit umum mencatat actor, timestamp, aksi, entitas, nilai sebelum/sesudah yang aman, dan alasan. Jangan simpan password, token, nomor kartu, atau rahasia dalam log.
-- Metadata lampiran harus terhubung ke object storage privat, memakai signed URL singkat, MIME/size allowlist, checksum, pemindaian file, retensi dan audit unduh.
-- Ekspor laporan mesti dapat direproduksi untuk rentang tanggal dan menyertakan waktu dibuat, timezone, currency, filter, status, nomor halaman serta label sumber data.
+**Aturan selisih:**
+1. Draft boleh disimpan dengan selisih. **Posting ke pembukuan hanya jika selisih nol.**
+2. Selisih kecil karena pembulatan supplier diselesaikan dengan satu baris **Penyesuaian pembulatan** bernilai paling besar Rp10 per faktur, dicatat ke akun *Selisih Pembulatan*. Dengan baris ini selisih akhir menjadi nol, jadi tidak ada toleransi diam-diam.
+3. Selisih lebih dari Rp10 tidak boleh diposting. Faktur diperbaiki dulu (salah ketik, diskon lupa, ongkir lupa).
+4. Kuantitas faktur tidak boleh melebihi kuantitas PO-line tertaut kecuali Owner menandai alasan tertulis (barang tambahan dari supplier). Alasan disimpan.
 
-## Backup/restore dan keamanan
+## 6. Modal efektif dan HPP (D-02)
 
-1. Tetapkan backup terjadwal dan retensi sesuai kebijakan perusahaan. Verifikasi opsi backup/PITR project Supabase secara terpisah; jangan menganggap migration atau Git sebagai salinan data bisnis.
-2. Simpan salinan terenkripsi di lokasi terpisah dengan akses terbatas, rotasi/retensi, checksum dan bukti keberhasilan. Backup harus mencakup data, konfigurasi migration, metadata auth yang dibutuhkan, dan daftar konfigurasi object storage; rahasia dikelola terpisah.
-3. Uji restore di project non-production yang terisolasi; cek row count, constraint, RLS, role, file, totals dan saldo trial balance. Catat RPO/RTO yang disepakati. Jangan uji restore pada Production.
-4. Pastikan publishable key saja berada di browser; service-role key tidak boleh di Git/client/log. RLS deny-by-default, SECURITY DEFINER dengan search_path kosong dan role check, MFA bagi administrator jika tersedia, least privilege, audit akses, dependency scan, HTTPS dan kebijakan sesi.
-5. Sebelum release jalankan security/performance advisor; tinjau temuan SECURITY DEFINER dan dependency advisories. Jangan menganggap build berhasil sebagai persetujuan keamanan.
+**Alokasi (satu aturan untuk semua faktur):**
+- Diskon faktur dibagi ke baris **proporsional** terhadap nilai baris setelah diskon baris.
+- Ongkir/biaya angkut pembelian dan biaya lain dibagi proporsional dengan cara yang sama.
+- Sisa pembulatan masuk ke baris bernilai terbesar.
+- PPN yang tidak dapat dikreditkan (bagian 4) ikut dialokasikan ke baris dengan aturan yang sama.
 
-## UAT wajib sebelum cutover
+**Modal efektif per item** = (harga × qty − diskon baris − bagian diskon faktur + bagian ongkir/biaya lain + bagian PPN tidak dikreditkan) ÷ qty. Ditampilkan sebagai dua angka: modal sebelum PPN dan PPN tercetak (D-02).
 
-Gunakan project non-production dengan akun Owner, Admin, dan Viewer terpisah serta data sintetis. Uji minimum:
+**HPP:**
+- HPP diakui **saat invoice pelanggan diterbitkan**, sebesar modal efektif × kuantitas yang ditagihkan, sehingga pendapatan dan HPP jatuh di periode yang sama.
+- Biaya yang dipakai adalah biaya aktual dari faktur supplier yang sudah diposting dan tertaut ke PO-line dari baris SO tersebut.
+- Jika faktur supplier belum diposting saat invoice terbit, HPP memakai **estimasi dari harga PO** dan selisihnya (estimasi vs aktual) ditutup ke HPP saat faktur supplier diposting. Estimasi ini dicatat ke akun *Hutang Akrual Pembelian*.
+- Margin negatif diperingatkan di layar Pesanan dan saat menerbitkan invoice, tetapi tidak diblokir.
 
-- SO dengan harga snapshot/override; PO split supplier; oversell, race condition dan cancellation.
-- Faktur supplier duplikat, mismatch PO/supplier/quantity/tax arithmetic, void dan rekonsiliasi diskon/ongkos.
-- Shipment parsial beberapa kali; shipment yang issue/cancelled; invoice draft terpisah per delivered; jumlah invoiced tidak melebihi SO; sisa pembulatan tepat; void/recreate.
-- Setiap klasifikasi PPN termasuk produk belum ditinjau, PKP/non-PKP, inclusive/exclusive, DPP aktual/nilai lain, pembulatan, tanggal efektif, pengecualian dan reversal diuji oleh akuntan/pajak.
-- Invoice resmi, posting AP/HPP/pendapatan, penerimaan/pembayaran parsial dan multi-invoice, saldo uang muka, alokasi yang bersaing, void beralasan, jurnal seimbang/idempoten, reversal dan tutup/reopen periode.
-- Role/RLS untuk semua tabel dan RPC: Viewer tidak dapat menulis; user tanpa role ditolak; perubahan API langsung tidak dapat melewati RPC.
-- Ekspor laporan, audit, lampiran, backup dan restore diverifikasi. Jalankan UAT desktop/mobile, keyboard/screen reader, error/loading/empty states dan alur cetak.
+## 7. Pengakuan pendapatan dan invoice (D-10)
 
-## Status cutover saat ini
+- Invoice dibuat manual oleh Owner/Admin dari SO yang dikonfirmasi; boleh beberapa kali; total kumulatif dibatasi SO.
+- **Draft tidak mengakui pendapatan.** Pendapatan diakui saat invoice **diterbitkan** (status issued). Piutang usaha timbul saat itu.
+- **Prosedur wajib sebelum menerbitkan (SOP, bukan fitur sistem):** Owner/Admin memastikan barang sudah diserahkan supplier ke pelanggan (konfirmasi supplier atau pelanggan). Tanggal invoice dianggap tanggal penyerahan. Sistem tidak mencatat pengiriman (D-09).
+- Pembayaran mengurangi piutang dan **tidak mengakui pendapatan lagi**.
+- Pembayaran yang masuk **sebelum** invoice diterbitkan dicatat sebagai **Uang Muka Pelanggan** (liabilitas). Bila Jena PKP, PPN terutang saat pembayaran diterima, jadi Owner membuat faktur pajak atas uang muka di Coretax saat itu. Uang muka dialokasikan ke invoice saat diterbitkan. Praktik yang dianjurkan: terbitkan invoice sebelum atau segera setelah pembayaran diterima.
+- Invoice yang salah: sebelum terbit, batalkan dengan alasan; setelah terbit, buat **nota kredit** penuh atau sebagian, terhubung ke invoice asal, lalu terbitkan invoice baru.
 
-Project yang diperiksa didokumentasikan sebagai Production dan berisi data uji pada tabel operasional. Migration pembayaran sudah terpasang, tetapi invoice/AP remote masih draft-only sehingga saldo belum dapat dialokasikan. Accounting migration pada PR ini belum diterapkan. Framework menyediakan issue invoice komersial dan posting AP/AR/jurnal setelah konfigurasi disetujui, tetapi bukan e-Faktur, belum menghitung pajak otomatis, belum mengakui HPP aktual, dan belum menyediakan laporan GL, audit umum, backup/restore atau UAT role-based penuh. Jangan mengoperasikan pembukuan atau cutover sebelum kebijakan dan seluruh UAT disetujui dan dilaksanakan.
+## 8. Jurnal (ringkas, dengan contoh)
+
+Contoh PKP: beli Rp10.000.000 (neto), jual Rp12.000.000 (pra-pajak).
+
+| Peristiwa | Debit | Kredit |
+|---|---|---|
+| Faktur supplier diposting (PPN 11% = 1.100.000, dapat dikreditkan) | Clearing Pembelian 10.000.000; PPN Masukan 1.100.000 | Hutang Usaha 11.100.000 |
+| Invoice pelanggan diterbitkan (PPN 11% = 1.320.000) | Piutang Usaha 13.320.000 | Penjualan 12.000.000; PPN Keluaran 1.320.000 |
+| HPP saat invoice diterbitkan | HPP 10.000.000 | Clearing Pembelian 10.000.000 |
+| Pelanggan membayar | Kas/Bank 13.320.000 | Piutang Usaha 13.320.000 |
+| Bayar supplier | Hutang Usaha 11.100.000 | Kas/Bank 11.100.000 |
+| Pembayaran masuk sebelum invoice | Kas/Bank | Uang Muka Pelanggan |
+
+Contoh **Non-PKP**: faktur supplier: Debit Clearing 11.100.000 (PPN ikut modal), Kredit Hutang 11.100.000. Invoice pelanggan tanpa PPN. HPP = 11.100.000.
+
+Akun minimal COA: Kas/Bank, Piutang Usaha, Uang Muka Pelanggan, PPN Masukan, Clearing Pembelian, Hutang Usaha, Hutang Akrual Pembelian, PPN Keluaran, Penjualan, HPP, Selisih Pembulatan, Modal Pemilik, Laba Ditahan. Nomor dan pemetaan akun diisi di pengaturan COA oleh Owner sebelum approval gate dibuka.
+
+## 9. Pembayaran dan alokasi
+
+- Pembayaran parsial dan ke banyak invoice didukung. Total alokasi ≤ dana tersedia dan ≤ sisa invoice.
+- Dana yang belum dialokasikan = uang muka (pelanggan) atau uang muka ke supplier.
+- Kelebihan bayar tidak dikembalikan otomatis. Dicatat sebagai uang muka sampai dialokasikan atau dikembalikan lewat pencatatan pembayaran keluar.
+- Idempotency key wajib pada setiap pembayaran (sudah ada).
+
+## 10. Retur, koreksi, dan selisih kuantitas
+
+- **Retur pelanggan / koreksi invoice terbit:** nota kredit terhubung ke invoice (bagian 7). Mengurangi pendapatan, PPN keluaran (bila PKP), dan HPP proporsional.
+- **Retur ke supplier / kredit supplier:** nota kredit supplier terhubung ke faktur asal, mengurangi hutang, clearing/HPP, dan PPN masukan proporsional.
+- **Selisih kuantitas** (barang diterima kurang dari pesanan): invoice pelanggan hanya untuk kuantitas yang benar-benar diserahkan; kuantitas SO yang tidak terpenuhi dibatalkan lewat perubahan SO (dengan alasan) sebelum invoice dibuat.
+- Tidak ada hapus; semua lewat dokumen lawan atau jurnal balik yang tertaut ke sumbernya.
+
+## 11. Periode dan tutup buku
+
+- Periode bulanan. Owner menutup periode setelah rekonsiliasi dan mengunci posting.
+- **Tidak ada buka kembali periode.** Koreksi untuk periode tertutup dibuat sebagai jurnal koreksi pada periode berjalan, dengan alasan dan referensi dokumen sumber.
+- Audit log wajib untuk: issue/void, posting, pembatalan, nota kredit, perubahan pengaturan pajak/COA, tutup periode. Rahasia tidak disimpan di log.
+- Laporan wajib (dari jurnal diposting): Laba Rugi, Neraca, Arus Kas sederhana, Umur Piutang dan Hutang, Rekap PPN Keluaran/Masukan.
+
+## 12. Cutover dan pembersihan data uji
+
+- **Tanggal cutover: 1 Januari 2027** (awal tahun buku). Posting jurnal baru dinyalakan setelah UAT lulus dan pembersihan selesai; paling lambat sehari sebelum tanggal itu.
+- **Penyetuju COA dan kebijakan: Owner.** Persetujuan dicatat dengan tanggal di bagian 13.
+- Langkah wajib berurutan: (1) UAT role Owner/Admin/Viewer lulus pada skenario: split supplier, invoice berulang per SO, pembayaran parsial, uang muka, nota kredit, margin negatif, PKP dan Non-PKP; (2) backup penuh dan uji pemulihan; (3) pembersihan data uji dengan skrip SQL yang direview (bagian 6a PRODUCT_SPEC); (4) isi pengaturan pajak dan COA; (5) buka periode Januari 2027.
+- **Penomoran dokumen setelah pembersihan:** format `PREFIX-TAHUN-NNNN` (mis. `SO-2027-0001`), urut per tahun. Draft memakai prefix `DRAFT-`.
+- **Saldo awal:** bila ada piutang atau hutang berjalan pada 31 Desember 2026, dimasukkan sebagai dokumen saldo awal berdokumen asli dan tanggal asli, bukan sebagai angka total.
+
+## 13. Pengesahan dan riwayat perubahan
+
+| Tanggal | Perubahan | Disetujui |
+|---|---|---|
+| 17 Oktober 2026 | Kebijakan awal: PPN, modal/HPP, pengakuan pendapatan, rekonsiliasi, retur, tutup buku, cutover | Suryo (pemilik) |
