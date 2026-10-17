@@ -90,7 +90,7 @@ Project Jena Medical Center (sjiezdyxylwvqessyvml) berstatus aktif. Audit baca-s
 
 Record yang teramati: 1 customer, 1 supplier, 2 produk, 1 harga khusus, 2 SO confirmed, 2 baris SO, 1 PO sent, 1 shipment shipped, 1 customer payment recorded, 1 supplier payment recorded, 10 akun COA, profile posting draft, 0 account mapping, 0 periode, 0 jurnal, 0 invoice pelanggan, dan 0 faktur supplier.
 
-**Tindakan wajib sebelum D-09:** konfirmasi apakah shipment dan pembayaran itu data uji atau harus dipertahankan. Backup dan pemulihan harus diuji sebelum menghapus tabel/relasi atau membersihkan data. Jangan melakukan penghapusan cascade berdasarkan asumsi.
+**Instruksi pemilik untuk D-09:** hapus seluruh record dan objek shipment legacy secara langsung. Tabel payments/allocations tidak dihapus dan tidak ikut dalam penghapusan shipment.
 
 ## 7. Migration remote
 
