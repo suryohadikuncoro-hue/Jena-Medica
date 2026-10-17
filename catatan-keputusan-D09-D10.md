@@ -1,80 +1,54 @@
-# Catatan keputusan D-09 dan D-10 (siap ditempel ke repo)
+# Catatan Keputusan D-09, D-10, dan D-11
 
-Tanggal keputusan: 17 Oktober 2026. Pemutus: Suryo (pemilik).
+**Tanggal keputusan:** 17 Oktober 2026  
+**Pemutus:** Suryo (pemilik)  
+**Status:** keputusan disahkan; implementasi teknis masih perlu PR terpisah. Catatan ini adalah rekam keputusan, bukan daftar instruksi yang harus ditempel secara manual ke dokumen lain.
 
-## A. `docs/PRODUCT_SPEC.md`
+Sumber kebenaran keputusan produk adalah PRODUCT_SPEC.md. Kebijakan akuntansi dan pajak rinci ada di ACCOUNTING_POLICY_AND_CUTOVER.md. Kondisi schema remote diperiksa di DATABASE_INTEGRATION_READINESS.md dan SUPABASE_INTEGRATION.md.
 
-### A1. Baris D-09 (ganti seluruh baris di tabel bagian 3)
+## D-09 — Tidak ada pencatatan pengiriman
 
-| D-09 | **Tidak ada pencatatan pengiriman.** Pengiriman urusan suplier dan pelanggan, bukan urusan pemilik. Hapus modul pengiriman: menu, halaman, komponen, dan tabel `shipments`, `shipment_lines`, `shipment_status_events`, beserta RPC `create_shipment` dan `transition_shipment` dan trigger invoice otomatis saat shipment delivered. Perubahan skema dilakukan langsung di Supabase (lihat D-11) dan dicatat di PR. Hanya data uji yang terdampak. Jangan menambahkan resi, surat jalan, kurir, status kirim, atau penerimaan barang. | Disetujui 17 Okt 2026 |
+Keputusan: pengiriman merupakan urusan supplier dan pelanggan, bukan fungsi sistem Jena. Hapus menu, halaman, komponen, tabel shipments/shipment_lines/shipment_status_events, RPC create_shipment/transition_shipment, serta trigger invoice otomatis berbasis status delivered. Jangan menambahkan resi, surat jalan, kurir, status kirim, timeline pengiriman, atau penerimaan barang.
 
-### A2. Baris D-10 (ganti seluruh baris)
+**Status implementasi saat audit 17 Oktober 2026:** tabel/RPC/trigger legacy masih ada dan aplikasi masih memiliki route yang menggabungkan pengiriman dengan pembayaran. Database memiliki 1 record shipment berstatus shipped. Sebelum menghapus tabel/relasi, Owner harus memastikan apakah record itu data uji atau transaksi yang harus dipertahankan. Buat backup dan buktikan pemulihan sebelum perubahan; jangan menganggap data terdampak pasti hanya data uji.
 
-| D-10 | **Dasar dan pemicu invoice pelanggan.** (1) Invoice dibuat **manual** oleh Owner/Admin dari **SO yang sudah dikonfirmasi**. (2) Satu SO boleh memiliki **beberapa invoice**. (3) Total kuantitas dan nilai kumulatif semua invoice aktif dari satu SO tidak boleh melebihi SO; dibatasi di database. Harga memakai snapshot harga di baris SO. (4) Tidak ada hubungan ke pengiriman. Invoice tidak memiliki `shipment_id`. (5) **Draft invoice tidak mengakui pendapatan.** (6) Pendapatan diakui saat invoice **diterbitkan** (status issued) dan menjadi piutang usaha. Pembayaran dicatat saat diterima dan hanya melunasi piutang; pembayaran tidak mengakui pendapatan kedua kali. (7) Invoice yang salah dibatalkan dengan alasan lalu dibuat baru (D-07). | Disetujui pemilik 17 Okt 2026. Aturan akuntansinya ada di `ACCOUNTING_POLICY_AND_CUTOVER.md` bagian 7 dan 8; tidak ada butir terbuka |
+## D-10 — Invoice manual dari SO
 
-### A3. Tambahkan baris baru D-11
+Keputusan:
 
-| D-11 | **Cara kerja database.** Aplikasi dibangun dan diuji langsung di Supabase (satu proyek). Tidak ada alur "bangun di lokal lalu dorong". Supabase adalah sumber kebenaran skema. File di `supabase/migrations/` hanya arsip dan nama/versinya harus sama dengan yang tercatat di remote. Setiap perubahan skema dijelaskan di deskripsi PR (apa yang diubah, dampak ke data uji). | Disetujui 17 Okt 2026 |
+1. Owner/Admin membuat invoice manual dari SO yang telah dikonfirmasi.
+2. Satu SO boleh memiliki beberapa invoice; total kuantitas dan nilai kumulatif semua invoice aktif tidak boleh melampaui SO. Aturan harus dijaga oleh database, bukan UI saja.
+3. Invoice tidak memiliki shipment_id dan tidak bergantung pada event pengiriman.
+4. Draft tidak mengakui pendapatan atau piutang. Pendapatan/piutang timbul saat invoice diterbitkan sesuai kebijakan akuntansi.
+5. Pembayaran setelah invoice mengurangi piutang. Dana yang diterima sebelum invoice dicatat sebagai uang muka dan ditangani sesuai kebijakan pajak/akuntansi.
+6. Invoice salah yang sudah diterbitkan dikoreksi melalui nota kredit dan dokumen baru yang tertaut, bukan mengubah histori tanpa jejak.
 
-### A4. Bagian 2 (alur target), kalimat dalam kurung
+**Status implementasi saat audit 17 Oktober 2026:** tabel/RPC invoice masih mengikat sales invoice ke shipment, dan trigger auto-invoice masih aktif. Perubahan schema, RPC, route, tombol, serta batas kuantitas/nilai berbasis SO belum dikerjakan.
 
-Ganti "(kirim via WhatsApp; pemicu pembuatan menunggu D-10)" dengan "(dibuat manual dari SO terkonfirmasi, D-10; kirim via WhatsApp)".
+## D-11 — Supabase sebagai sumber kebenaran schema
 
-### A5. Bagian 4 (status fitur)
+Keputusan:
 
-- Baris "Pengiriman langsung + timeline status": `Akan dihapus (D-09), disetujui 17 Okt 2026`
-- Baris "Invoice pelanggan": `Draf aktif tetapi masih terikat pengiriman di database; diubah ke dasar SO (D-10)`
+- Hanya ada satu proyek Supabase yang dipakai sebagai sumber kebenaran schema.
+- Perubahan schema dijalankan secara terkontrol langsung pada proyek tersebut setelah ada persetujuan dan PR yang menjelaskan objek, risiko data, rencana pemulihan, dan validasi.
+- Folder supabase/migrations adalah arsip. Version ID dan nama arsip harus sama dengan migration history remote; isi migration yang sudah diterapkan tidak boleh diedit.
+- Jangan menjalankan supabase db push, menghapus data, mengubah schema, membuka gate posting, atau deploy tanpa langkah dan persetujuan yang sesuai.
 
-### A6. Bagian 5 (backlog), ganti butir 2
+**Status implementasi:** audit menemukan 9 migration remote. PR dokumentasi menyamakan nama/version prefix empat arsip migration dengan ID remote dan tidak mengubah konten SQL atau database.
 
-2. Hapus modul pengiriman (D-09) dan ubah invoice ke dasar SO (D-10): lepas `shipment_id` dari `sales_invoices`, hapus trigger auto-invoice, ubah RPC `create_customer_invoice` agar menerima SO dan kuantitas per baris dengan batas kumulatif di database, tambah tombol "Buat invoice" di halaman SO. Satu PR. Data uji saja yang terdampak.
+## Urutan implementasi yang harus diikuti
 
-### A7. Bagian 6 (pertanyaan terbuka), ganti seluruh isi
+1. Inventarisasi shipment, SO/PO, invoice, dan payment terkait; Owner mengklasifikasikan data yang harus dipertahankan atau dibersihkan.
+2. Buat backup dan uji restore pada lingkungan terisolasi.
+3. Siapkan PR teknis D-09/D-10 berisi perubahan UI, RPC, trigger, relasi/constraint, dan schema target.
+4. Review dampak perubahan; rencanakan pemulihan dan dokumentasikan langkah penerapan terkontrol.
+5. Terapkan perubahan hanya setelah disetujui, lalu verifikasi RLS/policy, constraint, RPC/trigger, jumlah record, alur invoice parsial, dan role Owner/Admin/Viewer.
+6. Perbarui status fitur dan hasil UAT di dokumentasi. Keputusan yang telah disetujui tidak boleh ditulis sebagai implementasi selesai sampai diverifikasi.
 
-Semua pertanyaan di bagian ini telah dijawab di `ACCOUNTING_POLICY_AND_CUTOVER.md` (disahkan 17 Okt 2026): status PKP (bagian 2, pengaturan perusahaan), selisih pembulatan (bagian 5), alokasi diskon dan ongkir (bagian 6), penyetuju dan jadwal cutover (bagian 12), pembersihan data uji dan nomor dokumen (bagian 12). Tidak ada pertanyaan terbuka.
+## Dokumen terkait
 
-Satu-satunya hal teknis yang tersisa: apakah migration akuntansi `20261017140000` sudah diterapkan di Supabase. Ini dicek dan dicatat di tabel Status fitur, bukan pertanyaan kebijakan.
-
-### A9. Perubahan status keputusan lain di bagian 3
-
-- **D-01:** hapus "(penanganan selisih pembulatan [PERLU KONFIRMASI] dengan akuntan)". Ganti dengan: "Selisih pembulatan ditangani sesuai `ACCOUNTING_POLICY_AND_CUTOVER.md` bagian 5 (baris Penyesuaian pembulatan maksimal Rp10)."
-- **D-02:** hapus kalimat "mana yang dipakai sebagai HPP menunggu keputusan akuntan". Ganti dengan: "Alokasi dan HPP mengikuti `ACCOUNTING_POLICY_AND_CUTOVER.md` bagian 6."
-- **D-03:** status menjadi "Disetujui". Hapus kalimat "Status PKP ... [PERLU KONFIRMASI]". Ganti dengan: "Status PKP adalah pengaturan perusahaan (kebijakan akuntansi bagian 2). Tarif memakai kode pajak berversi: `PPN_UMUM` = 12% × 11/12 DPP, efektif 11%, berlaku mulai 1 Januari 2025."
-- **Header dokumen:** hapus kalimat tentang bagian bertanda [PERLU KONFIRMASI]; sudah tidak ada.
-
-### A8. Header dokumen
-
-Ubah "draf untuk disahkan pemilik" menjadi "disahkan pemilik 17 Oktober 2026, kecuali butir bertanda [PERLU KONFIRMASI]".
-
-## B. `AGENTS.md`
-
-### B1. Bagian 1, baris Alur
-
-`Pesanan Pelanggan → Order ke Suplier (bisa split) → Faktur Suplier → Invoice Pelanggan (manual dari SO, WhatsApp) → Pembayaran → Jurnal → Laporan dan Dashboard.`
-
-### B2. Bagian 3, ganti dua butir pengiriman dan invoice
-
-- **Tidak ada pencatatan pengiriman** (D-09). Modul pengiriman ditargetkan dihapus. Jangan mengembangkannya, dan jangan menambah kode yang bergantung padanya.
-- Invoice pelanggan dibuat manual dari SO terkonfirmasi, boleh beberapa kali, total kumulatif dibatasi SO (D-10). Draft tidak mengakui pendapatan. Jangan menautkan invoice ke pengiriman.
-
-### B3. Bagian 5, butir navigasi
-
-Jika rute berbasis hash (`#customers`, `#invoices`) masih ada, jangan menambah yang baru. Pindahkan ke rute sungguhan secara bertahap sesuai `docs/UI_UX_GUIDELINES.md`.
-
-### B4. Bagian 6, ganti butir migrasi
-
-Perubahan skema dilakukan langsung di Supabase (D-11). Setiap perubahan dicatat di deskripsi PR. File di `supabase/migrations/` adalah arsip, dengan nama dan versi yang sama dengan yang tercatat di remote. Jangan mengubah arsip lama yang sudah diterapkan.
-
-## C. `DATA_MODEL_MAPPING_AND_INTEGRATION_PLAN.md`
-
-- Bagian 13 (shipment), 14 (invoice per shipment) dan 15 (auto-invoice): tambahkan di bawah judul `> DIBATALKAN 17 Okt 2026 oleh D-09 dan D-10. Dipertahankan hanya sebagai riwayat.`
-- Bagian 1 (alur) dan ERD: hapus SHIPMENT dan SHIPMENT_LINE, ubah relasi invoice menjadi SALES_ORDER → SALES_INVOICE.
-- Tabel bagian 2: hapus baris "Pengiriman". Pada baris "Invoice Pelanggan" ganti "sumber kuantitas/trigger invoice perlu dipastikan" dengan "dibuat manual dari SO (D-10)".
-- Bagian 5 butir 4 dan bagian 6 butir 6: ganti dengan "invoice dari SO (D-10)".
-- Bagian 8 sampai 12: beri label `Riwayat per tahap` dan jangan dipakai sebagai status terkini.
-
-## D. `SUPABASE_INTEGRATION.md`, `DATABASE_INTEGRATION_READINESS.md`, `README.md`
-
-- Hapus semua keterangan shipment (tabel, RPC, UI) setelah penghapusannya selesai. Selama belum selesai, tulis "akan dihapus (D-09)".
-- Hapus kata "file lokal" dan "versi remote" pada daftar migration. Pakai satu nama versi yang sama dengan remote (D-11). Samakan nama migration invoice (`20261016175827` di READINESS vs `20261017100000` di dokumen lain) dengan yang tercatat di Supabase.
-- README: perbarui jumlah migration dan tabel, serta status halaman. Tambahkan satu baris: "Sumber kebenaran: AGENTS.md dan docs/PRODUCT_SPEC.md".
+- PRODUCT_SPEC.md — keputusan produk, alur target, backlog dan cutover.
+- ACCOUNTING_POLICY_AND_CUTOVER.md — pajak, pengakuan pendapatan/HPP, jurnal, cutover.
+- DATA_MODEL_MAPPING_AND_INTEGRATION_PLAN.md — ERD target dan aturan integritas.
+- DATABASE_INTEGRATION_READINESS.md — snapshot audit remote.
+- SUPABASE_INTEGRATION.md — rincian integrasi/auth/RLS dan migration remote.
