@@ -34,7 +34,7 @@ Query baca-saja pada 17 Oktober 2026 menemukan: 1 customer, 1 supplier, 2 produk
 
 Jangan anggap shipment `shipped` sebagai `delivered`. Status payment `recorded` tidak dengan sendirinya berarti memiliki jurnal kas/bank atau telah dialokasikan ke invoice.
 
-**Peringatan sebelum D-09:** ada record shipment dan payment di database. Belum dikonfirmasi apakah semuanya data uji atau perlu dipertahankan. Sebelum penghapusan struktur atau pembersihan, Owner harus mengklasifikasikan record, menyetujui retensi/penghapusan, dan memastikan backup dapat dipulihkan. Jangan mengeksekusi drop/cascade hanya berdasarkan asumsi di catatan keputusan.
+**Instruksi D-09 dari pemilik:** hapus langsung objek dan record shipment legacy sesuai scope keputusan. Tabel pembayaran pelanggan/supplier tetap dipertahankan; bukan bagian dari penghapusan shipment.
 
 ## 4. Keputusan target vs implementasi lama
 
