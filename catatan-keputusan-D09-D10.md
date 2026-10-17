@@ -34,7 +34,7 @@ Keputusan:
 - Folder supabase/migrations adalah arsip. Version ID dan nama arsip harus sama dengan migration history remote; isi migration yang sudah diterapkan tidak boleh diedit.
 - Jangan menjalankan supabase db push, menghapus data, mengubah schema, membuka gate posting, atau deploy tanpa langkah dan persetujuan yang sesuai.
 
-**Status implementasi:** audit menemukan 9 migration remote. PR dokumentasi menyamakan nama/version prefix empat arsip migration dengan ID remote dan tidak mengubah konten SQL atau database.
+**Status implementasi:** audit menemukan 9 migration remote. PR #31 menyamakan version prefix empat arsip lama tanpa mengubah konten SQL dan menambahkan migration D-09/D-10 baru; migration baru belum diterapkan ke database remote.
 
 ## Urutan implementasi yang harus diikuti
 
