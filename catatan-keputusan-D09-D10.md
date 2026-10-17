@@ -23,7 +23,7 @@ Keputusan:
 5. Pembayaran setelah invoice mengurangi piutang. Dana yang diterima sebelum invoice dicatat sebagai uang muka dan ditangani sesuai kebijakan pajak/akuntansi.
 6. Invoice salah yang sudah diterbitkan dikoreksi melalui nota kredit dan dokumen baru yang tertaut, bukan mengubah histori tanpa jejak.
 
-**Status implementasi saat audit 17 Oktober 2026:** tabel/RPC invoice masih mengikat sales invoice ke shipment, dan trigger auto-invoice masih aktif. Perubahan schema, RPC, route, tombol, serta batas kuantitas/nilai berbasis SO belum dikerjakan.
+**Status remote pada audit 17 Oktober 2026:** tabel/RPC invoice masih mengikat sales invoice ke shipment, dan trigger auto-invoice masih aktif. **Status branch PR #31:** UI shipment sudah dihapus, UI invoice berbasis SO dan migration baru telah disiapkan; penerapan schema remote belum dilakukan.
 
 ## D-11 — Supabase sebagai sumber kebenaran schema
 
