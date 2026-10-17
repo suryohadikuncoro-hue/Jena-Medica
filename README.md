@@ -7,7 +7,7 @@ Aplikasi ERP web B2B untuk Jena Medical Center dengan model **drop-ship**. Suppl
 - `AGENTS.md` — aturan kerja dan urutan prioritas dokumen.
 - `PRODUCT_SPEC.md` — keputusan produk D-01–D-11.
 - `ACCOUNTING_POLICY_AND_CUTOVER.md` — kebijakan akuntansi, pajak, dan prasyarat cutover.
-- `UI_UX_GUIDELINES.md` — pedoman UI/UX.
+- `UI_UX_GUIDELINES.md` — pedoman UI/UX, diturunkan dari mockup di folder `design/`.
 - `DATABASE_INTEGRATION_READINESS.md` dan `SUPABASE_INTEGRATION.md` — snapshot schema/akses Supabase.
 - `DATA_MODEL_MAPPING_AND_INTEGRATION_PLAN.md` — model data target dan status implementasi.
 
