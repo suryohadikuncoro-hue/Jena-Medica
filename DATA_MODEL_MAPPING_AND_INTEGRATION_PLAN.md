@@ -15,7 +15,7 @@ sales_order → satu atau beberapa purchase_order → supplier_invoice → satu 
 
 Invoice pelanggan tidak mempunyai relasi ke shipment. Satu SO dapat memiliki beberapa invoice; database harus menjaga bahwa total kuantitas dan nilai dari invoice aktif tidak melampaui SO. Harga transaksi mengambil snapshot pada SO. Draft invoice tidak menghasilkan pendapatan/piutang; pendapatan dan piutang timbul saat invoice diterbitkan sesuai kebijakan akuntansi.
 
-**Perbedaan penting:** schema remote pada snapshot audit masih berisi modul shipment dan relasi invoice ke shipment. Itu adalah implementasi legacy, bukan model target, dan belum dihapus oleh PR dokumentasi.
+**Perbedaan penting:** snapshot remote masih berisi modul shipment dan relasi invoice ke shipment. Itu implementasi legacy, bukan model target. Branch PR ini menghapus UI shipment serta menyertakan migration D-09/D-10, tetapi perubahan schema belum diterapkan ke remote.
 
 ## 2. Pemetaan layar ke entitas target
 
