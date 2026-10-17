@@ -147,6 +147,9 @@ begin
        or v_source.requested_quantity <> pg_catalog.round(v_source.requested_quantity, 4) then
       raise exception using errcode = '22023', message = 'Invoice quantity must be positive with at most four decimal places';
     end if;
+    if v_source.sales_order_quantity <= 0 or v_source.sales_order_line_total is null then
+      raise exception using errcode = '23514', message = 'The selected sales order line has no valid quantity or total';
+    end if;
 
     select coalesce(sum(sil.quantity), 0), coalesce(sum(sil.line_total), 0)
     into v_prior_quantity, v_prior_total
