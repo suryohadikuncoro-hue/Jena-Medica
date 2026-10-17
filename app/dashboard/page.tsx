@@ -9,8 +9,8 @@ const empty: Snapshot = { customers: 0, openOrders: 0, supplierDrafts: 0, salesD
 const cards: { key: keyof Snapshot; label: string; hint: string; href: string }[] = [
   { key: "customers", label: "Pelanggan aktif", hint: "Master pelanggan", href: "/master-data#customers" },
   { key: "openOrders", label: "SO terkonfirmasi", hint: "Menunggu proses berikutnya", href: "/" },
-  { key: "inTransit", label: "Shipment berjalan", hint: "Dikirim atau ada kendala", href: "/pengiriman-piutang" },
-  { key: "deliveredUninvoiced", label: "Diterima · belum ditagih", hint: "Siap dibuat draft invoice", href: "/invoice-pelanggan" },
+  { key: "customerPayments", label: "Penerimaan tercatat", hint: "Belum tentu dialokasikan atau dibukukan", href: "/pembayaran" },
+  { key: "supplierPayments", label: "Pembayaran supplier tercatat", hint: "Belum tentu dialokasikan atau dibukukan", href: "/pembayaran" },
   { key: "supplierDrafts", label: "Draft faktur supplier", hint: "Capture dokumen saja; belum AP", href: "/operasional#invoices" },
   { key: "salesDrafts", label: "Draft invoice pelanggan", hint: "Belum diterbitkan atau diposting", href: "/invoice-pelanggan" },
 ];
