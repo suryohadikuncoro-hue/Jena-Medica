@@ -57,27 +57,26 @@ Data yang teramati juga mencakup 1 customer, 1 supplier, 2 produk, 2 SO berstatu
 ## 5. Urutan pengerjaan
 
 1. Selesaikan rekonsiliasi dokumentasi dan pastikan lokasi dokumen tunggal di root repository ini.
-2. Inventarisasi record terkait shipment, SO/PO, dan pembayaran; buat backup dan pastikan pemulihan dapat diuji sebelum rencana pembersihan.
-3. Implementasikan D-09 dan D-10 dalam PR teknis yang terpisah dan ter-review: hapus alur shipment/trigger auto-invoice serta ubah schema/RPC/UI invoice agar bersumber dari SO. Jangan jalankan perubahan database hanya berdasarkan PR dokumentasi.
-4. Lengkapi validasi faktur Supplier: hitungan usulan, angka tercetak, selisih, modal efektif, dan aturan posting D-01/D-02.
-5. Lengkapi invoice komersial, pratinjau/cetak bersih, dan tautan PDF WhatsApp sesuai D-06.
-6. Konfigurasikan profil pajak dan COA, mapping akun, referensi approval, serta periode akuntansi. Kerangka posting yang ada masih terkunci oleh konfigurasi.
-7. Selesaikan UAT Owner/Admin/Viewer, backup/restore, rekonsiliasi dan laporan sebelum cutover.
+2. Implementasikan D-09 dan D-10 pada perubahan teknis: hapus modul/tabel/RPC/trigger shipment dan record shipment yang terkait; ubah schema/RPC/UI invoice menjadi manual berbasis SO, dengan batas kumulatif di database. Data shipment dinyatakan data uji oleh pemilik. Tabel pembayaran tidak ikut dihapus.
+3. Lengkapi validasi faktur Supplier: hitungan usulan, angka tercetak, selisih, modal efektif, dan aturan posting D-01/D-02.
+4. Lengkapi invoice komersial, pratinjau/cetak bersih, dan tautan PDF WhatsApp sesuai D-06.
+5. Konfigurasikan profil pajak dan COA, mapping akun, referensi approval, serta periode akuntansi. Kerangka posting yang ada masih terkunci oleh konfigurasi.
+6. Selesaikan UAT Owner/Admin/Viewer, backup/restore, rekonsiliasi dan laporan sebelum cutover.
 
 ## 6. Cutover dan pembersihan data uji
 
-Target cutover awal tahun buku adalah **1 Januari 2027**, tetapi hanya berlaku jika seluruh prasyarat di bawah selesai. Tanggal ini bukan izin untuk menghapus data atau mengaktifkan posting otomatis.
+Target cutover awal tahun buku adalah **1 Januari 2027**, tetapi hanya berlaku jika seluruh prasyarat pembukuan selesai. Keputusan D-09 secara terpisah menyetujui penghapusan langsung objek dan record shipment yang dianggap data uji; penghapusan itu tidak menunggu cutover.
 
-1. Identifikasi setiap record sebagai data uji atau transaksi yang harus dipertahankan, khususnya shipment berstatus `shipped` dan kedua record pembayaran yang teramati pada audit.
-2. Buat backup penuh dan uji pemulihan pada lingkungan terisolasi. Simpan bukti hasilnya.
-3. Susun dan review rencana pembersihan/retensi dengan pemilik. Jangan menghapus tabel atau baris sebelum data terdampak dan relasinya disetujui.
-4. Verifikasi RLS, role, constraint, saldo, dan relasi setelah perubahan skema/pembersihan.
+1. Selesaikan D-09/D-10: hapus tabel/RPC/trigger dan record shipment, lalu lepaskan semua dependensi invoice lama.
+2. Pertahankan tabel dan record pembayaran pelanggan/supplier.
+3. Verifikasi RLS, role, constraint, saldo, dan relasi setelah perubahan skema.
+4. Untuk cutover pembukuan, buat backup penuh dan uji pemulihan pada lingkungan terisolasi.
 5. Isi pengaturan pajak dan COA/mapping; rekam persetujuan Owner dan buka periode hanya setelah UAT lulus.
-6. Tetapkan nomor dokumen setelah pembersihan (format target `PREFIX-TAHUN-NNNN`, misalnya `SO-2027-0001`) dan catat tanggal/pelaksana di audit/dokumen.
+6. Tetapkan nomor dokumen sesuai kebijakan penomoran dan catat tanggal/pelaksana di audit/dokumen.
 
 ## 7. Definisi selesai untuk setiap PR
 
 - Perilaku sesuai keputusan D-01–D-11 dan status implementasi tidak diklaim lebih maju dari kondisi sebenarnya.
-- PR skema menyatakan tabel/fungsi/trigger yang berubah, data terdampak, backup/rollback atau rencana pemulihan, dan validasi read-only/UAT yang relevan.
+- PR skema menyatakan tabel/fungsi/trigger yang berubah, data terdampak, cara validasi, dan status penerapan. Untuk D-09, penghapusan sudah disetujui pemilik dan tidak ditunda untuk peringatan backup.
 - Jalankan `npm run lint`, `npm run build`, dan `npm run build:worker` untuk perubahan aplikasi; jangan mengklaim lulus bila belum dijalankan.
 - Jangan commit rahasia. Hanya publishable key yang boleh dipakai di browser.
