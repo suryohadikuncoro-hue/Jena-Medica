@@ -1,55 +1,55 @@
 # Jena Medical Center Business Suite
 
-ERP web B2B untuk bisnis distribusi barang medis dengan model **drop-ship**. Sistem tidak mengelola persediaan fisik atau saldo stok. Aplikasi memakai Next.js, Supabase Auth/Postgres/RLS/RPC, dan target runtime Cloudflare Workers melalui OpenNext.
+Aplikasi ERP web B2B untuk Jena Medical Center dengan model **drop-ship**. Supplier mengirim langsung kepada pelanggan di luar sistem; aplikasi tidak mengelola persediaan fisik.
 
-## Sumber kebenaran dokumen
+## Sumber kebenaran dokumentasi
 
-- `AGENTS.md` — aturan kerja agent dan urutan dokumen.
-- `PRODUCT_SPEC.md` — keputusan produk D-01 sampai D-11.
+- `AGENTS.md` — aturan kerja dan urutan prioritas dokumen.
+- `PRODUCT_SPEC.md` — keputusan produk D-01–D-11.
 - `ACCOUNTING_POLICY_AND_CUTOVER.md` — kebijakan akuntansi, pajak, dan prasyarat cutover.
 - `UI_UX_GUIDELINES.md` — pedoman UI/UX.
-- `DATABASE_INTEGRATION_READINESS.md` dan `SUPABASE_INTEGRATION.md` — kondisi database remote dan batas verifikasi.
-- `DATA_MODEL_MAPPING_AND_INTEGRATION_PLAN.md` — model target dan riwayat pengembangan.
-- `catatan-keputusan-D09-D10.md` — catatan keputusan dan status implementasi D-09/D-10/D-11.
+- `DATABASE_INTEGRATION_READINESS.md` dan `SUPABASE_INTEGRATION.md` — snapshot schema/akses Supabase.
+- `DATA_MODEL_MAPPING_AND_INTEGRATION_PLAN.md` — model data target dan status implementasi.
 
-Jika ada konflik, keputusan di `PRODUCT_SPEC.md` dan kebijakan akuntansi berlaku sesuai urutan pada `AGENTS.md`. Bedakan selalu keputusan yang disetujui dari fitur yang benar-benar terimplementasi.
+## D-09/D-10: keputusan dan perubahan teknis
 
-## Status terkini
+- **D-09:** tidak ada menu, halaman, komponen, RPC, tabel, atau record pengiriman di sistem. Objek shipment legacy dan record shipment akan dihapus sesuai instruksi pemilik tanpa menunggu backup sebagai prasyarat. Record pembayaran pelanggan/supplier tidak termasuk scope dan tetap dipertahankan.
+- **D-10:** invoice pelanggan dibuat manual dari SO terkonfirmasi. Satu SO dapat memiliki beberapa invoice; batas kumulatif kuantitas dan nilai dijaga oleh database. Invoice tidak memiliki `shipment_id`.
+- Pembayaran dan alokasi tetap tersedia di route mandiri `/pembayaran`.
 
-Audit baca-saja pada 17 Oktober 2026 mengonfirmasi **9 migration remote** dan **27 tabel publik**; seluruh tabel publik memiliki RLS aktif dan policy. Framework akuntansi sudah ada di database, tetapi posting tetap terkunci: `accounting_posting_profile` berstatus `draft`, mapping akun = 0, periode = 0, dan jurnal = 0.
+PR ini menambahkan migration `20261017150000_d10_invoice_from_sales_order_drop_shipment_module.sql` untuk menghapus objek shipment serta mengganti RPC invoice agar menerima SO dan kuantitas per baris. Migration ini **belum diterapkan ke Supabase Production**. Sampai migration diterapkan, schema remote tetap merupakan schema legacy dan belum cocok dengan kode baru pada branch ini. Terapkan secara terkoordinasi dengan release kode, bukan dengan menjalankan DDL terpisah.
 
-Data remote yang teramati: 1 customer, 1 supplier, 2 produk, 2 SO berstatus `confirmed`, 1 PO berstatus `sent`, 1 shipment berstatus `shipped`, 1 customer payment dan 1 supplier payment berstatus `recorded`, 10 akun COA, serta belum ada invoice pelanggan/faktur supplier/jurnal. Makna setiap record belum boleh diasumsikan sebagai data uji; klasifikasikan sebelum pembersihan.
+## Snapshot Supabase terakhir yang diverifikasi
 
-## Fitur aplikasi saat ini
+Audit baca-saja tanggal 17 Oktober 2026 mencatat **9 migration remote** dan **27 tabel publik**. Semua tabel publik memiliki RLS aktif dan policy. Framework akuntansi sudah ada di remote, tetapi belum siap membukukan transaksi: profile posting berstatus `draft`, mapping akun 0, periode 0, dan jurnal 0.
+
+Data saat audit: 1 customer, 1 supplier, 2 produk, 1 harga pelanggan/barang, 2 SO terkonfirmasi, 1 PO berstatus `sent`, 1 shipment berstatus `shipped`, 1 customer payment dan 1 supplier payment berstatus `recorded`. Tidak ada invoice pelanggan atau faktur supplier. D-09 menetapkan shipment yang ada sebagai data uji yang akan dihapus; pembayaran pelanggan/supplier akan dipertahankan.
+
+## Fitur aplikasi setelah D-09/D-10
 
 - `/login` dan `/set-password` — autentikasi Supabase.
-- `/` — pesanan pelanggan dan snapshot harga.
+- `/` — buat dan kelola SO; harga khusus diambil berdasarkan tanggal transaksi.
 - `/master-data` — master pelanggan, supplier, barang, dan harga.
-- `/operasional` — order supplier dan capture draft Faktur Supplier.
-- `/pengiriman-piutang` — implementasi lama yang masih menggabungkan shipment dan pembayaran; akan disesuaikan dengan D-09.
-- `/invoice-pelanggan` — implementasi invoice lama masih terkait shipment/delivered; akan diubah sesuai D-10.
-- `/keuangan` — status operasional/kerangka akuntansi dengan approval gate; bukan bukti bahwa pembukuan sudah aktif.
+- `/operasional` — PO supplier dan capture draft Faktur Supplier.
+- `/invoice-pelanggan` — buat invoice manual dari SO terkonfirmasi; kuantitas parsial dapat ditagih bertahap sesuai sisa SO.
+- `/pembayaran` — penerimaan pelanggan, pembayaran supplier, dan alokasi.
+- `/keuangan` — status dokumen dan kerangka akuntansi; bukan bukti bahwa posting aktif.
 
-Nama route di atas menggambarkan implementasi yang ditemukan saat dokumen ini diperbarui, bukan jaminan bahwa setiap alur siap produksi atau sudah diverifikasi pada domain live.
+Catatan pembayaran operasional bukan otomatis jurnal kas/bank, dan draft invoice bukan pendapatan/piutang. Posting tetap dikunci sampai profil kebijakan, mapping COA, dan periode dikonfigurasi serta disetujui.
 
-## Target proses yang telah diputuskan
+## Supabase, otorisasi, dan validasi
 
-Pesanan Pelanggan → PO Supplier (dapat split) → Faktur Supplier → Invoice pelanggan manual dari SO terkonfirmasi → Pembayaran/alokasi → Jurnal → Laporan/Dashboard.
+Aplikasi memakai Supabase Auth/Postgres/RLS/RPC dan publishable key pada browser. Service-role key tidak boleh berada pada client, Git, atau log. Role bisnis dibaca dari `app_metadata.business_role` (`owner`, `admin`, `viewer`); viewer hanya baca.
 
-- D-09: tidak ada fitur pencatatan pengiriman; modul, tabel, RPC, dan trigger shipment lama ditargetkan dihapus.
-- D-10: invoice manual dari SO terkonfirmasi, dapat parsial, kumulatif kuantitas/nilai dibatasi SO di database, dan tanpa `shipment_id`.
-- D-11: Supabase adalah sumber kebenaran schema. Arsip migration di repository harus memakai version ID yang sama dengan history remote dan konten migration yang telah diterapkan tidak diedit.
+Untuk perubahan aplikasi, jalankan `npm run lint`, `npm run build`, dan `npm run build:worker` pada commit yang direview, lalu tulis hasil aktualnya di PR. Untuk migration, verifikasi constraint, RLS/policy, fungsi/trigger, hitungan record serta alur invoice SO berbasis kuantitas kumulatif. Status build/deployment live belum diverifikasi oleh PR dokumentasi ini.
 
-D-09 dan D-10 telah diputuskan tetapi **implementasi teknis belum selesai**. Sebelum perubahan schema, klasifikasikan data terdampak dan cadangkan database. PR dokumentasi tidak menerapkan migration atau mengubah database.
+## Menjalankan lokal
 
-## Keamanan dan batas cutover
+```bash
+npm ci
+cp .env.example .env.local
+# Isi NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+npm run dev
+```
 
-RLS aktif pada semua tabel publik dan semua tabel memiliki policy pada audit terakhir. Advisor masih melaporkan beberapa temuan untuk ditinjau: fungsi `SECURITY DEFINER` yang dapat dipanggil role authenticated (role check telah diperiksa pada audit), perlindungan password bocor Supabase Auth yang nonaktif, 20 foreign key tanpa indeks, dan 46 indeks yang ditandai unused. Jangan mengubah atau menghapus semuanya otomatis.
-
-Belum dapat dianggap siap untuk cutover: UAT role-based lengkap, klasifikasi data uji, backup dan uji pemulihan, konfigurasi profil pajak, mapping COA, periode akuntansi, validasi aturan pajak per barang, dan rekonsiliasi akuntansi. Domain Cloudflare production tidak diverifikasi dalam audit ini.
-
-## Validasi dan deployment
-
-Untuk perubahan aplikasi, jalankan `npm run lint`, `npm run build`, dan `npm run build:worker`, lalu cantumkan hasil nyata dalam PR. Untuk perubahan schema, jelaskan keputusan D-xx, objek/data terdampak, prosedur pemulihan, dan langkah verifikasi. Jangan menjalankan `supabase db push`, menghapus data, membuka posting, atau melakukan deployment tanpa persetujuan eksplisit pemilik.
-
-Konfigurasi Cloudflare Workers/OpenNext berada di `wrangler.jsonc` dan `open-next.config.ts`. Jangan commit credential atau service-role key.
+Buka `http://localhost:3000`. Konfigurasi Cloudflare Workers/OpenNext ada pada `wrangler.jsonc` dan `open-next.config.ts`. Jangan commit credential.
