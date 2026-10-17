@@ -10,7 +10,7 @@ Sumber kebenaran keputusan produk adalah PRODUCT_SPEC.md. Kebijakan akuntansi da
 
 Keputusan: pengiriman merupakan urusan supplier dan pelanggan, bukan fungsi sistem Jena. Hapus menu, halaman, komponen, tabel shipments/shipment_lines/shipment_status_events, RPC create_shipment/transition_shipment, serta trigger invoice otomatis berbasis status delivered. Jangan menambahkan resi, surat jalan, kurir, status kirim, timeline pengiriman, atau penerimaan barang.
 
-**Status implementasi saat audit 17 Oktober 2026:** tabel/RPC/trigger legacy masih ada dan aplikasi masih memiliki route yang menggabungkan pengiriman dengan pembayaran. Database memiliki 1 record shipment berstatus shipped. Sebelum menghapus tabel/relasi, Owner harus memastikan apakah record itu data uji atau transaksi yang harus dipertahankan. Buat backup dan buktikan pemulihan sebelum perubahan; jangan menganggap data terdampak pasti hanya data uji.
+**Instruksi implementasi pemilik:** record shipment tersebut diperlakukan sebagai data uji dan dihapus bersama objek shipment legacy. Tidak perlu menunggu backup sebagai prasyarat D-09. Record customer_payment dan supplier_payment tidak termasuk scope penghapusan dan harus tetap ada.
 
 ## D-10 — Invoice manual dari SO
 
