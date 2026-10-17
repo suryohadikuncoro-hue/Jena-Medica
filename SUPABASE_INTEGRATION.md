@@ -30,7 +30,7 @@ Satu project mewakili satu perusahaan/data bisnis; belum ada isolasi multi-tenan
 | `customer_payments` / `supplier_payments` | Capture receipt/disbursement IDR dengan idempotency key; saldo yang belum diposting diperlakukan sebagai uang muka. |
 | `customer_payment_allocation_batches` / `customer_payment_allocations`; `supplier_payment_allocation_batches` / `supplier_payment_allocations` | Alokasi parsial/multi-invoice yang hanya dapat diarahkan ke invoice pelanggan `issued` atau faktur supplier `posted`; jurnalnya diposting terpisah. |
 
-Sembilan migration telah tercatat pada Supabase. Dua puluh tujuh tabel public ber-RLS tersedia, dengan data TEST terbatas pada master, harga, SO dan PO; tabel shipment, invoice pelanggan, dan faktur supplier masih kosong. SO/PO/invoice menggunakan IDR; nilai SO dan invoice draft belum menghitung PPN. Capture pembayaran dan batch alokasi sudah termigrasi, namun belum ada dokumen eligible untuk alokasi.
+Sembilan migration tercatat pada Supabase. Dua puluh tujuh tabel public mengaktifkan RLS dan masing-masing memiliki policy. Snapshot row-count read-only: 1 customer, 1 supplier, 2 product, 2 SO, 1 PO, 1 harga khusus, 1 shipment, 1 penerimaan pelanggan, 1 pembayaran supplier, 10 akun COA, 0 mapping, 0 periode, 0 invoice pelanggan, 0 faktur supplier dan 0 jurnal. Status setiap record operasional sebagai data uji atau transaksi riil harus dikonfirmasi sebelum cutover. SO/PO/invoice menggunakan IDR; nilai SO dan invoice draft belum menghitung PPN. Capture pembayaran dan alokasi sudah termigrasi; belum ada dokumen eligible untuk alokasi.
 
 ## Aturan harga dan faktur
 
@@ -66,7 +66,7 @@ RLS memakai `app_metadata`, bukan `user_metadata`. Rujukan: [Supabase Row Level 
 - `supabase/migrations/20261016134859_supplier_invoice_capture.sql`
 - `supabase/migrations/20261016171001_dropship_shipment_tracking.sql`
 - `supabase/migrations/20261016175827_customer_invoices_per_delivery_drafts.sql`
-- `supabase/migrations/20261016205342_auto_customer_invoice_on_delivery_drafts.sql` (**file lokal; remote mencatat auto-invoice pada versi `20261016205342`**)
+- `supabase/migrations/20261016205342_auto_customer_invoice_on_delivery_drafts.sql` (**nama dan version ID diselaraskan dengan catatan migration remote**)
 - `supabase/migrations/20261016215508_payments_and_invoice_allocations.sql` (**sudah diterapkan ke Supabase**)
 - `supabase/migrations/20261016225329_accounting_posting_framework.sql` (**framework AP/AR dan jurnal; sudah tercatat remote, posting tetap terkunci oleh approval gate**)
 
