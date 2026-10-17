@@ -1,6 +1,6 @@
 # Pedoman UI/UX — Jena Medical Center Business Suite
 
-**Peran:** satu-satunya rujukan tampilan dan interaksi. Keputusan bisnis ada di `docs/PRODUCT_SPEC.md`.
+**Peran:** satu-satunya rujukan tampilan dan interaksi. Keputusan bisnis ada di `PRODUCT_SPEC.md`.
 Pengguna utama adalah pemilik bisnis yang sering membuka dari HP, bukan akuntan.
 
 ## 1. Prinsip
@@ -106,4 +106,4 @@ Centang dan hapus bila selesai. Urutan = prioritas.
 - [ ] U-20 Tema tanpa kedipan; ikon dari satu set; lebar header dan konten selaras
 - [ ] U-21 Skeleton loading; catatan "Akses hanya-baca" untuk Viewer
 - [ ] U-22 Arahkan setelah login ke Dashboard; perbaiki ikon "＋" di bottom bar
-- [ ] U-23 Hapus menu, halaman, dan komponen Pengiriman (D-09); pindahkan Pembayaran dan Piutang & Hutang ke rute sendiri; sesuaikan stepper dan dashboard (hapus kartu "Shipment berjalan" dan "Diterima · belum ditagih")
+- [ ] U-23 Verifikasi build/UAT akhir untuk perubahan D-09/D-10 di PR #31: menu, halaman, dan komponen Pengiriman sudah dihapus; Pembayaran/Piutang & Hutang dipindah ke rute `/pembayaran`; dashboard tidak lagi menampilkan kartu shipment. Checklist tetap terbuka sampai lint/build dan pengujian alur terverifikasi.

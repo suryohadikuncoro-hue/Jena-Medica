@@ -6,12 +6,12 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AuthStatus } from "@/app/components/auth-status";
 
 const groups = [
-  { title: "Transaksi", items: [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Pengiriman", "/pengiriman-piutang"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pengiriman-piutang#payments"]] },
+  { title: "Transaksi", items: [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pembayaran"]] },
   { title: "Master Data", items: [["Pelanggan", "/master-data#customers"], ["Supplier", "/master-data#suppliers"], ["Barang", "/master-data#products"], ["Harga per Pelanggan", "/master-data#prices"], ["Daftar Akun", "/master-data#accounts"]] },
   { title: "Akuntansi", items: [["Jurnal Umum", "/keuangan#jurnal"], ["Buku Besar", "/keuangan#buku-besar"], ["Biaya Operasional", "/keuangan#biaya"], ["Tutup Buku", "/keuangan#tutup-buku"]] },
-  { title: "Laporan", items: [["Laba Rugi", "/keuangan#laba-rugi"], ["Neraca", "/keuangan#neraca"], ["Arus Kas", "/keuangan#arus-kas"], ["Piutang & Hutang", "/pengiriman-piutang#payments"], ["PPN", "/keuangan#ppn"]] },
+  { title: "Laporan", items: [["Laba Rugi", "/keuangan#laba-rugi"], ["Neraca", "/keuangan#neraca"], ["Arus Kas", "/keuangan#arus-kas"], ["Piutang & Hutang", "/pembayaran"], ["PPN", "/keuangan#ppn"]] },
 ] as const;
-const quickActions = [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pengiriman-piutang#payments"], ["Biaya Operasional", "/keuangan#biaya"]] as const;
+const quickActions = [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pembayaran"], ["Biaya Operasional", "/keuangan#biaya"]] as const;
 const searchItems = [...groups.flatMap(g => g.items.map(([label, href]) => ({ label, href }))), { label: "Dashboard", href: "/dashboard" }];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -51,7 +51,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex" aria-label="Navigasi utama">
           <Link className={`top-link ${pathname === "/dashboard" ? "top-link-active" : ""}`} href="/dashboard">Dashboard</Link>
           {groups.map(group => <details key={group.title} className="nav-menu"><summary className="top-link cursor-pointer">{group.title}<span aria-hidden="true" className="ml-1 text-xs">⌄</span></summary><div className="nav-popover">{group.items.map(([label, href]) => <Link key={label} href={href}>{label}</Link>)}</div></details>)}
-          <Link className={`top-link ${pathname === "/pengiriman-piutang" ? "top-link-active" : ""}`} href="/pengiriman-piutang">Pengiriman</Link>
         </nav>
         <div className="ml-auto flex shrink-0 items-center gap-2 lg:ml-0">
           <button className="search-trigger hidden sm:flex" type="button" onClick={() => setPaletteOpen(true)}><span aria-hidden="true">⌕</span><span className="hidden xl:inline">Cari transaksi…</span><kbd>⌘ K</kbd></button>
@@ -63,11 +62,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button type="button" className="icon-button lg:hidden" aria-label="Buka menu" aria-expanded={mobileOpen} onClick={() => setMobileOpen(v => !v)}>☰</button>
         </div>
       </div>
-      {mobileOpen && <div className="mobile-menu lg:hidden"><div className="mb-3 flex gap-2"><button className="search-trigger flex-1" type="button" onClick={() => { setPaletteOpen(true); setMobileOpen(false); }}>⌕ Cari transaksi</button><button className="icon-button" onClick={toggleTheme} aria-label="Ganti tema">◐</button></div><Link href="/dashboard" onClick={() => setMobileOpen(false)}>Dashboard</Link>{groups.map(g => <details key={g.title} className="mobile-menu-group"><summary>{g.title}</summary>{g.items.map(([label, href]) => <Link key={label} href={href} onClick={() => setMobileOpen(false)}>{label}</Link>)}</details>)}<AuthStatus compact/><Link href="/pengiriman-piutang" onClick={() => setMobileOpen(false)}>Pengiriman</Link><button className="primary-button mt-3 w-full" onClick={() => { setMobileOpen(false); setCreateOpen(v => !v); }}>＋ Buat Baru</button></div>}
+      {mobileOpen && <div className="mobile-menu lg:hidden"><div className="mb-3 flex gap-2"><button className="search-trigger flex-1" type="button" onClick={() => { setPaletteOpen(true); setMobileOpen(false); }}>⌕ Cari transaksi</button><button className="icon-button" onClick={toggleTheme} aria-label="Ganti tema">◐</button></div><Link href="/dashboard" onClick={() => setMobileOpen(false)}>Dashboard</Link>{groups.map(g => <details key={g.title} className="mobile-menu-group"><summary>{g.title}</summary>{g.items.map(([label, href]) => <Link key={label} href={href} onClick={() => setMobileOpen(false)}>{label}</Link>)}</details>)}<AuthStatus compact/><button className="primary-button mt-3 w-full" onClick={() => { setMobileOpen(false); setCreateOpen(v => !v); }}>＋ Buat Baru</button></div>}
     </header>
     {notice && <div role="status" className="notice-banner mx-auto mt-3 max-w-[1500px] px-4 lg:px-8">{notice}<button className="ml-3 font-semibold" onClick={() => setNotice("")}>Tutup</button></div>}
     <div className="pb-20 lg:pb-0">{children}</div>
-    <nav className="bottom-bar lg:hidden" aria-label="Aksi utama"><Link href="/dashboard">⌂<span>Dashboard</span></Link><Link href="/">＋<span>Pesanan</span></Link><Link href="/invoice-pelanggan">▤<span>Invoice</span></Link><Link href="/pengiriman-piutang#payments">↗<span>Bayar</span></Link></nav>
+    <nav className="bottom-bar lg:hidden" aria-label="Aksi utama"><Link href="/dashboard">⌂<span>Dashboard</span></Link><Link href="/">＋<span>Pesanan</span></Link><Link href="/invoice-pelanggan">▤<span>Invoice</span></Link><Link href="/pembayaran">↗<span>Bayar</span></Link></nav>
     {paletteOpen && <div className="palette-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setPaletteOpen(false); }}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Pencarian global"><div className="flex items-center gap-3 border-b p-4"><span aria-hidden="true">⌕</span><input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Cari menu dan transaksi..." aria-label="Cari menu dan transaksi" className="min-w-0 flex-1 bg-transparent outline-none"/><kbd>ESC</kbd></div><div className="p-2">{matches.length ? matches.map(item => <Link className="command-result" key={`${item.label}-${item.href}`} href={item.href} onClick={() => { setPaletteOpen(false); setQuery(""); }}>{item.label}<span>Buka →</span></Link>) : <p className="p-4 text-sm opacity-60">Tidak ada hasil. Pencarian data transaksi aktif setelah sumber data terhubung.</p>}</div><p className="border-t px-4 py-3 text-xs opacity-60">Gunakan Ctrl/Cmd + K untuk membuka pencarian</p></section></div>}
   </div>;
 }
