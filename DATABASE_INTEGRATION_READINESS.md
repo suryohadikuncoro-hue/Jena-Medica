@@ -100,4 +100,4 @@ Ini snapshot advisor saat audit; jalankan ulang setelah perubahan schema dan seb
 5. UAT bisnis dan role-based, rekonsiliasi, pengujian idempotensi/concurrency/reversal, dan review Advisor.
 6. Catat persetujuan Owner dan hasil pemeriksaan sebelum mengaktifkan posting atau menganggap sistem siap operasional.
 
-Tidak ada perubahan database, data, atau deployment dilakukan dalam audit maupun PR dokumentasi ini.
+Belum ada perubahan database/data Production atau deployment yang dilakukan. Branch PR #31 berisi perubahan aplikasi dan file migration baru; migration tersebut belum diterapkan ke Supabase remote.
