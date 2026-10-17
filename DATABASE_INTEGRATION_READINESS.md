@@ -68,7 +68,7 @@ Shipment berstatus `shipped` bukan berarti delivered. Catatan pembayaran `record
 
 **D-10 — invoice manual berbasis SO.** Schema saat ini masih mengharuskan `sales_invoices.shipment_id` dan RPC/trigger invoice draft bergantung pada shipment. Targetnya invoice manual dari SO terkonfirmasi, tanpa `shipment_id`, dapat parsial, dengan batas jumlah/nilai kumulatif yang dijaga database. Perubahan ini belum diimplementasikan hanya dengan menyetujui dokumen.
 
-Jangan mengembangkan alur shipment baru. Jangan mulai perubahan schema sebelum data terdampak diinventarisasi dan backup dapat dipulihkan. PR ini tidak menjalankan perubahan database.
+Jangan mengembangkan alur shipment baru. D-09/D-10 telah disetujui; implementasi teknis akan menghapus objek dan record shipment legacy serta memindahkan invoice ke SO. Record pembayaran tetap dipertahankan. PR dokumentasi tidak mengubah database.
 
 ## 5. Keamanan dan Advisor
 
