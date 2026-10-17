@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-type Snapshot = { customers: number; openOrders: number; inTransit: number; deliveredUninvoiced: number; supplierDrafts: number; salesDrafts: number };
-const empty: Snapshot = { customers: 0, openOrders: 0, inTransit: 0, deliveredUninvoiced: 0, supplierDrafts: 0, salesDrafts: 0 };
+type Snapshot = { customers: number; openOrders: number; supplierDrafts: number; salesDrafts: number; customerPayments: number; supplierPayments: number };
+const empty: Snapshot = { customers: 0, openOrders: 0, supplierDrafts: 0, salesDrafts: 0, customerPayments: 0, supplierPayments: 0 };
 const cards: { key: keyof Snapshot; label: string; hint: string; href: string }[] = [
   { key: "customers", label: "Pelanggan aktif", hint: "Master pelanggan", href: "/master-data#customers" },
   { key: "openOrders", label: "SO terkonfirmasi", hint: "Menunggu proses berikutnya", href: "/" },
