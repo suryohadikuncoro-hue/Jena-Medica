@@ -86,7 +86,7 @@ Ini snapshot advisor saat audit; jalankan ulang setelah perubahan schema dan seb
 ## 6. Aplikasi, validasi, dan batas verifikasi
 
 - Aplikasi memakai Supabase JS di browser dengan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Service-role key tidak boleh dipakai di browser.
-- Route `/pengiriman-piutang` dan `/invoice-pelanggan` saat ini merepresentasikan implementasi lama berbasis shipment dan harus disesuaikan setelah D-09/D-10 diterapkan.
+- Pada snapshot remote yang diaudit, route lama `/pengiriman-piutang` menggabungkan shipment dan pembayaran, sedangkan invoice terikat shipment. Pada branch PR ini, route shipment telah dihapus, pembayaran dipindahkan ke `/pembayaran`, dan UI invoice memakai SO. Migration baru belum diterapkan remote.
 - Framework akuntansi memiliki approval gate, tetapi UAT UI end-to-end ber-role Owner/Admin/Viewer terhadap alur baru belum dilakukan.
 - Audit ini tidak memverifikasi domain Cloudflare live, tidak menjalankan build, dan tidak menguji transaksi UI.
 - Jangan mengklaim lint/build lulus dari dokumen historis tanpa menjalankannya kembali pada commit yang sedang direview.
