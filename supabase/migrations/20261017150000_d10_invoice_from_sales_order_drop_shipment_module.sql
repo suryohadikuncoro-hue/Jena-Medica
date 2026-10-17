@@ -204,4 +204,6 @@ grant execute on function public.create_customer_invoice(uuid, date, text, jsonb
 comment on function public.create_customer_invoice(uuid, date, text, jsonb) is
   'Creates a draft customer invoice manually from a confirmed sales order; cumulative active invoice quantity and values cannot exceed each sales order line.';
 
+notify pgrst, 'reload schema';
+
 commit;
