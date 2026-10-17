@@ -11,6 +11,8 @@ Audit mencatat **9 migration remote** dan **27 tabel publik**. Semua tabel publi
 
 Versi migration berikut adalah versi yang tercatat di Supabase. Arsip di `supabase/migrations/` harus memakai version ID yang sama dengan remote (D-11).
 
+Branch ini menambahkan migration **belum diterapkan** `20261017150000_d10_invoice_from_sales_order_drop_shipment_module.sql`. Migration tersebut melepas dependensi shipment dari invoice dan menyediakan RPC invoice manual dari SO terkonfirmasi. Snapshot remote di atas tetap kondisi sebelum migration: 9 migration dan 27 tabel publik. Audit ini tidak menjalankan DDL.
+
 | Version ID | Migration | Status remote |
 |---|---|---|
 | `20261016125928` | `dropship_suppliers_orders` | Tercatat |
