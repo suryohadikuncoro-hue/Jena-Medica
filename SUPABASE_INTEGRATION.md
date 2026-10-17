@@ -42,7 +42,7 @@ Jangan anggap shipment `shipped` sebagai `delivered`. Status payment `recorded` 
 
 Keputusan final: hapus menu/halaman/komponen pengiriman, tabel shipment, RPC terkait, dan trigger invoice otomatis ketika shipment menjadi delivered. Jangan menambahkan tracking, resi, surat jalan, kurir, atau penerimaan barang.
 
-Kondisi saat audit: objek dan route legacy masih tersedia. Perubahan skema serta pemindahan alur pembayaran/piutang ke route terpisah belum dilakukan. Jangan mengembangkan modul legacy; lakukan perubahan dalam PR teknis terpisah setelah inventarisasi data, backup, dan rencana perubahan disetujui.
+Kondisi remote saat audit: objek shipment legacy masih ada, sementara kode pada branch ini menyiapkan route pembayaran mandiri dan invoice berbasis SO. Migration D-09/D-10 belum diterapkan ke remote. Tidak perlu menunggu backup sebagai prasyarat penghapusan shipment; record pembayaran harus dipertahankan.
 
 ### D-10 — invoice manual dari SO
 
