@@ -51,7 +51,7 @@ Hitungan berikut berasal dari query baca-saja pada 17 Oktober 2026:
 
 Shipment berstatus `shipped` bukan berarti delivered. Catatan pembayaran `recorded` adalah pencatatan operasional, bukan otomatis jurnal kas/bank atau bukti pelunasan invoice.
 
-**Penting sebelum D-09 atau pembersihan data:** keputusan produk menargetkan penghapusan modul pengiriman. Namun audit menemukan 1 shipment dan masing-masing 1 record pembayaran pelanggan/supplier. Status apakah record tersebut data uji atau transaksi yang harus dipertahankan **belum terkonfirmasi**. Jangan menghapus tabel/baris atau melakukan cascade sebelum pemilik mengonfirmasi klasifikasi, backup, dan rencana retensi.
+**Instruksi pemilik untuk D-09:** record shipment yang teramati diperlakukan sebagai data uji dan dihapus bersama objek shipment legacy. Penghapusan tidak menunggu backup sebagai prasyarat. Record pembayaran pelanggan dan supplier tetap dipertahankan, bukan bagian scope penghapusan.
 
 ## 3. Status kebijakan dan posting
 
