@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Pesanan Baru</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#eceeed;display:flex;justify-content:center}
+.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.lbl{font-size:12px;font-weight:600;color:#6b6e75;margin-bottom:6px}
+.fld{min-height:48px;box-sizing:border-box;padding:0 16px;border:1.5px solid #e4e5e2;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:600;color:#17181c}
+.card{background:#f5f5f3;border-radius:24px;padding:16px}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;color:#17181c}
+.btn{min-height:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:1.5px solid #17181c;background:transparent;color:#17181c}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;width:64px;font-size:11px;font-weight:600;color:#a9acb4}
+.tab span.c{display:flex;width:44px;height:32px;align-items:center;justify-content:center;border-radius:999px}
+</style>
+
+</head>
+<body>
+
+
+<div style="width:390px;height:1260px;box-sizing:border-box;background:#fff;color:#17181c;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column">
+<div style="padding:20px 20px 0;display:flex;align-items:center;gap:12px">
+<a href="#" aria-label="Kembali" style="display:flex;width:44px;height:44px;align-items:center;justify-content:center;border:1.5px solid #e4e5e2;border-radius:50%;color:#17181c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+<div style="flex:1"><h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-.03em">Pesanan Baru</h1><div style="font-size:12px;color:#6b6e75">Draf tersimpan otomatis</div></div>
+<span class="pill" style="background:#e4e5e2">Draf</span>
+</div>
+
+<div style="padding:18px 20px 0;display:flex;flex-direction:column;gap:14px">
+<div class="card" style="display:flex;flex-direction:column;gap:12px">
+<div><div class="lbl">Pelanggan</div><div class="fld"><span>Klinik Contoh A</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+<div style="display:flex;gap:10px">
+<div style="flex:1"><div class="lbl">Tanggal pesanan</div><div class="fld"><span>18 Okt 2026</span></div></div>
+<div style="flex:1"><div class="lbl">Termin bayar</div><div class="fld"><span>30 hari</span></div></div>
+</div>
+<div><div class="lbl">Alamat tujuan</div><div class="fld"><span>Jl. Contoh No. 12, Surabaya</span></div></div>
+</div>
+
+<div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:6px"><h2 style="margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em">Barang</h2><span style="font-size:12px;color:#6b6e75">3 barang</span></div>
+
+<div class="card" style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;gap:10px"><div style="font-weight:700;font-size:15px">Sarung tangan periksa</div><div style="font-weight:800">Rp 1.700.000</div></div>
+<div style="display:flex;gap:10px"><div style="flex:1"><div class="lbl">Jumlah (kotak)</div><div class="fld"><span>20</span></div></div><div style="flex:1.4"><div class="lbl">Harga satuan</div><div class="fld"><span>Rp 85.000</span></div></div></div>
+<div style="display:flex;gap:6px"><span class="pill" style="background:#c2ecdd">Harga khusus</span><span class="pill" style="background:#c2ecdd">Margin +12%</span></div>
+</div>
+
+<div class="card" style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;gap:10px"><div style="font-weight:700;font-size:15px">Masker bedah 3 lapis</div><div style="font-weight:800">Rp 2.075.000</div></div>
+<div style="display:flex;gap:10px"><div style="flex:1"><div class="lbl">Jumlah (kotak)</div><div class="fld"><span>50</span></div></div><div style="flex:1.4"><div class="lbl">Harga satuan</div><div class="fld"><span>Rp 41.500</span></div></div></div>
+<div style="display:flex;gap:6px"><span class="pill" style="background:#fcebc3">Diubah manual</span><span class="pill" style="background:#c2ecdd">Margin +7%</span></div>
+</div>
+
+<div class="card" style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;gap:10px"><div style="font-weight:700;font-size:15px">Tensimeter digital</div><div style="font-weight:800">Rp 1.280.000</div></div>
+<div style="display:flex;gap:10px"><div style="flex:1"><div class="lbl">Jumlah (unit)</div><div class="fld"><span>2</span></div></div><div style="flex:1.4"><div class="lbl">Harga satuan</div><div class="fld"><span>Rp 640.000</span></div></div></div>
+<div style="display:flex;gap:6px"><span class="pill" style="background:#c2ecdd">Harga khusus</span><span class="pill" style="background:#f8c9d3">Margin −3%</span></div>
+</div>
+
+<div style="padding:14px 16px;border-radius:20px;background:#f8c9d3;font-size:13px;line-height:1.45"><b>Tensimeter dijual di bawah modal terakhir (Rp 660.000).</b> Tetap bisa diproses, tapi marginnya minus.</div>
+
+<button type="button" class="btn">+ Tambah barang</button>
+
+<div class="card" style="display:flex;align-items:center;justify-content:space-between;background:#17181c;color:#fff;border-radius:24px">
+<div><div style="font-size:12px;opacity:.75">Total pesanan</div><div style="font-size:26px;font-weight:800;letter-spacing:-.02em">Rp 5.055.000</div></div>
+<div style="font-size:12px;text-align:right;opacity:.75">3 barang<br>termin 30 hari</div>
+</div>
+
+<div style="display:flex;gap:10px"><button type="button" class="btn" style="flex:1">Simpan draf</button><button type="button" class="btn" style="flex:1.4;background:#17181c;color:#fff">Konfirmasi pesanan</button></div>
+</div>
+
+<div style="margin-top:auto;background:#1b1c21;border-radius:24px 24px 0 0;padding:10px 8px 18px;display:flex;justify-content:space-around">
+<a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></span>Dashboard</a>
+<a href="#" class="tab" aria-current="page" style="color:#f8c9d3"><span class="c" style="background:#f8c9d3;color:#17181c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="3"></rect><path d="M9 4h6v3H9zM9 12h6M9 16h4"></path></svg></span>Pesanan</a>
+<a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v11a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM14 3v5h5M9 13h6M9 17h6"></path></svg></span>Order</a>
+<a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"></path></svg></span>Invoice</a>
+<a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.2"></circle><circle cx="12" cy="12" r="1.2"></circle><circle cx="19" cy="12" r="1.2"></circle></svg></span>Lainnya</a>
+</div>
+</div>
+
+</body>
+</html>

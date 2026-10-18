@@ -4,6 +4,7 @@
 > **Sumber kebenaran tampilan:** `Mockup_Jena_Business_Suite` (disimpan di `design/Mockup_Jena_Business_Suite.pdf` dan `.html`). Dokumen ini diturunkan dari mockup. Kalau berbeda, **mockup menang**, kecuali butir di bagian 9 (teknis) dan bagian 10 (konflik dengan keputusan produk).
 > Aturan lama "menu tetap di atas / navbar atas / hamburger" **dicabut**. Menu ada di rail kiri (desktop) dan bottom bar (mobile).
 > Pengguna utama adalah pemilik bisnis yang sering membuka dari HP, bukan akuntan.
+> **Mockup HP (390 px):** `design/mockup-hp/index.html`, 15 layar. Layar 1–13 disetujui; **layar 14–15 (Keuangan) masih draf dan perlu diskusi**.
 
 **Cara membaca ukuran.** Layar Dashboard diambil dari kode sumber mockup, jadi angka pikselnya pasti. Layar Pesanan, Faktur Supplier, dan Invoice diambil dari PDF (tanpa kode), jadi struktur, warna, dan teksnya pasti, tetapi ukuran pikselnya **perkiraan** dan mengikuti token/komponen Dashboard. Jangan menebak angka baru; pakai komponen di bagian 5.
 
@@ -76,12 +77,17 @@ Halaman (`--page`) berisi satu shell putih: maks 1480 px, rata tengah, padding 2
 - Ikon: SVG garis 24×24, stroke 1.8, ujung bulat, `currentColor`.
 
 ### Mobile (≤ 820 px)
-- Rail hilang; muncul **bottom bar** sticky `bottom:10px`, 5 kolom, padding 8, sudut 30, latar `#1b1c21`: Dashboard, Pesanan, Order supplier/Faktur, Invoice, Pembayaran. Item aktif berupa lingkaran pink.
-- Shell mobile: padding 16, sudut 26. Padding halaman 10.
+- Rail hilang; muncul **bottom bar** menempel di bawah layar (referensi pola: aplikasi perbankan; warna: mockup Jena). Latar `#1b1c21`, sudut atas 24, padding 10/8/18 (bawah menyertakan jarak aman gestur HP), 5 slot sama lebar.
+- Slot (tiap ikon **berlabel teks** 11 px/600): **Dashboard, Pesanan, Order, Invoice, Lainnya**.
+- Tidak aktif: ikon dan label `#a9acb4`. Aktif: ikon `#17181c` di dalam lingkaran/pil `#f8c9d3` (44×32), label `#f8c9d3`, `aria-current="page"`. Target sentuh minimal 44 px.
+- **Order** adalah satu menu "Order supplier" berisi dua tab, **Order** dan **Faktur** (tab memperbarui URL; lencana pink pada Faktur = jumlah faktur perlu dicek).
+- **Lainnya** membuka halaman sendiri (rute sungguhan, bukan lembar geser) berisi kartu profil, lalu menu **Pembayaran, Master Data, Keuangan, Pengaturan**, dan Keluar. Saat di halaman Pembayaran, Master Data, atau Keuangan, slot Lainnya yang tampil aktif. Tidak ada ikon pemberitahuan sampai fiturnya ada (prinsip 8).
+- Shell mobile: lebar 390 px, padding halaman 20 px.
 
 ### Pola kepala halaman
 - **Dashboard:** sapaan h1 + tanggal; kanan: tombol Cari dan "+ Pesanan baru".
 - **Halaman detail:** tautan kembali kecil di atas judul (desktop: "‹ Semua pesanan"; mobile: tombol bulat 44 px bergaris dengan panah) lalu h1 + pil status + keterangan satu baris. Aksi destruktif (mis. "Batalkan pesanan") di kanan atas sebagai tombol garis merah.
+- **Halaman daftar (HP):** h1 28 px + keterangan 13 px; kanan: tombol cari (44 px, bergaris) dan tombol bulat "+" 48 px (aksi utama membuat dokumen baru). Di bawahnya: tab segmen bila ada dua bagian (Order|Faktur, Piutang|Hutang, Pelanggan|Supplier|Barang), banner aksi, kartu ringkas, filter, lalu daftar.
 - **Halaman faktur supplier:** jejak kecil "Order supplier · Faktur supplier" di atas h1.
 - **Daftar + editor (Invoice):** h1 + satu kalimat penjelasan; di bawahnya dua kartu berdampingan (daftar kiri, editor kanan).
 
@@ -130,6 +136,19 @@ Halaman (`--page`) berisi satu shell putih: maks 1480 px, rata tengah, padding 2
 | Dibayar sebagian | pink |
 | Lunas | mint |
 
+**Tambahan dari mockup HP**
+
+| Komponen | Spesifikasi |
+|---|---|
+| Pil status tambahan | Menunggu balasan = kuning; Dibalas = mint; Dicatat = mint; Draf (order/faktur) = abu; Draf · ada selisih = pink |
+| Banner aksi | blok pastel (kuning = perlu tinjauan; pink = ada masalah), kalimat pertama tebal, tombol solid kecil di kanan ("Tinjau", "Periksa", "Buat order") |
+| Kartu ringkas | dua kartu sebaris di atas daftar: label 12 px `--muted`, angka 20–22 px/800, satuan 12 px `--teal-text` |
+| Kartu total gelap | latar `#17181c`, teks putih, label 12 px opacity .75, angka 26–34 px/800; dipakai untuk total pesanan, total tagihan, saldo ringkasan |
+| Baris daftar | kartu `--card`, ikon bulat 44 (warna pastel sesuai status), kiri "nomor · nama" 14/700 dan keterangan langkah berikutnya 12 px `--muted`, kanan nilai 14/800 dan pil status |
+| Baris riwayat transaksi | ikon bulat panah turun hijau (masuk, nominal `+`, `--good`) atau panah naik pink (keluar, nominal `−`, `--bad`), nama, keterangan "dokumen · cara bayar · tanggal" |
+| Chip filter | pil 44 px dapat digeser horizontal; aktif `--ink` |
+| Tombol nonaktif | `--line` + `--muted`, `aria-disabled="true"`; dipakai untuk "Catat ke pembukuan" selama selisih belum nol |
+
 Aturan komponen:
 - Satu aksi utama per kartu. Tombol solid hanya untuk aksi utama halaman/kartu langkah ("Buat invoice dari pesanan ini", "Terbitkan invoice", "+ Pesanan baru"). Aksi sekunder: tombol garis.
 - Angka yang belum berasal dari pembukuan diberi keterangan (mockup: "angka dari dokumen, belum dari pembukuan").
@@ -167,13 +186,31 @@ Kamus ini hanya berlaku untuk **teks yang dibaca pengguna di layar**. Kode, nama
 
 ## 8. Status verifikasi layar
 
-| Layar | Sumber | Status |
-|---|---|---|
-| Dashboard | kode + PDF | Terverifikasi, ukuran pasti |
-| Detail pesanan (desktop + mobile) | PDF | Terverifikasi, ukuran perkiraan |
-| Faktur supplier | PDF | Terverifikasi, ukuran perkiraan |
-| Invoice (daftar + buat) | PDF | Terverifikasi, ukuran perkiraan |
-| Daftar pesanan, form pesanan baru, daftar faktur supplier, Master data, Pembayaran, Keuangan | tidak ada di mockup | **Belum ada acuan**. Pakai komponen bagian 5 dan tandai di PR |
+Acuan: `design/` (PDF dan HTML Dashboard desktop) dan `design/mockup-hp/` (15 layar HP).
+
+| # | Layar | Berkas | Status |
+|---|---|---|---|
+| — | Dashboard desktop | `design/Mockup_Jena_Business_Suite.html` | Disetujui, ukuran pasti |
+| — | Detail pesanan (desktop dan HP), faktur supplier desktop, invoice desktop | `design/Mockup_Jena_Business_Suite.pdf` | Disetujui, ukuran perkiraan |
+| 1 | Pesanan Baru | `mockup-hp/01-pesanan-baru.html` | Disetujui |
+| 2 | Daftar Pesanan | `02-daftar-pesanan.html` | Disetujui |
+| 3 | Order Supplier, tab Order | `03-order-supplier.html` | Disetujui |
+| 4 | Order Supplier, tab Faktur | `04-order-supplier-faktur.html` | Disetujui (tunduk K2, K3) |
+| 5 | Detail / Catat Faktur Supplier | `05-detail-faktur-supplier.html` | Disetujui (tunduk K2, K3) |
+| 6 | Daftar Invoice | `06-daftar-invoice.html` | Disetujui (tunduk K1, K5) |
+| 7 | Tinjau dan Edit Draf Invoice | `07-tinjau-draf-invoice.html` | Disetujui (tunduk K1, K4, K5) |
+| 8 | Invoice Terbit + Kirim WhatsApp | `08-invoice-terbit.html` | Disetujui (tunduk K4, K6) |
+| 9 | Pembayaran (tab Piutang) | `09-pembayaran.html` | Disetujui |
+| 10 | Catat Pembayaran | `10-catat-pembayaran.html` | Disetujui (lihat pertanyaan 5, bagian 13) |
+| 11 | Lainnya (menu) | `11-lainnya.html` | Disetujui |
+| 12 | Master Data (tab Pelanggan) | `12-master-data.html` | Disetujui |
+| 13 | Detail Pelanggan + Harga Khusus | `13-detail-pelanggan.html` | Disetujui |
+| 14 | Keuangan: Ikhtisar | `14-keuangan-ikhtisar.html` | **Draf, perlu diskusi** |
+| 15 | Keuangan: Laba Rugi | `15-keuangan-laba-rugi.html` | **Draf, perlu diskusi** |
+
+**Belum ada acuan** (pakai token dan komponen bagian 3 dan 5, jangan menebak, tandai di PR): Dashboard versi HP; versi desktop layar 1–15 selain yang ada di PDF; Login dan atur kata sandi; Pengaturan; tab Supplier dan Barang di Master Data; tab Hutang di Pembayaran; form tambah/ubah data master dan harga khusus; Keuangan selain Ikhtisar dan Laba Rugi (Neraca, Jurnal umum, Buku Besar, Tutup Buku, PPN, Hutang & piutang); form biaya operasional; keadaan kosong, memuat, error, dan tanpa izin; tampilan Viewer; mode gelap per layar; tablet (820–1100 px).
+
+Angka, nama pelanggan/supplier, dan nomor dokumen di mockup adalah data contoh (P3).
 
 ## 9. Penyimpangan teknis dari mockup
 
@@ -199,7 +236,8 @@ Mockup menampilkan beberapa hal yang tidak sejalan dengan keputusan pemilik atau
 | K2 | Faktur supplier: "PPN bisa dikreditkan: Ya", baris "PPN masukan (dikreditkan)", "Total modal sebelum PPN" | `ACCOUNTING_POLICY` bagian 4: bila bukan PKP, PPN tidak dikreditkan dan **menjadi bagian modal**; pemilik menegaskan hal yang sama | Field dan baris kredit PPN hanya tampil bila PKP. Selama belum, PPN faktur supplier ikut masuk modal per barang |
 | K3 | Baris "Ongkos kirim dan biaya lain" di faktur supplier dan alokasinya ke modal | Pemilik menyatakan faktur supplier tidak mencatat ongkir atau biaya lain. D-02 dan `ACCOUNTING_POLICY` bagian 5 masih menyebut biaya angkut/biaya lain | **Konflik dokumen.** Jangan membangun baris ini sampai pemilik memutuskan dan `PRODUCT_SPEC.md` diperbarui |
 | K4 | Teks invoice: "…kalau salah, buat nota kredit" | Pemilik menyatakan tidak ada nota kredit: invoice terbit yang salah dibatalkan lalu dibuat ulang. D-07 dan `ACCOUNTING_POLICY` bagian 7 masih menyebut nota kredit | **Konflik dokumen.** Jangan membangun nota kredit atau teks itu sampai diputuskan |
-| K5 | Invoice dibuat manual lewat tombol "Buat invoice dari pesanan ini" | D-10: invoice manual dari SO terkonfirmasi (sama dengan mockup). Catatan pemilik dari diskusi desain menyebut draf otomatis setelah faktur supplier dicatat | Ikuti D-10 (manual) sampai pemilik memastikan |
+| K5 | Mockup desktop awal: invoice dibuat manual lewat tombol "Buat invoice dari pesanan ini". Mockup HP: draf dibuat otomatis, ditinjau dan diedit, lalu diterbitkan | D-10 masih menyebut invoice **manual**. Pemilik memutuskan: draf otomatis, ditinjau dan boleh diedit sebelum diterbitkan atau dikirim ke WhatsApp | **Keputusan pemilik sudah ada, dokumen belum.** Perbarui D-10 di `PRODUCT_SPEC.md` lewat PR terpisah. Sebelum itu, jangan membuat pembuatan draf otomatis di database tanpa persetujuan; UI boleh mengikuti layar 6–8 |
+| K6 | Tombol "Kirim WhatsApp" | D-06: aplikasi tidak mengirim pesan; WhatsApp memakai tautan PDF | Tombol membuka WhatsApp dengan pesan dan tautan PDF; tidak ada pengiriman otomatis |
 
 ## 11. Aturan interaksi dan form
 
@@ -227,9 +265,12 @@ Target lokasi `app/components/ui/` (belum ada; buat saat implementasi): `Field`,
 9. Setelah tombol "Buat/Catat" ditekan, scroll ke form dan fokuskan kolom pertama. Simpan draf otomatis pada form panjang.
 
 ### Alur lintas layar
-- Pesanan terkonfirmasi: tombol **Buat order supplier** dan **Buat invoice dari pesanan ini** (D-10). Tidak ada layar atau menu Pengiriman (D-09).
-- Invoice terbit: tombol **Kirim WhatsApp** dan **Catat pembayaran**.
-- Langkah di setiap pesanan: Pesanan → Order supplier → Invoice → Lunas (tanpa pengiriman), ditampilkan sebagai kartu "Langkah Berikutnya".
+- Alur: Pesanan → Order supplier → Faktur supplier → **Draf invoice otomatis** → tinjau dan edit → **Terbitkan** → **Kirim WhatsApp** → Pembayaran → Lunas. Tidak ada layar atau menu Pengiriman (D-09).
+- Pesanan terkonfirmasi: tombol **Buat order supplier**. Draf invoice yang belum ditinjau ditandai dengan banner "menunggu tinjauan" di Daftar Pesanan, Daftar Invoice, dan Dashboard.
+- Invoice terbit: tombol **Kirim WhatsApp**, **Unduh PDF**, **Catat pembayaran**, **Batalkan invoice**. Tombol Kirim WhatsApp **membuka WhatsApp** dengan pesan dan tautan PDF; aplikasi tidak mengirim pesan sendiri (D-06).
+- Pembayaran mendukung alokasi ke satu atau banyak invoice; sisa dana dicatat sebagai uang muka (`ACCOUNTING_POLICY_AND_CUTOVER.md` bagian 9).
+- Langkah di setiap pesanan ditampilkan sebagai kartu "Langkah Berikutnya".
+- **Catatan:** draf otomatis adalah keputusan pemilik dan belum tercatat di `PRODUCT_SPEC.md` (D-10 masih menyebut invoice manual). Lihat K5.
 
 ### Dokumen cetak untuk pelanggan
 - Area cetak berisi hanya isi invoice: identitas Jena, nomor, tanggal, jatuh tempo, pelanggan, item, total, **rekening dan instruksi pembayaran**.
@@ -246,11 +287,16 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 
 **Migrasi ke mockup**
 - [ ] M-01 Font Plus Jakarta Sans dan token bagian 3 (terang dan gelap), termasuk `--teal-text` dan `--warn-text`. Ganti token lama (`--accent`, `--success`, dan seterusnya) secara bertahap; jangan mencampur dua sistem token dalam satu komponen
-- [ ] M-02 Shell: rail kiri desktop dan bottom bar mobile menggantikan bar atas
-- [ ] M-03 Dashboard sesuai mockup (U-05 sudah menyiapkan data dari server)
-- [ ] M-04 Detail pesanan (desktop dan mobile)
-- [ ] M-05 Faktur supplier: tiga tabel dan kartu "Jika Dicatat" (tunduk pada K2, K3)
-- [ ] M-06 Invoice: daftar + editor (tunduk pada K1, K4, K5)
+- [ ] M-02 Shell: rail kiri desktop dan bottom bar HP (5 slot berlabel, halaman Lainnya) menggantikan bar atas
+- [ ] M-03 Komponen bersama (`app/components/ui/`): kartu, panel, tombol, pil status, tab segmen, banner aksi, kartu ringkas, baris daftar, baris riwayat
+- [ ] M-04 Dashboard sesuai mockup (U-05 sudah menyiapkan data dari server)
+- [ ] M-05 Pesanan: daftar, form pesanan baru, detail pesanan (layar 1, 2, dan detail)
+- [ ] M-06 Order Supplier satu menu dengan tab Order dan Faktur (layar 3, 4)
+- [ ] M-07 Faktur supplier: isi, cocokkan dengan hitungan sistem, modal per barang, jika dicatat (layar 5; tunduk K2, K3)
+- [ ] M-08 Invoice: daftar, tinjau dan edit draf, invoice terbit dan kirim WhatsApp (layar 6–8; tunduk K1, K4, K5, K6)
+- [ ] M-09 Pembayaran: daftar piutang/hutang dan catat pembayaran dengan alokasi (layar 9, 10)
+- [ ] M-10 Master Data: pelanggan, supplier, barang, harga khusus (layar 12, 13)
+- [ ] M-11 Keuangan: Ikhtisar dan Laba Rugi (layar 14, 15) — **tunda sampai didiskusikan**
 
 **Perbaikan dari audit lama yang masih berlaku**
 - [ ] U-01 Hapus atau fungsikan elemen palsu: titik notifikasi, avatar, label pencarian, form yang tidak menyimpan, tombol "(segera)"
@@ -275,11 +321,14 @@ Dihapus karena tidak berlaku lagi setelah mockup: U-03 (dropdown menu atas), U-0
 
 ## 13. Pertanyaan terbuka untuk pemilik
 
-1. **Bottom bar mobile** hanya 5 ikon, jadi Master data dan Keuangan tidak terjangkau di HP. Tambah tombol "Menu" atau biarkan?
-2. Master data, Pembayaran, dan Keuangan belum punya layar di mockup. Fase berapa?
-3. Ikon "Order supplier" dan jejak "Order supplier · Faktur supplier": satu menu atau dua?
-4. K1–K5: putuskan dan catat di `PRODUCT_SPEC.md` (status PKP, ongkir/biaya lain, nota kredit, invoice manual atau draf otomatis).
-5. Layar yang belum ada acuan (daftar pesanan, form pesanan baru, daftar faktur supplier) perlu mockup sebelum dibangun?
+Sudah diputuskan: bottom bar HP 5 slot berlabel dengan halaman Lainnya; satu menu Order supplier dengan tab Order dan Faktur; draf invoice otomatis yang ditinjau dan diedit (K5, perlu dicatat di `PRODUCT_SPEC.md`).
+
+1. **Keuangan (layar 14, 15) perlu diskusi:** isi tab, siapa yang mencatat biaya operasional, alur Tutup Buku dan PPN, dan bagaimana tampilan Buku Besar yang belum dirilis. Jangan dibangun sebelum dibahas (M-11).
+2. K1 sampai K4: putuskan dan catat di `PRODUCT_SPEC.md` (status PKP, ongkir/biaya lain, nota kredit) bersama pembaruan D-10 (K5).
+3. Master data ada di balik slot Lainnya, jadi dua ketukan dari bottom bar. Cukup, atau ingin satu ketukan?
+4. Tab Supplier dan Barang (Master Data), tab Hutang (Pembayaran), dan form tambah/ubah data belum ada mockup. Cukup dijelaskan lewat pola yang ada, atau perlu mockup sendiri?
+5. Pembayaran yang sudah tersimpan: apakah dibatalkan dengan alasan lalu dicatat ulang (asumsi di layar 10)? Dokumen belum menegaskan ini.
+6. Layar yang belum ada: Login, Pengaturan, keadaan umum (kosong, memuat, error, tanpa izin, Viewer), mode gelap, tablet, dan versi desktop. Prioritas mana yang dibuat dulu?
 
 ## 14. Checklist PR yang mengubah tampilan
 
@@ -288,4 +337,5 @@ Dihapus karena tidak berlaku lagi setelah mockup: U-03 (dropdown menu atas), U-0
 - [ ] Desktop (rail) dan mobile ≤ 820 px (bottom bar) diperiksa
 - [ ] Tangkapan layar dibandingkan dengan mockup, ditempel di PR
 - [ ] Penyimpangan hanya dari bagian 9; hal di bagian 10 tidak dibangun dari mockup
+- [ ] Layar yang dibangun punya acuan di bagian 8; layar berstatus draf (14–15) tidak dibangun
 - [ ] Item backlog bagian 12 yang selesai dicentang
