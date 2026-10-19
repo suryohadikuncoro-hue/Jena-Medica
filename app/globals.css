@@ -2,43 +2,83 @@
 
 :root {
   color-scheme: light;
-  --background: #f4f7f6;
-  --surface: #ffffff;
-  --surface-muted: #f8faf9;
-  --foreground: #172a2a;
-  --muted: #617271;
-  --muted-soft: #859391;
-  --border: #e2e9e7;
-  --accent: #0f766e;
-  --accent-strong: #115e59;
-  --accent-soft: #ccfbf1;
-  --success: #15803d;
-  --warning: #a16207;
-  --danger: #b91c1c;
+  /* Token tema dari mockup (UI_UX_GUIDELINES.md bagian 3). Komponen baru memakai token ini langsung. */
+  --page: #eceeed;
+  --shell: #ffffff;
+  --card: #f5f5f3;
+  --ink: #17181c;
+  --on-ink: #ffffff;
+  --muted: #6b6e75;
+  --line: #e4e5e2;
+  --pink: #f8c9d3;
+  --pink-ink: #d9677f;
+  --yellow: #fcebc3;
+  --mint: #c2ecdd;
+  --teal: #1e8c86;
+  --teal-text: #17766f;
+  --good: #17795a;
+  --warn: #9a6a05;
+  --warn-text: #865a03;
+  --bad: #c2415d;
+  /* Alias token lama agar halaman yang belum dimigrasi ikut berganti warna. Hapus bertahap (U-10). */
+  --background: var(--page);
+  --surface: var(--shell);
+  --surface-muted: var(--card);
+  --foreground: var(--ink);
+  --muted-soft: var(--muted);
+  --border: var(--line);
+  --accent: var(--teal-text);
+  --accent-strong: #0f5f5a;
+  --accent-soft: var(--mint);
+  --success: var(--good);
+  --warning: var(--warn-text);
+  --danger: var(--bad);
   --info: #0369a1;
-  --shadow-card: 0 2px 10px rgba(19, 45, 43, .045), 0 1px 2px rgba(19, 45, 43, .04);
+  --shadow-card: 0 2px 10px rgba(20, 24, 28, .05), 0 1px 2px rgba(20, 24, 28, .04);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #0d1716;
-  --surface: #142220;
-  --surface-muted: #192a27;
-  --foreground: #e9f2f0;
-  --muted: #b0c0bd;
-  --muted-soft: #8fa29e;
-  --border: #2b403c;
-  --accent: #2dd4bf;
-  --accent-strong: #5eead4;
-  --accent-soft: #123d38;
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --danger: #f87171;
+  --page: #0d0e10;
+  --shell: #16171a;
+  --card: #1f2024;
+  --ink: #f1f2f3;
+  --on-ink: #121316;
+  --muted: #a3a6ad;
+  --line: #2c2d33;
+  --pink: #4d2c36;
+  --pink-ink: #f08aa2;
+  --yellow: #4a3f22;
+  --mint: #21443a;
+  --teal: #4cc9c0;
+  --teal-text: #4cc9c0;
+  --good: #6fd9b0;
+  --warn: #f3c15a;
+  --warn-text: #f3c15a;
+  --bad: #f08aa2;
+  --accent-strong: #8fe3dc;
   --info: #38bdf8;
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, .18);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, .28);
 }
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-page: var(--page);
+  --color-shell: var(--shell);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-on-ink: var(--on-ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-pink: var(--pink);
+  --color-pink-ink: var(--pink-ink);
+  --color-yellow: var(--yellow);
+  --color-mint: var(--mint);
+  --color-teal: var(--teal);
+  --color-teal-text: var(--teal-text);
+  --color-good: var(--good);
+  --color-warn: var(--warn);
+  --color-warn-text: var(--warn-text);
+  --color-bad: var(--bad);
   --font-sans: var(--font-app-sans);
 }
 * { box-sizing: border-box; }
@@ -49,7 +89,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 72%, white); outline-offset: 2px; }
 .app-root { background: var(--background); color: var(--foreground); }
 .app-topbar { background: color-mix(in srgb, var(--surface) 92%, transparent); border-color: var(--border); color: var(--foreground); }
-.brand-mark { display: inline-flex; width: 38px; height: 38px; align-items: center; justify-content: center; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 800; font-size: 18px; }
+.brand-mark { display: inline-flex; width: 38px; height: 38px; align-items: center; justify-content: center; border-radius: 12px; background: var(--accent); color: var(--on-ink); font-weight: 800; font-size: 18px; }
 .top-link { display: inline-flex; min-height: 40px; align-items: center; border-radius: 10px; padding: 0 11px; color: var(--muted); font-size: 13px; font-weight: 550; white-space: nowrap; }
 .top-link:hover, .top-link-active { background: var(--accent-soft); color: var(--accent-strong); text-decoration: none; }
 .nav-menu { position: relative; }
@@ -60,7 +100,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .nav-popover a:hover, .action-popover a:hover, .command-result:hover { background: var(--surface-muted); color: var(--accent-strong); text-decoration: none; }
 .search-trigger { display: inline-flex; min-height: 40px; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); padding: 0 11px; color: var(--muted); font-size: 13px; }
 kbd { border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; color: var(--muted-soft); font-size: 10px; }
-.primary-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; border: 0; border-radius: 10px; background: var(--accent); padding: 0 14px; color: #fff; font-size: 13px; font-weight: 650; }
+.primary-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; border: 0; border-radius: 10px; background: var(--accent); padding: 0 14px; color: var(--on-ink); font-size: 13px; font-weight: 650; }
 .primary-button:hover { background: var(--accent-strong); }
 .icon-button, .avatar-button { position: relative; display: inline-flex; width: 40px; height: 40px; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); color: var(--muted); font-size: 18px; }
 .avatar-button { border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: 12px; font-weight: 700; }
