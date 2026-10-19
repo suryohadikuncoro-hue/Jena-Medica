@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { IconInvoice, IconOrder, IconPembayaran, IconPesanan } from "@/app/components/icons";
+import { ActionBanner, Button, ButtonLink, SegmentedTabs, TotalCard, type Tone } from "@/app/components/ui";
 
 type Period = "7d" | "30d" | "ytd";
 type Counts = {
@@ -151,68 +153,93 @@ export default function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
-  const actions = [
-    { label: "Pesanan terkonfirmasi", detail: "Periksa progres dan tindak lanjut", count: counts.confirmedOrders, action: "Buka pesanan", href: "/", tone: "accent" },
-    { label: "Menunggu balasan", detail: "Order supplier terkirim", count: counts.sentPurchaseOrders, action: "Catat balasan", href: "/operasional", tone: "warning" },
-    { label: "Faktur perlu dicek", detail: "Faktur supplier draf", count: counts.supplierInvoiceDrafts, action: "Periksa", href: "/operasional", tone: "danger" },
-    { label: "Draft invoice pelanggan", detail: "Belum diterbitkan", count: counts.customerInvoiceDrafts, action: "Tinjau draft", href: "/invoice-pelanggan", tone: "success" },
-  ] as const;
+  const dash = (value: number) => (loading ? "—" : formatCount(value));
+  const actions: { label: string; detail: string; count: number; action: string; href: string; tone: Tone; icon: ReactNode }[] = [
+    { label: "Pesanan terkonfirmasi", detail: "Periksa progres dan tindak lanjut", count: counts.confirmedOrders, action: "Buka pesanan", href: "/", tone: "yellow", icon: <IconPesanan /> },
+    { label: "Menunggu balasan", detail: "Order supplier terkirim", count: counts.sentPurchaseOrders, action: "Catat balasan", href: "/operasional", tone: "yellow", icon: <IconOrder /> },
+    { label: "Faktur perlu dicek", detail: "Faktur supplier draf", count: counts.supplierInvoiceDrafts, action: "Periksa", href: "/operasional", tone: "pink", icon: <IconOrder /> },
+    { label: "Draf invoice pelanggan", detail: "Belum diterbitkan", count: counts.customerInvoiceDrafts, action: "Tinjau draf", href: "/invoice-pelanggan", tone: "gray", icon: <IconInvoice /> },
+  ];
+  const quick = [
+    { label: "Pesanan", href: "/", tone: "pink", icon: <IconPesanan /> },
+    { label: "Order", href: "/operasional", tone: "yellow", icon: <IconOrder /> },
+    { label: "Faktur", href: "/operasional", tone: "mint", icon: <IconOrder /> },
+    { label: "Invoice", href: "/invoice-pelanggan", tone: "yellow", icon: <IconInvoice /> },
+    { label: "Bayar", href: "/pembayaran", tone: "pink", icon: <IconPembayaran /> },
+  ];
   const maxActivity = Math.max(1, ...activity.flatMap(point => [point.orders, point.invoices]));
   const todayLabel = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  const periodLabel = periodOptions.find(option => option.key === period)?.label ?? "";
 
-  return <main className="page-wrap dashboard-wrap">
-    <div className="dashboard-heading"><div><p className="dashboard-greeting">Halo{name ? `, ${name}` : ""}</p><p className="dashboard-date-line">{todayLabel} · angka dari dokumen operasional</p></div><div className="dashboard-heading-actions"><button type="button" className="tab-button" onClick={() => void load()} disabled={loading}>{loading ? "Memuat…" : "Muat ulang"}</button><Link className="primary-button dashboard-create-button" href="/">＋ Pesanan baru</Link></div></div>
-    {message && <div role="status" className="demo-banner mb-5"><strong>{loading ? "Memuat data." : "Ringkasan belum tersedia."}</strong> {message}{message.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</div>}
+  return <main className="page-wrap dash-wrap">
+    <header className="dash-header">
+      <div><h1 className="dash-greeting">Halo{name ? `, ${name}` : ""}</h1><p className="dash-date">{todayLabel} · angka dari dokumen operasional</p></div>
+      <div className="dash-header-actions"><Button size="sm" className="dash-desktop-only" onClick={() => void load()} disabled={loading}>{loading ? "Memuat…" : "Muat ulang"}</Button><ButtonLink variant="solid" href="/">+ Pesanan baru</ButtonLink></div>
+    </header>
+    {message && <ActionBanner className="dash-message" action={message.includes("Masuk") ? <ButtonLink href="/login" variant="solid" size="sm">Masuk</ButtonLink> : undefined}><b>{loading ? "Memuat data." : "Ringkasan belum tersedia."}</b> {message}</ActionBanner>}
 
-    <div className="dashboard-layout">
-      <aside className="dashboard-left-column">
-        <section className="dashboard-panel dashboard-summary" aria-labelledby="summary-heading">
-          <div className="dashboard-panel-heading"><div><h2 id="summary-heading">Ringkasan</h2><p>Dokumen yang perlu diproses</p></div></div>
-          <SummaryLine label="SO terkonfirmasi" sub="Status pesanan pada periode" count={counts.confirmedOrders} loading={loading} tone="accent" href="/" unit="pesanan" />
-          <SummaryLine label="Menunggu supplier" sub="Order terkirim, menunggu tanggapan" count={counts.sentPurchaseOrders} loading={loading} tone="warning" href="/operasional" unit="order" />
-          <SummaryLine label="Faktur perlu dicek" sub="Draf faktur supplier" count={counts.supplierInvoiceDrafts} loading={loading} tone="danger" href="/operasional" unit="faktur" />
-          <Link href="/" className="dashboard-plus-action" aria-label="Buka pesanan baru">＋</Link>
-        </section>
-        <section className="dashboard-panel dashboard-billing" aria-labelledby="billing-heading">
-          <div className="dashboard-billing-ring"><span>{loading ? "—" : formatCount(counts.issuedInvoices)}<small>invoice<br/>terbit</small></span></div>
-          <h2 className="dashboard-billing-title" id="billing-heading">Status invoice</h2>
-          <p className="dashboard-billing-subtitle">Jumlah dokumen pada periode pilihan</p>
-          <div className="dashboard-billing-pair"><span>Draft<strong>{loading ? "—" : formatCount(counts.customerInvoiceDrafts)}</strong></span><span>Terbit<strong>{loading ? "—" : formatCount(counts.issuedInvoices)}</strong></span></div>
-          <div className="dashboard-payment-pair"><Link href="/pembayaran">Penerimaan tercatat<strong>{loading ? "—" : formatCount(counts.customerPayments)}</strong></Link><Link href="/pembayaran">Pembayaran supplier<strong>{loading ? "—" : formatCount(counts.supplierPayments)}</strong></Link></div>
-          <div className="dashboard-period-select" role="group" aria-label="Pilih periode">{periodOptions.map(option => <button key={option.key} type="button" aria-pressed={period === option.key} onClick={() => setPeriod(option.key)}>{option.label}</button>)}</div>
-        </section>
-      </aside>
-
-      <section className="dashboard-center-column">
-        <article className="dashboard-panel dashboard-activity" aria-labelledby="activity-heading">
-          <div className="dashboard-panel-heading"><div><h2 id="activity-heading">Aktivitas Pesanan</h2><p>Jumlah pesanan terkonfirmasi dan invoice terbit per hari</p></div><span className="dashboard-date-range">{periodCaption("7d")}</span></div>
-          <div className="activity-legend"><span><i className="legend-dot legend-orders" />Pesanan</span><span><i className="legend-dot legend-invoices" />Ditagih</span></div>
-          {loading ? <div className="activity-skeleton" aria-label="Memuat aktivitas" /> : activity.length ? <div className="activity-chart" role="img" aria-label="Grafik jumlah pesanan terkonfirmasi dan invoice terbit per hari selama tujuh hari terakhir">{activity.map(point => <div className="activity-day" key={point.date}><div className="activity-bars"><span className="activity-bar activity-bar-orders" title={`${point.orders} pesanan`} style={{ height: point.orders ? `${Math.max(5, point.orders / maxActivity * 100)}%` : "0%" }} /><span className="activity-bar activity-bar-invoices" title={`${point.invoices} invoice terbit`} style={{ height: point.invoices ? `${Math.max(5, point.invoices / maxActivity * 100)}%` : "0%" }} /></div><span className="activity-day-label">{new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date(`${point.date}T12:00:00`))}</span></div>)}</div> : <p className="dashboard-empty">Data aktivitas belum tersedia.</p>}
-          <p className="dashboard-chart-honesty">Grafik menampilkan jumlah dokumen, bukan nilai penjualan atau pendapatan.</p>
-        </article>
-        <section className="dashboard-panel dashboard-action-panel" aria-labelledby="action-heading">
-          <div className="dashboard-panel-heading"><div><h2 id="action-heading">Perlu Tindakan</h2><p>Urut dari yang paling mendesak</p></div></div>
-          <div className="dashboard-action-grid">{actions.map(item => <article key={item.label} className={`dashboard-action-card action-${item.tone}`}><span className="dashboard-action-icon" aria-hidden="true">{item.tone === "accent" ? "↗" : item.tone === "warning" ? "◷" : item.tone === "danger" ? "▤" : "＋"}</span><h3>{item.label}</h3><p className="dashboard-action-detail">{item.detail}</p><strong className="dashboard-action-count">{loading ? "—" : formatCount(item.count)} <small>dokumen</small></strong><Link href={item.href} className="dashboard-action-button">{item.action}</Link></article>)}</div>
-        </section>
-      </section>
-
-      <aside className="dashboard-right-column">
-        <section className="dashboard-panel dashboard-monitor" aria-labelledby="monitor-heading">
-          <div className="dashboard-panel-heading"><div><h2 id="monitor-heading">Perlu Dipantau</h2><p>Dokumen yang butuh perhatian</p></div></div>
-          <MonitorCard color="pink" eyebrow="Faktur supplier" title="Draf untuk diperiksa" count={counts.supplierInvoiceDrafts} loading={loading} href="/operasional" detail="Belum masuk pembukuan" />
-          <MonitorCard color="yellow" eyebrow="Invoice pelanggan" title="Masih berupa draf" count={counts.customerInvoiceDrafts} loading={loading} href="/invoice-pelanggan" detail="Belum diterbitkan" />
-          <MonitorCard color="mint" eyebrow="Invoice pelanggan" title="Sudah diterbitkan" count={counts.issuedInvoices} loading={loading} href="/invoice-pelanggan" detail="Status invoice, bukan status pembayaran" />
-          <p className="dashboard-monitor-note">Pengiriman diurus supplier dan pelanggan, tidak dicatat di sini.</p>
-        </section>
-      </aside>
+    <div className="dash-mobile-only dash-hero">
+      <TotalCard label={`Invoice terbit · ${periodLabel}`} value={dash(counts.issuedInvoices)} note={`${dash(counts.customerInvoiceDrafts)} draf invoice menunggu tinjauan`} />
+      <nav className="dash-quick" aria-label="Aksi cepat">{quick.map(item => <Link key={item.label} href={item.href} className="dash-quick-item"><span className={`dash-quick-icon ui-tone-${item.tone}`}>{item.icon}</span>{item.label}</Link>)}</nav>
     </div>
-    <p className="dashboard-honesty-note">Angka pada halaman ini dihitung dari dokumen aktual di Supabase. Angka tersebut bukan saldo kas, piutang, hutang, pendapatan, atau laba.</p>
+
+    <div className="dash-grid">
+      <div className="dash-col">
+        <section className="dash-sec dash-order-1" aria-labelledby="summary-heading">
+          <div className="dash-sec-head"><div><h2 id="summary-heading">Ringkasan</h2><p>Dokumen yang perlu diproses</p></div></div>
+          <SegmentedTabs label="Pilih periode" items={periodOptions.map(option => ({ value: option.key, label: option.label }))} value={period} onChange={setPeriod} />
+          <div className="dash-stat-grid">
+            <SummaryCard label="SO terkonfirmasi" note="status pesanan pada periode" unit="pesanan" value={dash(counts.confirmedOrders)} href="/" />
+            <SummaryCard label="Menunggu supplier" note="order terkirim, belum dibalas" unit="order" value={dash(counts.sentPurchaseOrders)} href="/operasional" />
+            <SummaryCard label="Faktur perlu dicek" note="draf faktur supplier" unit="faktur" value={dash(counts.supplierInvoiceDrafts)} href="/operasional" />
+            <SummaryCard label="Draf invoice" note="belum diterbitkan" unit="draf" value={dash(counts.customerInvoiceDrafts)} href="/invoice-pelanggan" />
+          </div>
+        </section>
+        <section className="dash-sec dash-order-5" aria-labelledby="status-heading">
+          <div className="dash-sec-head"><div><h2 id="status-heading">Status invoice</h2><p>Jumlah dokumen pada periode pilihan</p></div></div>
+          <div className="dash-stat-grid">
+            <SummaryCard label="Draf" unit="invoice" value={dash(counts.customerInvoiceDrafts)} href="/invoice-pelanggan" />
+            <SummaryCard label="Terbit" unit="invoice" value={dash(counts.issuedInvoices)} href="/invoice-pelanggan" />
+            <SummaryCard label="Penerimaan tercatat" unit="pembayaran" value={dash(counts.customerPayments)} href="/pembayaran" />
+            <SummaryCard label="Pembayaran supplier" unit="pembayaran" value={dash(counts.supplierPayments)} href="/pembayaran" />
+          </div>
+        </section>
+      </div>
+
+      <div className="dash-col">
+        <section className="dash-sec dash-order-4" aria-labelledby="activity-heading">
+          <div className="dash-sec-head"><div><h2 id="activity-heading">Aktivitas Pesanan</h2><p>Jumlah pesanan terkonfirmasi dan invoice terbit per hari</p></div><span className="dash-range">{periodCaption("7d")}</span></div>
+          <div className="ui-card dash-chart-card">
+            <div className="dash-legend"><span><i className="dash-dot dash-dot-orders" />Pesanan</span><span><i className="dash-dot dash-dot-invoices" />Ditagih</span></div>
+            {loading ? <div className="dash-chart-skeleton ui-skeleton" aria-label="Memuat aktivitas" /> : activity.length ? <div className="dash-chart" role="img" aria-label="Grafik jumlah pesanan terkonfirmasi dan invoice terbit per hari selama tujuh hari terakhir">{activity.map(point => <div className="dash-day" key={point.date}><div className="dash-bars"><span className="dash-bar dash-bar-orders" title={`${point.orders} pesanan`} style={{ height: point.orders ? `${Math.max(5, point.orders / maxActivity * 100)}%` : "0%" }} /><span className="dash-bar dash-bar-invoices" title={`${point.invoices} invoice terbit`} style={{ height: point.invoices ? `${Math.max(5, point.invoices / maxActivity * 100)}%` : "0%" }} /></div><span className="dash-day-label">{new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date(`${point.date}T12:00:00`))}</span></div>)}</div> : <p className="dash-empty">Data aktivitas belum tersedia.</p>}
+            <p className="dash-note">Grafik menampilkan jumlah dokumen, bukan nilai penjualan atau pendapatan.</p>
+          </div>
+        </section>
+        <section className="dash-sec dash-order-2" aria-labelledby="action-heading">
+          <div className="dash-sec-head"><div><h2 id="action-heading">Perlu Tindakan</h2><p>Urut dari yang paling mendesak</p></div></div>
+          <div className="dash-action-list">{actions.map(item => <div key={item.label} className="ui-card dash-action-row"><span className={`ui-row-icon ui-tone-${item.tone}`} aria-hidden="true">{item.icon}</span><span className="ui-row-text"><strong>{item.label}</strong><small>{dash(item.count)} dokumen · {item.detail}</small></span><ButtonLink href={item.href} size="sm">{item.action}</ButtonLink></div>)}</div>
+        </section>
+      </div>
+
+      <div className="dash-col">
+        <section className="dash-sec dash-order-3" aria-labelledby="monitor-heading">
+          <div className="dash-sec-head"><div><h2 id="monitor-heading">Perlu Dipantau</h2><p>Dokumen yang butuh perhatian</p></div></div>
+          <div className="dash-monitor-list">
+            <MonitorCard tone="pink" eyebrow="Faktur supplier" title="Draf untuk diperiksa" count={dash(counts.supplierInvoiceDrafts)} href="/operasional" detail="Belum masuk pembukuan" />
+            <MonitorCard tone="yellow" eyebrow="Invoice pelanggan" title="Masih berupa draf" count={dash(counts.customerInvoiceDrafts)} href="/invoice-pelanggan" detail="Belum diterbitkan" />
+            <MonitorCard tone="mint" eyebrow="Invoice pelanggan" title="Sudah diterbitkan" count={dash(counts.issuedInvoices)} href="/invoice-pelanggan" detail="Status invoice, bukan status pembayaran" />
+          </div>
+          <p className="dash-note">Pengiriman diurus supplier dan pelanggan, tidak dicatat di sini.</p>
+        </section>
+      </div>
+    </div>
+    <p className="dash-note dash-footnote">Angka pada halaman ini dihitung dari dokumen aktual di Supabase. Angka tersebut bukan saldo kas, piutang, hutang, pendapatan, atau laba.</p>
   </main>;
 }
 
-function SummaryLine({ label, sub, count, loading, tone, href, unit }: { label: string; sub: string; count: number; loading: boolean; tone: string; href: string; unit: string }) {
-  return <Link href={href} className={`dashboard-summary-line line-${tone}`}><span className="dashboard-summary-copy"><strong>{label}</strong><small>{sub}</small></span><span className="dashboard-summary-count">{loading ? "—" : formatCount(count)}<small>{unit}</small></span></Link>;
+function SummaryCard({ label, note, unit, value, href }: { label: string; note?: string; unit: string; value: string; href: string }) {
+  return <Link href={href} className="ui-card ui-stat"><div className="ui-stat-label">{label}</div><div className="ui-stat-value">{value}<span className="ui-stat-unit"> {unit}</span></div>{note ? <div className="ui-stat-note">{note}</div> : null}</Link>;
 }
-function MonitorCard({ color, eyebrow, title, count, loading, href, detail }: { color: string; eyebrow: string; title: string; count: number; loading: boolean; href: string; detail: string }) {
-  return <Link href={href} className={`dashboard-monitor-card monitor-${color}`}><span className="dashboard-monitor-eyebrow">{eyebrow}</span><strong>{title}<span>{loading ? "—" : formatCount(count)}</span></strong><small>{detail}</small></Link>;
+function MonitorCard({ tone, eyebrow, title, count, href, detail }: { tone: "pink" | "yellow" | "mint"; eyebrow: string; title: string; count: string; href: string; detail: string }) {
+  return <Link href={href} className={`dash-monitor-card ui-tone-${tone}`}><span className="dash-monitor-top"><span>{eyebrow}</span><strong>{count}</strong></span><strong className="dash-monitor-title">{title}</strong><small>{detail}</small></Link>;
 }
