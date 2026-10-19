@@ -286,9 +286,9 @@ Target lokasi `app/components/ui/` (belum ada; buat saat implementasi): `Field`,
 Centang bila selesai. Satu PR = satu tujuan jelas.
 
 **Migrasi ke mockup**
-- [ ] M-01 Font Plus Jakarta Sans dan token bagian 3 (terang dan gelap), termasuk `--teal-text` dan `--warn-text`. Ganti token lama (`--accent`, `--success`, dan seterusnya) secara bertahap; jangan mencampur dua sistem token dalam satu komponen
-- [ ] M-02 Shell: rail kiri desktop dan bottom bar HP (5 slot berlabel, halaman Lainnya) menggantikan bar atas
-- [ ] M-03 Komponen bersama (`app/components/ui/`): kartu, panel, tombol, pil status, tab segmen, banner aksi, kartu ringkas, baris daftar, baris riwayat
+- [x] M-01 Font Plus Jakarta Sans dan token bagian 3 (terang dan gelap), termasuk `--teal-text` dan `--warn-text`. Ganti token lama (`--accent`, `--success`, dan seterusnya) secara bertahap; jangan mencampur dua sistem token dalam satu komponen
+- [x] M-02 Shell: rail kiri desktop dan bottom bar HP (5 slot berlabel, halaman Lainnya) menggantikan bar atas
+- [x] M-03 Komponen bersama (`app/components/ui/`): kartu, panel, tombol, pil status, tab segmen, banner aksi, kartu ringkas, baris daftar, baris riwayat
 - [ ] M-04 Dashboard sesuai mockup (U-05 sudah menyiapkan data dari server)
 - [ ] M-05 Pesanan: daftar, form pesanan baru, detail pesanan (layar 1, 2, dan detail)
 - [ ] M-06 Order Supplier satu menu dengan tab Order dan Faktur (layar 3, 4)
