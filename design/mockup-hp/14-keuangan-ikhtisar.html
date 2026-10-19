@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Keuangan</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#eceeed;display:flex;justify-content:center}
+.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;color:#17181c}
+.card{background:#f5f5f3;border-radius:24px;padding:16px}
+.pan{background:#fff;border-radius:18px;padding:12px 14px}
+.btn{min-height:48px;padding:0 20px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:1.5px solid #17181c;background:transparent;color:#17181c;text-decoration:none;gap:8px}
+.chip{flex:none;min-height:44px;padding:0 18px;display:flex;align-items:center;border-radius:999px;font-size:13px;font-weight:600;color:#6b6e75}
+.chip.on{background:#17181c;color:#fff}
+.tr{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #e4e5e2;font-size:14px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;width:64px;font-size:11px;font-weight:600;color:#a9acb4;text-decoration:none}
+.tab span.c{display:flex;width:44px;height:32px;align-items:center;justify-content:center;border-radius:999px}
+h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em}
+</style>
+
+</head>
+<body>
+
+
+<div style="width:390px;height:1340px;box-sizing:border-box;background:#fff;color:#17181c;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column">
+<div style="padding:20px 20px 0;display:flex;align-items:center;gap:10px"><div style="flex:1"><h1 style="margin:0;font-size:28px;font-weight:800;letter-spacing:-.03em">Keuangan</h1><div style="font-size:13px;color:#6b6e75">Akuntansi dan laporan</div></div></div><div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:6px;overflow-x:auto" role="tablist"><span class="chip on" role="tab">Ikhtisar</span><span class="chip" role="tab">Laba rugi</span><span class="chip" role="tab">Neraca</span><span class="chip" role="tab">Jurnal umum</span><span class="chip" role="tab">Buku Besar</span><span class="chip" role="tab">Tutup Buku</span><span class="chip" role="tab">PPN</span><span class="chip" role="tab">Hutang & piutang</span></div>
+<div style="padding:14px 16px;border-radius:22px;background:#fcebc3;font-size:13px;line-height:1.45"><b>Pembukuan belum aktif.</b> Angka di bawah berasal dari dokumen, bukan laporan akuntansi. Laporan resmi muncul setelah transaksi dibukukan.</div>
+<div style="display:flex;align-items:baseline;justify-content:space-between"><h2>Dari dokumen</h2><span class="pill" style="background:#e4e5e2">Belum dari pembukuan</span></div>
+<div style="display:flex;gap:10px"><div class="card" style="flex:1;padding:14px"><div style="font-size:12px;color:#6b6e75">Invoice terbit</div><div style="font-size:20px;font-weight:800;margin-top:4px">Rp 8,9 jt</div></div><div class="card" style="flex:1;padding:14px"><div style="font-size:12px;color:#6b6e75">Pembayaran masuk</div><div style="font-size:20px;font-weight:800;margin-top:4px;color:#17795a">Rp 5,4 jt</div></div></div>
+<div style="display:flex;gap:10px"><div class="card" style="flex:1;padding:14px"><div style="font-size:12px;color:#6b6e75">Piutang berjalan</div><div style="font-size:20px;font-weight:800;margin-top:4px">Rp 3,5 jt</div></div><div class="card" style="flex:1;padding:14px"><div style="font-size:12px;color:#6b6e75">Faktur belum dicatat</div><div style="font-size:20px;font-weight:800;margin-top:4px">2 faktur</div></div></div>
+<div><h2>Persiapan pembukuan</h2><div style="font-size:12px;color:#6b6e75;margin-top:2px">Selesaikan berurutan sebelum transaksi dibukukan.</div></div>
+<div class="card" style="display:flex;flex-direction:column;gap:8px">
+<div class="pan" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div><div style="font-weight:700">Profil pajak</div><div style="font-size:12px;color:#6b6e75;margin-top:2px">Status PKP dan aturan PPN</div></div><span class="pill" style="background:#f8c9d3">Belum</span></div>
+<div class="pan" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div><div style="font-weight:700">Akun dan pemetaan</div><div style="font-size:12px;color:#6b6e75;margin-top:2px">COA dan akun tiap transaksi</div></div><span class="pill" style="background:#f8c9d3">Belum</span></div>
+<div class="pan" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div><div style="font-weight:700">Periode akuntansi</div><div style="font-size:12px;color:#6b6e75;margin-top:2px">Buka periode pertama</div></div><span class="pill" style="background:#f8c9d3">Belum</span></div>
+<div class="pan" style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div><div style="font-weight:700">Uji coba (UAT)</div><div style="font-size:12px;color:#6b6e75;margin-top:2px">Peran, pembayaran, PKP dan non-PKP</div></div><span class="pill" style="background:#f8c9d3">Belum</span></div>
+<a href="#" class="btn" style="margin-top:4px">Buka Pengaturan</a></div>
+</div>
+<div style="margin-top:auto;background:#1b1c21;border-radius:24px 24px 0 0;padding:10px 8px 18px;display:flex;justify-content:space-around"><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></span>Dashboard</a><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="3"></rect><path d="M9 4h6v3H9zM9 12h6M9 16h4"></path></svg></span>Pesanan</a><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v11a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM14 3v5h5M9 13h6M9 17h6"></path></svg></span>Order</a><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"></path></svg></span>Invoice</a><a href="#" class="tab" aria-current="page" style="color:#f8c9d3"><span class="c" style="background:#f8c9d3;color:#17181c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.2"></circle><circle cx="12" cy="12" r="1.2"></circle><circle cx="19" cy="12" r="1.2"></circle></svg></span>Lainnya</a></div>
+</div>
+
+</body>
+</html>

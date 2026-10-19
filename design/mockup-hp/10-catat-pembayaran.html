@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Catat Pembayaran</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&amp;display=swap">
+<style>
+body{margin:0;background:#eceeed;display:flex;justify-content:center}
+.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;color:#17181c}
+.card{background:#f5f5f3;border-radius:24px;padding:16px}
+.pan{background:#fff;border-radius:18px;padding:12px 14px}
+.btn{min-height:48px;padding:0 20px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;border:1.5px solid #17181c;background:transparent;color:#17181c;text-decoration:none;gap:8px}
+.solid{background:#17181c;color:#fff}
+.lbl{font-size:12px;font-weight:600;color:#6b6e75;margin-bottom:6px}
+.fld{min-height:48px;box-sizing:border-box;padding:0 16px;border:1.5px solid #e4e5e2;border-radius:14px;background:#fff;display:flex;align-items:center;font-size:14px;font-weight:600}
+.seg{display:flex;gap:6px;padding:4px;background:#f5f5f3;border-radius:999px}
+.seg a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:999px;color:#6b6e75;font-size:13px;font-weight:700;text-decoration:none}
+.seg a.on{background:#17181c;color:#fff}
+.tab{display:flex;flex-direction:column;align-items:center;gap:4px;width:64px;font-size:11px;font-weight:600;color:#a9acb4;text-decoration:none}
+.tab span.c{display:flex;width:44px;height:32px;align-items:center;justify-content:center;border-radius:999px}
+h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em}
+</style>
+
+</head>
+<body>
+
+
+<div style="width:390px;height:1560px;box-sizing:border-box;background:#fff;color:#17181c;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column">
+<div style="padding:20px 20px 0;display:flex;align-items:flex-start;gap:12px">
+<a href="#" aria-label="Kembali" style="flex:none;display:flex;width:44px;height:44px;align-items:center;justify-content:center;border:1.5px solid #e4e5e2;border-radius:50%;color:#17181c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg></a>
+<div style="flex:1"><div style="font-size:12px;color:#6b6e75">Pembayaran</div><h1 style="margin:2px 0 0;font-size:26px;font-weight:800;letter-spacing:-.03em">Catat Pembayaran</h1></div></div>
+<div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:14px">
+<div class="seg"><a href="#" class="on">Dari pelanggan</a><a href="#">Ke supplier</a></div>
+<div class="card" style="display:flex;flex-direction:column;gap:12px"><h2>Pembayaran</h2>
+<div><div class="lbl">Pelanggan</div><div class="fld">Klinik Contoh B</div></div>
+<div style="display:flex;gap:10px"><div style="flex:1"><div class="lbl">Tanggal bayar</div><div class="fld">18 Okt 2026</div></div><div style="flex:1"><div class="lbl">Cara bayar</div><div style="display:flex;gap:6px"><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#17181c;color:#fff;font-size:13px;font-weight:700">Transfer</span><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:14px;border:1.5px solid #e4e5e2;color:#6b6e75;font-size:13px;font-weight:700">Tunai</span></div></div></div>
+<div><div class="lbl">Jumlah diterima</div><div class="fld" style="font-size:22px;font-weight:800;min-height:56px">Rp 2.000.000</div></div>
+<div><div class="lbl">Bukti pembayaran (opsional)</div><div class="fld" style="color:#6b6e75;font-weight:400">Lampirkan foto bukti transfer</div></div></div>
+<div class="card" style="display:flex;flex-direction:column;gap:10px"><div><h2>Alokasi ke Invoice</h2><div style="font-size:12px;color:#6b6e75;margin-top:2px">Alokasi tidak boleh melebihi sisa invoice dan dana yang diterima.</div></div>
+<div class="pan" style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;gap:10px"><div style="font-weight:700">INV-0002</div><div style="font-size:12px;color:#6b6e75">Sisa Rp 1.775.000</div></div><div class="lbl" style="margin:0">Alokasikan</div><div class="fld" style="justify-content:flex-end;font-weight:800">Rp 1.775.000</div></div>
+<a href="#" class="btn">Alokasikan otomatis</a>
+<div class="pan" style="padding:6px 14px"><div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e4e5e2"><span>Diterima</span><b>Rp 2.000.000</b></div><div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e4e5e2"><span>Teralokasi</span><b>Rp 1.775.000</b></div><div style="display:flex;justify-content:space-between;padding:8px 0"><span>Sisa dana</span><b>Rp 225.000</b></div></div>
+<div style="padding:14px 16px;border-radius:20px;background:#fcebc3;font-size:13px;line-height:1.45"><b>Sisa Rp 225.000 dicatat sebagai uang muka pelanggan</b> sampai dialokasikan ke invoice berikutnya.</div></div>
+<div style="font-size:12px;color:#6b6e75;line-height:1.5">Pembayaran yang sudah tersimpan tidak bisa diubah. Kalau salah, Batalkan dengan alasan lalu catat ulang.</div>
+<a href="#" class="btn solid">Simpan pembayaran</a><a href="#" class="btn">Batal</a>
+</div>
+<div style="margin-top:auto;background:#1b1c21;border-radius:24px 24px 0 0;padding:10px 8px 18px;display:flex;justify-content:space-around"><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></span>Dashboard</a><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="3"></rect><path d="M9 4h6v3H9zM9 12h6M9 16h4"></path></svg></span>Pesanan</a><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v11a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2zM14 3v5h5M9 13h6M9 17h6"></path></svg></span>Order</a><a href="#" class="tab"><span class="c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"></path></svg></span>Invoice</a><a href="#" class="tab" aria-current="page" style="color:#f8c9d3"><span class="c" style="background:#f8c9d3;color:#17181c"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.2"></circle><circle cx="12" cy="12" r="1.2"></circle><circle cx="19" cy="12" r="1.2"></circle></svg></span>Lainnya</a></div>
+</div>
+
+</body>
+</html>
