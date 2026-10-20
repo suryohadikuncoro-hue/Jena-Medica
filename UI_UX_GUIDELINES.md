@@ -236,7 +236,7 @@ Mockup menampilkan beberapa hal yang tidak sejalan dengan keputusan pemilik atau
 | K2 | Faktur supplier: "PPN bisa dikreditkan: Ya", baris "PPN masukan (dikreditkan)", "Total modal sebelum PPN" | `ACCOUNTING_POLICY` bagian 4: bila bukan PKP, PPN tidak dikreditkan dan **menjadi bagian modal**; pemilik menegaskan hal yang sama | Field dan baris kredit PPN hanya tampil bila PKP. Selama belum, PPN faktur supplier ikut masuk modal per barang |
 | K3 | Baris "Ongkos kirim dan biaya lain" di faktur supplier dan alokasinya ke modal | Pemilik menyatakan faktur supplier tidak mencatat ongkir atau biaya lain. D-02 dan `ACCOUNTING_POLICY` bagian 5 masih menyebut biaya angkut/biaya lain | **Konflik dokumen.** Jangan membangun baris ini sampai pemilik memutuskan dan `PRODUCT_SPEC.md` diperbarui |
 | K4 | Teks invoice: "…kalau salah, buat nota kredit" | Pemilik menyatakan tidak ada nota kredit: invoice terbit yang salah dibatalkan lalu dibuat ulang. D-07 dan `ACCOUNTING_POLICY` bagian 7 masih menyebut nota kredit | **Konflik dokumen.** Jangan membangun nota kredit atau teks itu sampai diputuskan |
-| K5 | Mockup desktop awal: invoice dibuat manual lewat tombol "Buat invoice dari pesanan ini". Mockup HP: draf dibuat otomatis, ditinjau dan diedit, lalu diterbitkan | D-10 masih menyebut invoice **manual**. Pemilik memutuskan: draf otomatis, ditinjau dan boleh diedit sebelum diterbitkan atau dikirim ke WhatsApp | **Keputusan pemilik sudah ada, dokumen belum.** Perbarui D-10 di `PRODUCT_SPEC.md` lewat PR terpisah. Sebelum itu, jangan membuat pembuatan draf otomatis di database tanpa persetujuan; UI boleh mengikuti layar 6–8 |
+| K5 | Mockup desktop awal: invoice dibuat manual lewat tombol "Buat invoice dari pesanan ini". Mockup HP: draf dibuat otomatis, ditinjau dan diedit, lalu diterbitkan | D-10 di `PRODUCT_SPEC.md` kini menetapkan draf otomatis setelah SO terkonfirmasi, ditinjau/diedit sebelum diterbitkan | **Keputusan sudah dicatat.** Implementasi database wajib idempoten dan menjaga batas kuantitas/nilai kumulatif invoice; verifikasi migration dan alur penerbitan sebelum Production |
 | K6 | Tombol "Kirim WhatsApp" | D-06: aplikasi tidak mengirim pesan; WhatsApp memakai tautan PDF | Tombol membuka WhatsApp dengan pesan dan tautan PDF; tidak ada pengiriman otomatis |
 
 ## 11. Aturan interaksi dan form
@@ -270,7 +270,7 @@ Target lokasi `app/components/ui/` (belum ada; buat saat implementasi): `Field`,
 - Invoice terbit: tombol **Kirim WhatsApp**, **Unduh PDF**, **Catat pembayaran**, **Batalkan invoice**. Tombol Kirim WhatsApp **membuka WhatsApp** dengan pesan dan tautan PDF; aplikasi tidak mengirim pesan sendiri (D-06).
 - Pembayaran mendukung alokasi ke satu atau banyak invoice; sisa dana dicatat sebagai uang muka (`ACCOUNTING_POLICY_AND_CUTOVER.md` bagian 9).
 - Langkah di setiap pesanan ditampilkan sebagai kartu "Langkah Berikutnya".
-- **Catatan:** draf otomatis adalah keputusan pemilik dan belum tercatat di `PRODUCT_SPEC.md` (D-10 masih menyebut invoice manual). Lihat K5.
+- **Catatan:** D-10 menetapkan draf invoice otomatis setelah SO terkonfirmasi; keputusan ini tercatat di `PRODUCT_SPEC.md`. Pastikan implementasi idempoten, draf dapat ditinjau/diedit, dan hanya penerbitan yang mengakui pendapatan/piutang.
 
 ### Dokumen cetak untuk pelanggan
 - Area cetak berisi hanya isi invoice: identitas Jena, nomor, tanggal, jatuh tempo, pelanggan, item, total, **rekening dan instruksi pembayaran**.
