@@ -66,6 +66,7 @@ export function CustomerInvoiceManager() {
   const [statusFilter, setStatusFilter] = useState<"all" | InvoiceStatus>("all");
   const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
   const [salesOrderId, setSalesOrderId] = useState("");
+  const [editingInvoiceId, setEditingInvoiceId] = useState("");
   const [invoiceDate, setInvoiceDate] = useState("");
   const [notes, setNotes] = useState("");
   const [lineQuantities, setLineQuantities] = useState<Record<string, string>>({});
@@ -130,8 +131,9 @@ export function CustomerInvoiceManager() {
   }, [invoices, invoiceLines]);
   const selectedOrder = salesOrders.find(row => row.id === salesOrderId);
   const selectedOrderLines = orderLines.filter(line => line.sales_order_id === salesOrderId);
+  const editingLineQuantities = new Map((editingInvoiceId ? invoiceLines.filter(line => line.sales_invoice_id === editingInvoiceId) : []).map(line => [line.sales_order_line_id, Number(line.quantity)]));
   const availableOrderLines = selectedOrderLines.map(line => ({
-    ...line, available: Math.max(0, Number(line.quantity) - (invoicedQuantityByOrderLine.get(line.id) ?? 0)),
+    ...line, available: Math.max(0, Number(line.quantity) - (invoicedQuantityByOrderLine.get(line.id) ?? 0) + (editingLineQuantities.get(line.id) ?? 0)),
   })).filter(line => line.available > 0);
   const visibleInvoices = invoices.filter(row => {
     if (statusFilter !== "all" && row.status !== statusFilter) return false;
@@ -151,7 +153,16 @@ export function CustomerInvoiceManager() {
   const whatsappHref = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(whatsappText)}` : "";
 
   function openCreateForm() {
-    setError(""); setNotice(""); setShowForm(true); setSalesOrderId(""); setInvoiceDate(localDate()); setNotes(""); setLineQuantities({});
+    setError(""); setNotice(""); setEditingInvoiceId(""); setShowForm(true); setSalesOrderId(""); setInvoiceDate(localDate()); setNotes(""); setLineQuantities({});
+  }
+
+  function openEditDraft() {
+    if (!selectedInvoice || selectedInvoice.status !== "draft") return;
+    setError(""); setNotice(""); setEditingInvoiceId(selectedInvoice.id); setShowForm(true);
+    setSalesOrderId(selectedInvoice.sales_order_id); setInvoiceDate(selectedInvoice.invoice_date);
+    setNotes(selectedInvoice.notes ?? "");
+    setLineQuantities(Object.fromEntries((linesByInvoice.get(selectedInvoice.id) ?? []).map(line => [line.sales_order_line_id, String(line.quantity)])));
+    setShowVoidForm(false);
   }
 
   async function createInvoice(event: FormEvent<HTMLFormElement>) {
@@ -169,12 +180,13 @@ export function CustomerInvoiceManager() {
       if (selectedLines.some(line => line.quantity > (lineById.get(line.sales_order_line_id)?.available ?? 0))) {
         throw new Error("Kuantitas invoice melebihi sisa kuantitas SO.");
       }
-      const { data, error: rpcError } = await getSupabaseBrowserClient().rpc("create_customer_invoice", {
-        p_sales_order_id: selectedOrder.id, p_invoice_date: invoiceDate, p_notes: notes, p_lines: selectedLines,
-      });
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: rpcError } = editingInvoiceId
+        ? await supabase.rpc("update_customer_invoice_draft", { p_customer_invoice_id: editingInvoiceId, p_invoice_date: invoiceDate, p_notes: notes, p_lines: selectedLines })
+        : await supabase.rpc("create_customer_invoice", { p_sales_order_id: selectedOrder.id, p_invoice_date: invoiceDate, p_notes: notes, p_lines: selectedLines });
       if (rpcError) throw rpcError;
-      setShowForm(false); setSelectedInvoiceId(String(data ?? ""));
-      setNotice("Draft invoice dibuat dari SO. Total kuantitas invoice aktif dibatasi di database; PPN dan posting akuntansi belum diproses.");
+      setShowForm(false); setSelectedInvoiceId(String(data ?? editingInvoiceId)); setEditingInvoiceId("");
+      setNotice("Draf invoice tersimpan. Belum diterbitkan atau dibukukan.");
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal membuat invoice pelanggan."); }
     finally { setSaving(false); }
@@ -200,20 +212,20 @@ export function CustomerInvoiceManager() {
 
   return <main className="page-wrap customer-invoice-screen">
     <div className="screen-only mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Buat invoice secara manual dari SO terkonfirmasi. Satu SO dapat ditagih beberapa kali sesuai sisa kuantitasnya.</p></div>
+      <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Draf dibuat otomatis saat SO dikonfirmasi. Tinjau kuantitas dan detail sebelum menerbitkan; satu SO dapat ditagih beberapa kali.</p></div>
       {canWrite && <button className="primary-button" type="button" onClick={openCreateForm}>＋ Buat invoice</button>}
     </div>
-    <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> invoice dibuat manual dari SO terkonfirmasi. Draft bukan invoice final, Faktur Pajak/e-Faktur, atau jurnal. Pendapatan dan piutang diakui saat invoice diterbitkan melalui workflow yang disetujui.</div>
+    <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> draf dibuat otomatis saat SO dikonfirmasi. Draf bukan invoice final, Faktur Pajak/e-Faktur, atau jurnal. Pendapatan dan piutang baru diakui saat invoice diterbitkan melalui workflow akuntansi yang disetujui.</div>
     {error && <p role="alert" className="screen-only mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
     {notice && <p role="status" className="screen-only mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
 
     {showForm && <form className="screen-only card card-pad mb-5 customer-invoice-form" onSubmit={createInvoice}>
-      <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">Buat invoice dari pesanan</h2><p className="mt-1 text-xs text-[var(--muted)]">Pilih SO terkonfirmasi dan isi kuantitas yang ditagihkan pada setiap baris. Database menjaga batas kumulatif invoice terhadap SO.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-xs text-[var(--muted)]">Pesanan terkonfirmasi<select required className="field mt-1" value={salesOrderId} onChange={event => { setSalesOrderId(event.target.value); setLineQuantities({}); }}><option value="">Pilih SO…</option>{salesOrders.filter(row => row.status === "confirmed").map(row => <option key={row.id} value={row.id}>{row.order_number} · {customerById.get(row.customer_id)?.legal_name ?? "Pelanggan"} · {money(row.total_amount)}</option>)}</select></label><label className="text-xs text-[var(--muted)]">Tanggal invoice<input required className="field mt-1" type="date" value={invoiceDate} onChange={event => setInvoiceDate(event.target.value)} /></label></div>
+      <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{editingInvoiceId ? "Tinjau dan edit draf invoice" : "Buat invoice dari pesanan"}</h2><p className="mt-1 text-xs text-[var(--muted)]">Atur kuantitas yang akan ditagihkan. Draf tidak mengakui pendapatan/piutang; batas kumulatif dijaga database.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-xs text-[var(--muted)]">Pesanan terkonfirmasi<select required className="field mt-1" value={salesOrderId} onChange={event => { setSalesOrderId(event.target.value); setLineQuantities({}); }}><option value="">Pilih SO…</option>{salesOrders.filter(row => row.status === "confirmed" && (!invoices.some(invoice => invoice.sales_order_id === row.id && invoice.status === "draft") || row.id === salesOrderId)).map(row => <option key={row.id} value={row.id}>{row.order_number} · {customerById.get(row.customer_id)?.legal_name ?? "Pelanggan"} · {money(row.total_amount)}</option>)}</select></label><label className="text-xs text-[var(--muted)]">Tanggal invoice<input required className="field mt-1" type="date" value={invoiceDate} onChange={event => setInvoiceDate(event.target.value)} /></label></div>
       {selectedOrder && <div className="mt-3 rounded-xl bg-[var(--surface-muted)] p-3 text-sm"><strong>{customerById.get(selectedOrder.customer_id)?.legal_name ?? "Pelanggan"}</strong><p className="mt-1 text-xs text-[var(--muted)]">SO {selectedOrder.order_number} · tanggal {displayDate(selectedOrder.order_date)} · jatuh tempo SO {displayDate(selectedOrder.due_date)}</p><p className="mt-1 text-xs text-[var(--muted)]">{selectedOrder.ship_to_address_snapshot}</p></div>}
       {selectedOrder && <div className="mt-4 space-y-2">{availableOrderLines.length === 0 ? <p className="rounded-xl border border-dashed border-[var(--border)] p-4 text-sm text-[var(--muted)]">Semua kuantitas pada SO ini sudah ditagihkan.</p> : availableOrderLines.map(line => <div key={line.id} className="grid gap-2 rounded-xl border border-[var(--border)] p-3 sm:grid-cols-[2fr_1fr_1fr_1fr] sm:items-center"><div><p className="font-medium">{line.product_name_snapshot}</p><p className="text-xs text-[var(--muted)]">{line.product_code_snapshot} · {line.unit_snapshot}</p></div><div className="text-xs"><p className="text-[var(--muted)]">Harga/unit</p><strong>{money(line.unit_price_snapshot)}</strong></div><div className="text-xs"><p className="text-[var(--muted)]">Sisa yang bisa ditagih</p><strong>{line.available.toLocaleString("id-ID")} {line.unit_snapshot}</strong></div><label className="text-xs text-[var(--muted)]">Qty invoice<input className="field mt-1" type="number" min="0" max={line.available} step="0.0001" value={lineQuantities[line.id] ?? ""} onChange={event => setLineQuantities(current => ({ ...current, [line.id]: event.target.value }))} /></label></div>)}</div>}
       <label className="mt-3 block text-xs text-[var(--muted)]">Catatan internal<textarea className="field mt-1 min-h-20 py-2" value={notes} onChange={event => setNotes(event.target.value)} placeholder="Catatan opsional" /></label>
-      <div className="mt-4 flex justify-end"><button type="submit" className="primary-button" disabled={saving || !selectedOrder || availableOrderLines.length === 0}>{saving ? "Menyimpan…" : "Simpan draft invoice"}</button></div>
+      <div className="mt-4 flex justify-end"><button type="submit" className="primary-button" disabled={saving || !selectedOrder || availableOrderLines.length === 0}>{saving ? "Menyimpan…" : editingInvoiceId ? "Simpan perubahan draf" : "Simpan draft invoice"}</button></div>
     </form>}
 
     <section className="screen-only mb-5 grid gap-3 sm:grid-cols-3">
@@ -252,6 +264,7 @@ export function CustomerInvoiceManager() {
     </section>
 
     {selectedInvoice && <div className="screen-only mt-4 flex flex-wrap gap-2">
+      {canWrite && selectedInvoice.status === "draft" && <button type="button" className="primary-button" onClick={openEditDraft}>Tinjau / edit draf</button>}
       <button type="button" className="primary-button" onClick={() => window.print()}>Cetak / Simpan PDF</button>
       {selectedInvoice.status !== "void" && phone ? <a className="tab-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Siapkan WhatsApp</a> : <button type="button" className="tab-button" disabled title="Nomor WhatsApp pelanggan yang valid diperlukan">Siapkan WhatsApp</button>}
       {selectedInvoice.status === "draft" && <Link className="tab-button inline-flex items-center" href="/keuangan#jurnal">Issue &amp; posting AR</Link>}
