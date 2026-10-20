@@ -293,7 +293,7 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 - [ ] M-05 Pesanan: daftar, form pesanan baru, detail pesanan (layar 1, 2, dan detail) — daftar sedang dikerjakan; form mendapat subtotal/total langsung dan validasi diskon di PR terpisah
 - [ ] M-06 Order Supplier satu menu dengan tab Order dan Faktur (layar 3, 4)
 - [ ] M-07 Faktur supplier: isi, cocokkan dengan hitungan sistem, modal per barang, jika dicatat (layar 5; tunduk K2, K3)
-- [ ] M-08 Invoice: daftar, tinjau dan edit draf, invoice terbit dan kirim WhatsApp (layar 6–8; tunduk K1, K4, K5, K6)
+- [ ] M-08 Invoice: daftar, tinjau dan edit draf, invoice terbit dan kirim WhatsApp (layar 6–8; tunduk K1, K4, K5, K6) — audit 20 Okt menemukan mismatch schema dan lifecycle; schema alignment sedang disiapkan, belum menyelesaikan alur D-10
 - [ ] M-09 Pembayaran: daftar piutang/hutang dan catat pembayaran dengan alokasi (layar 9, 10)
 - [ ] M-10 Master Data: pelanggan, supplier, barang, harga khusus (layar 12, 13)
 - [ ] M-11 Keuangan: Ikhtisar dan Laba Rugi (layar 14, 15) — **tunda sampai didiskusikan**
