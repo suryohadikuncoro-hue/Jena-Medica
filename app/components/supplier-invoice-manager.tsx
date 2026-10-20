@@ -46,7 +46,7 @@ function nonNegative(value: string, label: string, required = true) {
   return parsed;
 }
 
-export function SupplierInvoiceManager() {
+export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolean } = {}) {
   const configured = isSupabaseConfigured();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -193,11 +193,13 @@ export function SupplierInvoiceManager() {
     finally { setVoidSaving(false); }
   }
 
-  return <main className="page-wrap supplier-invoice-screen">
+  const Shell = embedded ? "div" : "main";
+  return <Shell className={embedded ? "supplier-invoice-screen" : "page-wrap supplier-invoice-screen"}>
+    {embedded ? <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-[var(--muted)]">Catat faktur supplier dan pasangkan item ke PO.</p><div className="flex gap-2"><Link className="tab-button" href="/keuangan#jurnal">Posting AP →</Link>{canWrite && <button className="primary-button" type="button" onClick={() => { setShowForm(value => !value); setError(""); setNotice(""); setDraft(blankInvoice(localDate())); }}>＋ Catat Faktur</button>}</div></div> :
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div><p className="page-kicker">Transaksi · Pembelian drop-ship</p><h1 className="page-title">Faktur Supplier</h1><p className="page-description">Catat faktur supplier dan pasangkan item ke PO. Posting AP tersedia setelah COA, kebijakan, dan periode disetujui di Keuangan.</p></div>
       <div className="flex gap-2"><Link className="tab-button" href="/operasional">← Order Supplier</Link><Link className="tab-button" href="/keuangan#jurnal">Posting AP →</Link>{canWrite && <button className="primary-button" type="button" onClick={() => { setShowForm(value => !value); setError(""); setNotice(""); setDraft(blankInvoice(localDate())); }}>＋ Catat Faktur</button>}</div>
-    </div>
+    </div>}
 
     <div className="demo-banner mb-5"><strong>Faktur tersimpan di Supabase.</strong> Posting AP tersedia melalui antrean Posting & Jurnal di Keuangan setelah konfigurasi disetujui. PPN masukan memerlukan review manual; biaya masuk akun clearing dan belum direklasifikasi ke HPP.</div>
     {error && <p role="alert" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
@@ -276,7 +278,7 @@ export function SupplierInvoiceManager() {
       {!loading && !visibleInvoices.length && !error && <p className="py-10 text-center text-sm text-[var(--muted)]">Belum ada faktur supplier untuk filter ini.</p>}
       {loading && <p className="py-6 text-center text-sm text-[var(--muted)]">Memuat faktur supplier dari Supabase…</p>}
     </section>
-  </main>;
+  </Shell>;
 }
 
 function Kpi({ label, value }: { label: string; value: string }) {

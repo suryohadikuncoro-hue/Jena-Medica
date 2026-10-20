@@ -11,7 +11,7 @@ Acuan tertinggi untuk tampilan. Aturan turunannya ada di `../UI_UX_GUIDELINES.md
 - Layar 1 sampai 13: disetujui sebagai acuan.
 - Layar 14 dan 15 (Keuangan): **draf, masih perlu diskusi**. Jangan dibangun sebelum dibahas.
 - Layar 16 (Dashboard HP): disetujui dan sudah diimplementasi (M-04). Nominal rupiah dan donat tidak diimplementasi (lihat `UI_UX_GUIDELINES.md` bagian 8).
-- Layar 17 sampai 19 (Login, Pengaturan, keadaan umum): **draf, menunggu konfirmasi pemilik**. Boleh jadi acuan pola, jangan dianggap final.
+- Layar 17 sampai 19 (Login, Pengaturan, keadaan umum): disetujui, belum diimplementasi.
 - Angka dan nama pada mockup adalah data contoh.
 - Bagian yang bertentangan dengan keputusan produk dicatat di `UI_UX_GUIDELINES.md` bagian 10 dan tidak boleh dibangun apa adanya.
 - Belum ada mockup: versi desktop untuk layar 1 sampai 19 (kecuali yang ada di PDF), tab Supplier dan Barang di Master Data, tab Hutang di Pembayaran, form tambah/ubah data master, mode gelap per layar, dan tablet.
