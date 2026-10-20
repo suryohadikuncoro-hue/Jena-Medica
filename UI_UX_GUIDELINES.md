@@ -4,7 +4,7 @@
 > **Sumber kebenaran tampilan:** `Mockup_Jena_Business_Suite` (disimpan di `design/Mockup_Jena_Business_Suite.pdf` dan `.html`). Dokumen ini diturunkan dari mockup. Kalau berbeda, **mockup menang**, kecuali butir di bagian 9 (teknis) dan bagian 10 (konflik dengan keputusan produk).
 > Aturan lama "menu tetap di atas / navbar atas / hamburger" **dicabut**. Menu ada di rail kiri (desktop) dan bottom bar (mobile).
 > Pengguna utama adalah pemilik bisnis yang sering membuka dari HP, bukan akuntan.
-> **Mockup HP (390 px):** `design/mockup-hp/index.html`, 15 layar. Layar 1–13 disetujui; **layar 14–15 (Keuangan) masih draf dan perlu diskusi**.
+> **Mockup HP (390 px):** `design/mockup-hp/index.html`, 19 layar. Layar 1–13 dan 16 disetujui; **layar 14–15 (Keuangan) masih draf dan perlu diskusi**; layar 17–19 draf menunggu konfirmasi pemilik.
 
 **Cara membaca ukuran.** Layar Dashboard diambil dari kode sumber mockup, jadi angka pikselnya pasti. Layar Pesanan, Faktur Supplier, dan Invoice diambil dari PDF (tanpa kode), jadi struktur, warna, dan teksnya pasti, tetapi ukuran pikselnya **perkiraan** dan mengikuti token/komponen Dashboard. Jangan menebak angka baru; pakai komponen di bagian 5.
 
@@ -207,8 +207,14 @@ Acuan: `design/` (PDF dan HTML Dashboard desktop) dan `design/mockup-hp/` (15 la
 | 13 | Detail Pelanggan + Harga Khusus | `13-detail-pelanggan.html` | Disetujui |
 | 14 | Keuangan: Ikhtisar | `14-keuangan-ikhtisar.html` | **Draf, perlu diskusi** |
 | 15 | Keuangan: Laba Rugi | `15-keuangan-laba-rugi.html` | **Draf, perlu diskusi** |
+| 16 | Dashboard (HP) | `16-dashboard-hp.html` | Disetujui, sudah diimplementasi (M-04). Tanpa nominal rupiah dan tanpa donat (lihat di bawah) |
+| 17 | Login | `17-login.html` | Draf, menunggu konfirmasi pemilik |
+| 18 | Pengaturan | `18-pengaturan.html` | Draf, menunggu konfirmasi pemilik (rute `/pengaturan` belum ada) |
+| 19 | Keadaan umum (kosong, memuat, error, izin, validasi, dialog, toast) | `19-keadaan-umum.html` | Draf pola, menunggu konfirmasi pemilik |
 
-**Belum ada acuan** (pakai token dan komponen bagian 3 dan 5, jangan menebak, tandai di PR): Dashboard versi HP; versi desktop layar 1–15 selain yang ada di PDF; Login dan atur kata sandi; Pengaturan; tab Supplier dan Barang di Master Data; tab Hutang di Pembayaran; form tambah/ubah data master dan harga khusus; Keuangan selain Ikhtisar dan Laba Rugi (Neraca, Jurnal umum, Buku Besar, Tutup Buku, PPN, Hutang & piutang); form biaya operasional; keadaan kosong, memuat, error, dan tanpa izin; tampilan Viewer; mode gelap per layar; tablet (820–1100 px).
+**Belum ada acuan** (pakai token dan komponen bagian 3 dan 5, jangan menebak, tandai di PR): versi desktop layar 1–19 selain yang ada di PDF; tab Supplier dan Barang di Master Data; tab Hutang di Pembayaran; form tambah/ubah data master dan harga khusus; Keuangan selain Ikhtisar dan Laba Rugi (Neraca, Jurnal umum, Buku Besar, Tutup Buku, PPN, Hutang & piutang); form biaya operasional; tampilan Viewer; mode gelap per layar; tablet (820–1100 px).
+
+**Catatan layar 16 (Dashboard).** Implementasi M-04 sengaja berbeda dari mockup: dashboard hanya menghitung jumlah dokumen, jadi kartu gelap menampilkan jumlah invoice terbit (bukan "Piutang berjalan Rp ..."), donat "5 / 7 sudah ditagih" diganti kartu hitungan, dan label disesuaikan dengan arti hitungan ("SO terkonfirmasi", "Menunggu supplier"). Nominal rupiah baru boleh ditambahkan setelah sumber datanya diputuskan (D-04: angka keuangan hanya dari jurnal yang dibukukan).
 
 Angka, nama pelanggan/supplier, dan nomor dokumen di mockup adalah data contoh (P3).
 
