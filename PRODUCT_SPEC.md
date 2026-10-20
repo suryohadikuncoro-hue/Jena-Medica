@@ -48,7 +48,7 @@ Status berikut adalah **kondisi teramati per 17 Oktober 2026**, bukan target des
 | Master pelanggan/supplier/barang dan harga khusus | Ada dan aktif | UAT role-based dan verifikasi data sebelum cutover |
 | SO/PO split dan capture faktur supplier | Ada | Validasi akhir sesuai D-01/D-02 dan alur invoice supplier |
 | Shipment/pengiriman | Remote audit: tabel dan RPC ada, 1 record `shipped`; kode branch ini telah menghapus UI shipment | Migration D-09 menghapus tabel/record/RPC/trigger; belum diterapkan remote |
-| Invoice pelanggan | Remote audit: tabel ada, invoice 0; schema legacy masih mengikat invoice ke shipment | Target: draf otomatis setelah SO terkonfirmasi, ditinjau/diedit Owner/Admin lalu diterbitkan; migration D-09/D-10 belum diterapkan remote |
+| Invoice pelanggan | Migration D-09/D-10 di repository memutus ketergantungan shipment dan RPC invoice berbasis SO. Audit kode 20 Okt menemukan kolom yang dibaca aplikasi belum lengkap pada schema migration dan alur penerbitan/otomatisasi belum tersedia. Status remote belum diverifikasi ulang. | PR schema alignment menyiapkan kolom invoice dan constraint status; tetap perlu trigger idempoten setelah SO confirmed, editor draf, RPC penerbitan + posting yang tunduk approval gate, dan UAT. Jangan release sebelum seluruh bagian disatukan. |
 | Pembayaran | 1 customer payment dan 1 supplier payment berstatus `recorded` | Konfirmasi apakah data uji; jangan anggap otomatis aman dihapus |
 | Kerangka akuntansi | Migration sudah diterapkan; 10 akun COA, profile `draft`, mapping 0, periode 0, jurnal 0 | Konfigurasi COA/mapping/policy dan periode, lalu UAT sebelum posting |
 | Laporan GL/keuangan final, audit umum, backup/restore teruji | Belum lengkap/terverifikasi | Selesaikan sebelum cutover |
@@ -58,7 +58,7 @@ Data yang teramati juga mencakup 1 customer, 1 supplier, 2 produk, 2 SO berstatu
 ## 5. Urutan pengerjaan
 
 1. Selesaikan rekonsiliasi dokumentasi dan pastikan lokasi dokumen tunggal di root repository ini.
-2. PR #31 menyiapkan implementasi D-09/D-10: UI shipment dihapus, route pembayaran dipisahkan, UI invoice berbasis SO, dan migration schema menghapus objek serta record shipment legacy tanpa menghapus pembayaran. D-10 kini menetapkan draf invoice otomatis setelah SO terkonfirmasi; verifikasi idempotensi trigger/RPC, alur tinjau/edit/terbitkan, dan batas kumulatif invoice. Migration masih pending pada Supabase remote; terapkan bersama release kode yang sesuai setelah review PR selesai.
+2. D-09/D-10: UI shipment dihapus dan migration repository memutus relasi shipment dari invoice. Audit 20 Okt menemukan mismatch schema dan lifecycle invoice belum lengkap. Selesaikan berurutan: schema alignment, draf otomatis idempoten setelah SO confirmed, tinjau/edit draf, penerbitan dan posting yang mengikuti approval gate, lalu UAT. Jangan menerapkan migration atau release parsial ke Production.
 3. Lengkapi validasi faktur Supplier: hitungan usulan, angka tercetak, selisih, modal efektif, dan aturan posting D-01/D-02.
 4. Lengkapi invoice komersial, pratinjau/cetak bersih, dan tautan PDF WhatsApp sesuai D-06.
 5. Konfigurasikan profil pajak dan COA, mapping akun, referensi approval, serta periode akuntansi. Kerangka posting yang ada masih terkunci oleh konfigurasi.
