@@ -290,7 +290,7 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 - [x] M-02 Shell: rail kiri desktop dan bottom bar HP (5 slot berlabel, halaman Lainnya) menggantikan bar atas
 - [x] M-03 Komponen bersama (`app/components/ui/`): kartu, panel, tombol, pil status, tab segmen, banner aksi, kartu ringkas, baris daftar, baris riwayat
 - [x] M-04 Dashboard sesuai mockup (U-05 sudah menyiapkan data dari server)
-- [ ] M-05 Pesanan: daftar, form pesanan baru, detail pesanan (layar 1, 2, dan detail)
+- [ ] M-05 Pesanan: daftar, form pesanan baru, detail pesanan (layar 1, 2, dan detail) — daftar sedang dikerjakan; form mendapat subtotal/total langsung dan validasi diskon di PR terpisah
 - [ ] M-06 Order Supplier satu menu dengan tab Order dan Faktur (layar 3, 4)
 - [ ] M-07 Faktur supplier: isi, cocokkan dengan hitungan sistem, modal per barang, jika dicatat (layar 5; tunduk K2, K3)
 - [ ] M-08 Invoice: daftar, tinjau dan edit draf, invoice terbit dan kirim WhatsApp (layar 6–8; tunduk K1, K4, K5, K6)
@@ -307,7 +307,7 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 - [ ] U-08 Satu gaya input (kelas `field-input`/`field-label` tidak terdefinisi di Pembayaran dan Buku Besar)
 - [ ] U-09 Validasi per kolom dengan scroll dan fokus ke kesalahan pertama
 - [ ] U-10 Ganti warna Tailwind langsung dengan token; lengkapi mode gelap
-- [ ] U-11 Form pesanan: total langsung, label terlihat, penanda harga khusus, peringatan margin
+- [ ] U-11 Form pesanan: total langsung, label terlihat, penanda harga khusus, peringatan margin — total pra-pajak dan validasi diskon diimplementasikan; label/penanda harga khusus dan peringatan margin masih tersisa
 - [ ] U-12 Combobox dengan pencarian untuk barang dan baris PO
 - [ ] U-13 `MoneyInput` dengan format Rp
 - [ ] U-14 Ganti istilah teknis sesuai kamus; ringkas banner peringatan
