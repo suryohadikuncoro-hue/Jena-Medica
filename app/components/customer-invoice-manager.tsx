@@ -212,10 +212,10 @@ export function CustomerInvoiceManager() {
 
   return <main className="page-wrap customer-invoice-screen">
     <div className="screen-only mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Buat invoice secara manual dari SO terkonfirmasi. Satu SO dapat ditagih beberapa kali sesuai sisa kuantitasnya.</p></div>
+      <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Draf dibuat otomatis saat SO dikonfirmasi. Tinjau kuantitas dan detail sebelum menerbitkan; satu SO dapat ditagih beberapa kali.</p></div>
       {canWrite && <button className="primary-button" type="button" onClick={openCreateForm}>＋ Buat invoice</button>}
     </div>
-    <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> invoice dibuat manual dari SO terkonfirmasi. Draft bukan invoice final, Faktur Pajak/e-Faktur, atau jurnal. Pendapatan dan piutang diakui saat invoice diterbitkan melalui workflow yang disetujui.</div>
+    <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> draf dibuat otomatis saat SO dikonfirmasi. Draf bukan invoice final, Faktur Pajak/e-Faktur, atau jurnal. Pendapatan dan piutang baru diakui saat invoice diterbitkan melalui workflow akuntansi yang disetujui.</div>
     {error && <p role="alert" className="screen-only mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
     {notice && <p role="status" className="screen-only mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
 
