@@ -3,6 +3,11 @@
 
 begin;
 
+-- One editable draft per SO; issued invoices can still be split across multiple invoices.
+-- Creation fails safely if legacy data contains duplicate active drafts requiring reconciliation.
+create unique index if not exists sales_invoices_one_draft_per_so_uq
+  on public.sales_invoices (sales_order_id) where status = 'draft';
+
 create or replace function public.update_customer_invoice_draft(
   p_customer_invoice_id uuid,
   p_invoice_date date,
