@@ -63,7 +63,8 @@ export default function SalesOrdersPage() {
       if (orderLineResult.error) throw orderLineResult.error;
       setCustomers((customerResult.data ?? []) as Customer[]);
       setProducts((productResult.data ?? []) as Product[]);
-      setOrders((orderResult.data ?? []) as SalesOrder[]);\n      setOrdersTotal(orderResult.count ?? 0);
+      setOrders((orderResult.data ?? []) as SalesOrder[]);
+      setOrdersTotal(orderResult.count ?? 0);
       setOrderLines((orderLineResult.data ?? []) as SalesOrderLine[]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat data pesanan dari Supabase."); }
     finally { setLoading(false); }
