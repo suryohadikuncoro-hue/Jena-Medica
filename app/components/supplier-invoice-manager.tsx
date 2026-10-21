@@ -106,14 +106,16 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
     setDraft(current => ({ ...current, [key]: value }));
   }
   function chooseSupplier(id: string) {
-    const supplier = supplierById.get(id);
-    const taxStatus: TaxStatus = supplier?.tax_status === "pkp" ? "taxed" : supplier?.tax_status === "non_pkp" ? "non_taxed" : "unverified";
     setDraft(current => ({
-      ...current, supplier_id: id, tax_status: taxStatus,
-       tax_rate: "",
-      tax_amount: taxStatus === "non_taxed" ? "0" : current.tax_amount,
+      ...current,
+      supplier_id: id,
+      // Tax status must come from the invoice document, not inferred from supplier profile.
+      tax_status: "unverified",
+      tax_rate: "",
+      tax_amount: "0",
     }));
   }
+
   function updateLine(index: number, key: keyof InvoiceLineDraft, value: string) {
     setDraft(current => ({ ...current, lines: current.lines.map((line, position) => position === index ? { ...line, [key]: value } : line) }));
   }
