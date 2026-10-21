@@ -1,5 +1,7 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
+**Rekonsiliasi terbaru — 21 Oktober 2026 (baca-saja):** Production mencatat 10 migration. Migration dasar D-09/D-10 tercatat dengan version `20261017185346`; arsip GitHub diselaraskan tanpa perubahan SQL. Migration lanjutan D-10 dari PR #46, #49, #50, #51 belum diterapkan. RPC `create_customer_invoice(uuid,date,text,jsonb)` di remote belum memiliki guard nilai kumulatif; RPC `update_customer_invoice_draft` belum tersedia. Query data sebelumnya tidak menemukan invoice aktif yang melampaui nilai/kuantitas SO. Belum ada uji runtime untuk invoice parsial/pembulatan/concurrency. Tidak ada perubahan database atau deployment.
+
 **Diperbarui:** 17 Oktober 2026  
 **Mode audit:** baca-saja; tidak menjalankan DDL, migration, pembersihan data, atau deployment.  
 **Project:** `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status Supabase `ACTIVE_HEALTHY`, region `ap-northeast-1`.  
@@ -7,7 +9,7 @@
 
 ## 1. Status skema dan migration remote
 
-Audit mencatat **9 migration remote** dan **27 tabel publik**. Semua tabel publik memiliki RLS aktif dan policy; audit juga tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`.
+Snapshot audit 17 Oktober mencatat **9 migration remote** dan **27 tabel publik**. Riwayat remote yang diperiksa ulang pada 21 Oktober mencatat **10 migration**. Semua tabel publik memiliki RLS aktif dan policy; audit juga tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`.
 
 Versi migration berikut adalah versi yang tercatat di Supabase. Arsip di `supabase/migrations/` harus memakai version ID yang sama dengan remote (D-11).
 
