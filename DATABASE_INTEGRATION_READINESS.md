@@ -1,6 +1,8 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
-**Rekonsiliasi terbaru — 21 Oktober 2026 (baca-saja):** Production mencatat 10 migration. Migration dasar D-09/D-10 tercatat dengan version `20261017185346`; arsip GitHub diselaraskan tanpa perubahan SQL. Migration lanjutan D-10 dari PR #46, #49, #50, #51 belum diterapkan. RPC `create_customer_invoice(uuid,date,text,jsonb)` di remote belum memiliki guard nilai kumulatif; RPC `update_customer_invoice_draft` belum tersedia. Query data sebelumnya tidak menemukan invoice aktif yang melampaui nilai/kuantitas SO. Belum ada uji runtime untuk invoice parsial/pembulatan/concurrency. Tidak ada perubahan database atau deployment.
+**Status Production terverifikasi — 22 Oktober 2026:** Supabase remote kini mencatat 15 migration, termasuk lima migration lanjutan D-10 dengan versi `20261021184121` sampai `20261021184142`. RPC `update_customer_invoice_draft(uuid,date,text,jsonb)` tersedia dan indeks satu draf aktif per SO aktif. Uji transaksional sementara berhasil: konfirmasi SO membuat satu draf, konfirmasi ulang tidak menggandakan draf, draf dapat diedit, kuantitas berlebih ditolak, dan jumlah jurnal tidak berubah; seluruh perubahan uji di-`ROLLBACK`. CI `main` lulus untuk lint, build Next.js, dan build Cloudflare Worker.
+
+**Belum dianggap selesai untuk cutover:** deployment Cloudflare live belum dapat diverifikasi; dua SO terkonfirmasi yang sudah ada belum memiliki invoice dan tidak di-backfill karena status data uji vs transaksi riil harus dipastikan (D-05); UAT guard nilai kumulatif jalur create, concurrency, dan pembulatan lintas beberapa invoice, dan UI Owner/Admin/Viewer masih perlu dilengkapi. Bagian audit di bawah yang mencatat status 21 Oktober adalah snapshot historis dan tidak menggantikan status ini.
 
 **Snapshot data historis:** 17 Oktober 2026  
 **Mode audit:** baca-saja; tidak menjalankan DDL, migration, pembersihan data, atau deployment.  
@@ -26,6 +28,11 @@ Migration dasar D-09/D-10 tercatat pada remote sebagai `20261017185346_d10_invoi
 | `20261016205342` | `auto_customer_invoice_on_delivery_drafts` | Tercatat; trigger lama ditargetkan dihapus sesuai D-09/D-10 |
 | `20261016215508` | `payments_and_invoice_allocations` | Tercatat |
 | `20261016225329` | `accounting_posting_framework` | Tercatat; framework ada tetapi gate posting belum dibuka |\n| `20261017185346` | `d10_invoice_from_sales_order_drop_shipment_module` | Tercatat; arsip diselaraskan di PR #52 |
+| `20261021184121` | `d10_auto_draft_edit` | Diterapkan ke Production; arsip diselaraskan di PR dokumentasi ini |
+| `20261021184128` | `d10_invoice_lock_order` | Diterapkan ke Production; arsip diselaraskan di PR dokumentasi ini |
+| `20261021184134` | `d10_invoice_value_cap` | Diterapkan ke Production; arsip diselaraskan di PR dokumentasi ini |
+| `20261021184138` | `d10_create_invoice_value_cap` | Diterapkan ke Production; arsip diselaraskan di PR dokumentasi ini |
+| `20261021184142` | `d10_future_dated_so_invoice_date` | Diterapkan ke Production; arsip diselaraskan di PR dokumentasi ini |
 
 PR #31 menyelaraskan arsip migration lama. PR #52 menyelaraskan arsip dasar D-09/D-10 dengan version ID remote tanpa mengubah isi SQL. Perubahan nama arsip bukan migration database dan tidak mengubah schema/data remote.
 
