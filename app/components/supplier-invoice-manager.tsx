@@ -9,6 +9,7 @@ type TaxStatus = "taxed" | "non_taxed" | "unverified";
 type PriceMode = "exclusive" | "inclusive" | "not_applicable" | "unknown";
 type DiscountMode = "none" | "amount" | "percent";
 type Supplier = { id: string; code: string; legal_name: string; tax_status: "pkp" | "non_pkp" | "unverified" };
+type Product = { id: string; code: string; name: string; unit: string };
  type SupplierInvoice = {
   id: string; supplier_id: string; supplier_invoice_number: string; invoice_date: string; due_date: string | null;
   tax_status: TaxStatus; price_mode: PriceMode; tax_rate_reported: number | string | null;
@@ -47,6 +48,7 @@ function nonNegative(value: string, label: string, required = true) {
 export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolean } = {}) {
   const configured = isSupabaseConfigured();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
    const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
   const [invoiceLines, setInvoiceLines] = useState<SupplierInvoiceLine[]>([]);
   const [role, setRole] = useState("");
@@ -74,15 +76,18 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       }
       const businessRole = String(session.user.app_metadata?.business_role ?? ""); setRole(businessRole);
       if (!["owner", "admin", "viewer"].includes(businessRole)) { setError("Akun belum memiliki role business_role pada Supabase Auth app_metadata."); setLoading(false); return; }
-      const [supplierResult, invoiceResult, invoiceLineResult] = await Promise.all([
+      const [supplierResult, invoiceResult, invoiceLineResult, productResult] = await Promise.all([
         supabase.from("suppliers").select("id,code,legal_name,tax_status").order("legal_name").limit(500),
         supabase.from("supplier_invoices").select("id,supplier_id,supplier_invoice_number,invoice_date,due_date,tax_status,price_mode,tax_rate_reported,discount_mode,discount_value_reported,subtotal_reported,discount_amount_reported,tax_amount_reported,other_charges_reported,invoice_total_reported,status,void_reason,input_tax_treatment,input_tax_review_reference,posted_at,created_at").order("invoice_date", { ascending: false }).limit(500),
         supabase.from("supplier_invoice_lines").select("id,supplier_invoice_id,line_number,purchase_order_line_id,product_code_snapshot,product_name_snapshot,unit_snapshot,quantity,unit_price_reported,line_discount_reported,line_total_reported").limit(3000),
+        supabase.from("products").select("id,code,name,unit").eq("is_active", true).order("name").limit(500),
       ]);
       for (const result of [supplierResult, invoiceResult, invoiceLineResult]) if (result.error) throw result.error;
       setSuppliers((supplierResult.data ?? []) as Supplier[]);
       setInvoices((invoiceResult.data ?? []) as SupplierInvoice[]);
       setInvoiceLines((invoiceLineResult.data ?? []) as SupplierInvoiceLine[]);
+      // Product lookup is a convenience only; an unavailable catalog must not prevent manual invoice capture.
+      setProducts(productResult.error ? [] : (productResult.data ?? []) as Product[]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat faktur supplier dari Supabase."); }
     finally { setLoading(false); }
   }, [configured]);
@@ -101,6 +106,24 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
     const haystack = `${item.supplier_invoice_number} ${supplierById.get(item.supplier_id)?.legal_name ?? ""}`.toLowerCase();
     return haystack.includes(query.toLowerCase());
   });
+  const lineProposals = useMemo(() => draft.lines.map(line => {
+    const hasInputs = line.quantity.trim() !== "" && line.unit_price_reported.trim() !== "";
+    const quantity = Number(line.quantity);
+    const unitPrice = Number(line.unit_price_reported);
+    const discount = Number(line.line_discount_reported || 0);
+    const valid = hasInputs && Number.isFinite(quantity) && quantity > 0 && Number.isFinite(unitPrice) && unitPrice >= 0 && Number.isFinite(discount) && discount >= 0 && discount <= quantity * unitPrice;
+    return {
+      valid,
+      proposed: valid ? quantity * unitPrice - discount : null,
+      printed: line.line_total_reported.trim() === "" ? null : Number(line.line_total_reported),
+    };
+  }), [draft.lines]);
+  const allLinesCalculable = lineProposals.every(line => line.valid);
+  const proposedSubtotal = allLinesCalculable ? lineProposals.reduce((sum, line) => sum + (line.proposed ?? 0), 0) : null;
+  const proposedInvoiceTotal = proposedSubtotal === null ? null
+    : proposedSubtotal - (Number(draft.discount_amount) || 0) + (Number(draft.tax_amount) || 0) + (Number(draft.other_charges) || 0);
+  const subtotalDifference = proposedSubtotal === null || draft.subtotal.trim() === "" ? null : Number(draft.subtotal) - proposedSubtotal;
+  const totalDifference = proposedInvoiceTotal === null || draft.total.trim() === "" ? null : Number(draft.total) - proposedInvoiceTotal;
  
   function updateDraft<K extends keyof InvoiceDraft>(key: K, value: InvoiceDraft[K]) {
     setDraft(current => ({ ...current, [key]: value }));
@@ -118,6 +141,31 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
 
   function updateLine(index: number, key: keyof InvoiceLineDraft, value: string) {
     setDraft(current => ({ ...current, lines: current.lines.map((line, position) => position === index ? { ...line, [key]: value } : line) }));
+  }
+
+  function chooseProduct(index: number, product: Product) {
+    setDraft(current => ({
+      ...current,
+      lines: current.lines.map((line, position) => position === index
+        ? { ...line, product_code: product.code, product_name: product.name, unit: product.unit }
+        : line),
+    }));
+  }
+
+  function productSuggestions(line: InvoiceLineDraft) {
+    const code = line.product_code.trim().toLowerCase();
+    const name = line.product_name.trim().toLowerCase();
+    const exactSelection = products.some(product =>
+      product.code.toLowerCase() === code &&
+      product.name.toLowerCase() === name &&
+      product.unit.toLowerCase() === line.unit.trim().toLowerCase()
+    );
+    if (exactSelection) return [];
+    const query = name || code;
+    if (query.length < 2) return [];
+    return products
+      .filter(product => `${product.code} ${product.name}`.toLowerCase().includes(query))
+      .slice(0, 6);
   }
 
   async function submitInvoice(event: FormEvent<HTMLFormElement>) {
@@ -225,12 +273,21 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
             <label className="text-xs text-[var(--muted)]">Kuantitas<input required className="field mt-1" type="number" min="0.0001" step="0.0001" value={line.quantity} onChange={event => updateLine(index, "quantity", event.target.value)} /></label>
             <label className="text-xs text-[var(--muted)]">Harga/unit (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={line.unit_price_reported} onChange={event => updateLine(index, "unit_price_reported", event.target.value)} /></label>
             <label className="text-xs text-[var(--muted)]">Diskon baris (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={line.line_discount_reported} onChange={event => updateLine(index, "line_discount_reported", event.target.value)} /></label>
-            <label className="text-xs text-[var(--muted)] sm:col-span-2">Total baris pada faktur (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={line.line_total_reported} onChange={event => updateLine(index, "line_total_reported", event.target.value)} /></label>
+            <label className="text-xs text-[var(--muted)] sm:col-span-2">Total baris tercetak (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={line.line_total_reported} onChange={event => updateLine(index, "line_total_reported", event.target.value)} /></label>
           </div>
+          {productSuggestions(line).length > 0 && <div className="mt-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+            <p className="mb-1 text-xs text-[var(--muted)]">Pilih dari master barang untuk mengisi kode, nama, dan satuan.</p>
+            <div className="flex flex-wrap gap-2">{productSuggestions(line).map(product => <button key={product.id} type="button" className="tab-button text-left" onClick={() => chooseProduct(index, product)}><span className="font-mono">{product.code}</span> · {product.name} <span className="text-[var(--muted)]">({product.unit})</span></button>)}</div>
+          </div>}
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-muted)] p-2 text-xs">
+            <span className="text-[var(--muted)]">Usulan baris = kuantitas × harga/unit − diskon baris</span>
+            <span className="font-semibold tabular-nums">{lineProposals[index]?.valid ? money(lineProposals[index].proposed ?? 0) : "Lengkapi kuantitas dan harga untuk menghitung"}</span>
+          </div>
+          {lineProposals[index]?.valid && lineProposals[index]?.printed !== null && lineProposals[index]?.printed !== undefined && Number.isFinite(lineProposals[index]?.printed) && <p className={`mt-1 text-xs ${Math.abs((lineProposals[index]?.printed ?? 0) - (lineProposals[index]?.proposed ?? 0)) === 0 ? "text-emerald-700" : "text-amber-800"}`}>Selisih total baris (tercetak − usulan): {money((lineProposals[index]?.printed ?? 0) - (lineProposals[index]?.proposed ?? 0))}. Nominal tercetak tetap menjadi sumber kebenaran.</p>}
         </div>)}</div>
       </div>
 
-      <div className="mt-5"><h3 className="text-sm font-semibold">Ringkasan sesuai faktur asli</h3><p className="mt-1 text-xs text-[var(--muted)]">Isi angka sebagaimana tercetak pada faktur. Sistem tidak menghitung atau menebak pajak; total tetap mengikuti dokumen sumber.</p>
+      <div className="mt-5"><h3 className="text-sm font-semibold">Ringkasan sesuai faktur asli</h3><p className="mt-1 text-xs text-[var(--muted)]">Isi angka tercetak sebagai sumber kebenaran. Usulan di bawah hanya untuk membantu memeriksa kecocokan; PPN tidak dihitung atau ditebak oleh sistem.</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-xs text-[var(--muted)]">Subtotal dilaporkan (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.subtotal} onChange={event => updateDraft("subtotal", event.target.value)} /></label>
           <label className="text-xs text-[var(--muted)]">Jenis diskon faktur<select className="field mt-1" value={draft.discount_mode} onChange={event => { const value = event.target.value as DiscountMode; setDraft(current => ({ ...current, discount_mode: value, discount_value: value === "none" ? "0" : current.discount_value })); }}><option value="none">Tanpa diskon</option><option value="amount">Nominal</option><option value="percent">Persentase</option></select></label>
@@ -239,6 +296,21 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
           <label className="text-xs text-[var(--muted)]">PPN tercetak (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.tax_amount} onChange={event => updateDraft("tax_amount", event.target.value)} disabled={draft.tax_status === "non_taxed"} /></label>
           <label className="text-xs text-[var(--muted)]">Biaya lain tercetak (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.other_charges} onChange={event => updateDraft("other_charges", event.target.value)} /></label>
           <label className="text-xs text-[var(--muted)] sm:col-span-2">Total faktur supplier (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.total} onChange={event => updateDraft("total", event.target.value)} /></label>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <article className="rounded-xl border border-[var(--border)] p-3">
+            <p className="text-xs text-[var(--muted)]">Subtotal usulan dari seluruh item</p>
+            <p className="mt-1 text-lg font-bold tabular-nums">{proposedSubtotal === null ? "Lengkapi kuantitas dan harga setiap item" : money(proposedSubtotal)}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Subtotal tercetak: {money(Number(draft.subtotal) || 0)}</p>
+            {subtotalDifference !== null && <p className={`mt-1 text-xs font-medium ${subtotalDifference === 0 ? "text-emerald-700" : "text-amber-800"}`}>Selisih (tercetak − usulan): {money(subtotalDifference)}</p>}
+          </article>
+          <article className="rounded-xl border border-[var(--border)] p-3">
+            <p className="text-xs text-[var(--muted)]">Total usulan dari rincian</p>
+            <p className="mt-1 text-lg font-bold tabular-nums">{proposedInvoiceTotal === null ? "Lengkapi rincian item" : money(proposedInvoiceTotal)}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Total tercetak: {draft.total.trim() ? money(Number(draft.total) || 0) : "Belum diisi"}</p>
+            {totalDifference !== null && <p className={`mt-1 text-xs font-medium ${totalDifference === 0 ? "text-emerald-700" : "text-amber-800"}`}>Selisih (tercetak − usulan): {money(totalDifference)}</p>}
+            <p className="mt-2 text-xs text-[var(--muted)]">Total usulan memakai subtotal item, diskon faktur, PPN tercetak, dan biaya lain tercetak. Perbedaan tidak menghalangi penyimpanan draft, tetapi perlu diperiksa sebelum pembukuan.</p>
+          </article>
         </div>
       </div>
       <label className="mt-4 block text-xs text-[var(--muted)]">Catatan<textarea className="field mt-1 min-h-20 py-2" maxLength={2000} value={draft.notes} onChange={event => updateDraft("notes", event.target.value)} placeholder="Referensi dokumen atau catatan pemeriksaan" /></label>
