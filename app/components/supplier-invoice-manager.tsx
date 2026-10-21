@@ -171,8 +171,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         line_total_reported: Number(line.quantity) * Number(line.unit_price_reported) - Number(line.line_discount_reported || 0),
       }));
       if (reportedLines.some(line => line.quantity <= 0 || !line.product_name || !line.unit)) throw new Error("Nama barang, satuan, dan kuantitas faktur wajib diisi.");
-      const rate = nonNegative(draft.tax_rate, "Tarif PPN sesuai dokumen", false);
-      if (rate !== null && rate > 100) throw new Error("Tarif PPN harus 0–100%.");
+      const rate = null;
       const payload = {
         p_supplier_id: draft.supplier_id,
         p_supplier_invoice_number: draft.number.trim(),
@@ -240,7 +239,6 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
           const value = event.target.value as TaxStatus;
           setDraft(current => ({ ...current, tax_status: value, tax_rate: value === "taxed" ? current.tax_rate : "", tax_amount: value === "non_taxed" ? "0" : current.tax_amount }));
         }}><option value="taxed">Berpajak</option><option value="non_taxed">Non-pajak</option><option value="unverified">Belum diverifikasi</option></select></label>
-         <label className="text-xs text-[var(--muted)]">Tarif PPN sesuai dokumen (%)<input className="field mt-1" type="number" min="0" max="100" step="0.0001" value={draft.tax_rate} onChange={event => updateDraft("tax_rate", event.target.value)} disabled={draft.tax_status === "non_taxed"} placeholder="Kosong bila tidak tercantum" /></label>
       </div>
       <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">Pilih status pajak dan salin nominal sesuai faktur asli. Sistem tidak menebak tarif atau menghitung pajak otomatis.</div>
 
