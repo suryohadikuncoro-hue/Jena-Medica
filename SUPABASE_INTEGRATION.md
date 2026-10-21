@@ -1,6 +1,6 @@
 # Supabase Integration — Jena Medical Center
 
-## 1. Environment dan aturan sumber kebenaran
+## Status rekonsiliasi Production — 21 Oktober 2026 (baca-saja)\n\nSupabase remote mencatat 10 migration. Migration dasar D-09/D-10 tercatat sebagai version `20261017185346`, sementara nama arsip lama memakai `20261017150000`; PR ini menyelaraskan nama arsip tanpa mengubah isi SQL. Migration lanjutan D-10 dari PR #46, #49, #50, dan #51 belum diterapkan. RPC remote `create_customer_invoice(uuid,date,text,jsonb)` belum memiliki guard nilai kumulatif dan RPC `update_customer_invoice_draft` belum tersedia. Audit data tidak menemukan invoice aktif yang melampaui nilai/kuantitas SO, tetapi belum ada uji runtime. Tidak ada perubahan database atau deployment. Bagian di bawah yang berlabel snapshot 17 Oktober adalah catatan historis dan tidak menggantikan status ini.\n\n## 1. Environment dan aturan sumber kebenaran
 
 Target: project Supabase `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status `ACTIVE_HEALTHY`, region `ap-northeast-1`. Satu proyek saat ini mewakili satu perusahaan; schema belum mempunyai isolasi multi-tenant.
 
@@ -12,7 +12,7 @@ Dokumen keputusan: `PRODUCT_SPEC.md`. Kebijakan akuntansi/pajak: `ACCOUNTING_POL
 
 ## 2. Skema remote saat audit
 
-Supabase mencatat 9 migration dan 27 tabel publik. Seluruh tabel publik memiliki RLS aktif dan policy; tidak ditemukan grant `SELECT` tabel publik untuk role `anon`.
+Pada snapshot audit 17 Oktober 2026, Supabase mencatat 9 migration dan 27 tabel publik. Riwayat remote saat rekonsiliasi 21 Oktober mencatat 10 migration. Seluruh tabel publik memiliki RLS aktif dan policy; tidak ditemukan grant `SELECT` tabel publik untuk role `anon`.
 
 | Kelompok | Tujuan/kondisi |
 |---|---|
@@ -66,7 +66,7 @@ Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsi
 - `supabase/migrations/20261016215508_payments_and_invoice_allocations.sql`
 - `supabase/migrations/20261016225329_accounting_posting_framework.sql`
 
-**Migration baru, belum diterapkan:** `supabase/migrations/20261017150000_d10_invoice_from_sales_order_drop_shipment_module.sql`. Migration ini menghapus modul shipment beserta data shipment legacy, menanggalkan `shipment_id`/`shipment_line_id` dari invoice, dan mengganti RPC invoice menjadi manual dari SO. Pembayaran pelanggan/supplier tidak dihapus. Remote masih berisi 9 migration dan schema legacy sampai migration baru diterapkan; empat rename arsip di atas tidak mengubah schema.
+**Migration dasar D-09/D-10 yang sudah tercatat di remote:** `supabase/migrations/20261017185346_d10_invoice_from_sales_order_drop_shipment_module.sql` (arsip diselaraskan tanpa mengubah SQL). **Migration lanjutan yang belum diterapkan:** `supabase/migrations/20261020042000_d10_auto_draft_edit.sql`, `supabase/migrations/20261021152000_d10_invoice_lock_order.sql`, `supabase/migrations/20261021160000_d10_invoice_value_cap.sql`, dan `supabase/migrations/20261021170000_d10_create_invoice_value_cap.sql`. Migration ini menghapus modul shipment beserta data shipment legacy, menanggalkan `shipment_id`/`shipment_line_id` dari invoice, dan mengganti RPC invoice menjadi manual dari SO. Pembayaran pelanggan/supplier tidak dihapus. Remote masih berisi 9 migration dan schema legacy sampai migration baru diterapkan; empat rename arsip di atas tidak mengubah schema.
 
 ## 6. Integrasi dan otorisasi
 
