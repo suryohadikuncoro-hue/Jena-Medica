@@ -83,3 +83,12 @@ Target cutover awal tahun buku adalah **1 Januari 2027**, tetapi hanya berlaku j
 - PR skema menyatakan tabel/fungsi/trigger yang berubah, data terdampak, cara validasi, dan status penerapan. Untuk D-09, penghapusan sudah disetujui pemilik dan tidak ditunda untuk peringatan backup.
 - Jalankan `npm run lint`, `npm run build`, dan `npm run build:worker` untuk perubahan aplikasi; jangan mengklaim lulus bila belum dijalankan.
 - Jangan commit rahasia. Hanya publishable key yang boleh dipakai di browser.
+
+
+## Keputusan implementasi — Faktur Supplier langsung
+
+- PO dibuat manual di luar ERP; PO bukan prasyarat untuk mencatat faktur supplier.
+- Faktur supplier adalah sumber data utama. Setiap baris menyimpan kode barang (opsional), nama barang, satuan, kuantitas, harga/unit, diskon baris, dan total baris sesuai dokumen.
+- UI tidak meminta `Mode Harga`; sistem tidak boleh menyimpulkan apakah harga termasuk PPN. Status pajak dan angka yang tercetak disalin dari dokumen, tanpa menghitung atau menebak pajak.
+- Referensi PO historis tetap dipertahankan bila ada, tetapi baris baru boleh tanpa PO. Data faktur tetap berstatus draft dan belum membentuk hutang/jurnal sampai alur akuntansi yang disetujui tersedia.
+- Status rilis: perubahan UI dan migration sedang disiapkan pada branch `feat/supplier-invoice-direct-capture`; belum diterapkan ke Production dan belum lolos lint/build/UAT.
