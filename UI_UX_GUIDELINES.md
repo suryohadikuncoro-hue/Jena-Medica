@@ -4,7 +4,7 @@
 > **Sumber kebenaran tampilan:** `Mockup_Jena_Business_Suite` (disimpan di `design/Mockup_Jena_Business_Suite.pdf` dan `.html`). Dokumen ini diturunkan dari mockup. Kalau berbeda, **mockup menang**, kecuali butir di bagian 9 (teknis) dan bagian 10 (konflik dengan keputusan produk).
 > Aturan lama "menu tetap di atas / navbar atas / hamburger" **dicabut**. Menu ada di rail kiri (desktop) dan bottom bar (mobile).
 > Pengguna utama adalah pemilik bisnis yang sering membuka dari HP, bukan akuntan.
-> **Mockup HP (390 px):** `design/mockup-hp/index.html`, 19 layar. Layar 1–13 dan 16 disetujui; **layar 14–15 (Keuangan) masih draf dan perlu diskusi**; layar 17–19 draf menunggu konfirmasi pemilik.
+> **Mockup HP (390 px):** `design/mockup-hp/index.html`, 19 layar. Layar 1–13 dan 16–19 disetujui; **layar 14–15 (Keuangan) masih draf dan perlu diskusi**.
 
 **Cara membaca ukuran.** Layar Dashboard diambil dari kode sumber mockup, jadi angka pikselnya pasti. Layar Pesanan, Faktur Supplier, dan Invoice diambil dari PDF (tanpa kode), jadi struktur, warna, dan teksnya pasti, tetapi ukuran pikselnya **perkiraan** dan mengikuti token/komponen Dashboard. Jangan menebak angka baru; pakai komponen di bagian 5.
 
@@ -208,9 +208,9 @@ Acuan: `design/` (PDF dan HTML Dashboard desktop) dan `design/mockup-hp/` (15 la
 | 14 | Keuangan: Ikhtisar | `14-keuangan-ikhtisar.html` | **Draf, perlu diskusi** |
 | 15 | Keuangan: Laba Rugi | `15-keuangan-laba-rugi.html` | **Draf, perlu diskusi** |
 | 16 | Dashboard (HP) | `16-dashboard-hp.html` | Disetujui, sudah diimplementasi (M-04). Tanpa nominal rupiah dan tanpa donat (lihat di bawah) |
-| 17 | Login | `17-login.html` | Draf, menunggu konfirmasi pemilik |
-| 18 | Pengaturan | `18-pengaturan.html` | Draf, menunggu konfirmasi pemilik (rute `/pengaturan` belum ada) |
-| 19 | Keadaan umum (kosong, memuat, error, izin, validasi, dialog, toast) | `19-keadaan-umum.html` | Draf pola, menunggu konfirmasi pemilik |
+| 17 | Login | `17-login.html` | Disetujui, belum diimplementasi |
+| 18 | Pengaturan | `18-pengaturan.html` | Disetujui, belum diimplementasi (rute `/pengaturan` belum ada) |
+| 19 | Keadaan umum (kosong, memuat, error, izin, validasi, dialog, toast) | `19-keadaan-umum.html` | Disetujui sebagai pola, belum diimplementasi |
 
 **Belum ada acuan** (pakai token dan komponen bagian 3 dan 5, jangan menebak, tandai di PR): versi desktop layar 1–19 selain yang ada di PDF; tab Supplier dan Barang di Master Data; tab Hutang di Pembayaran; form tambah/ubah data master dan harga khusus; Keuangan selain Ikhtisar dan Laba Rugi (Neraca, Jurnal umum, Buku Besar, Tutup Buku, PPN, Hutang & piutang); form biaya operasional; tampilan Viewer; mode gelap per layar; tablet (820–1100 px).
 
@@ -297,7 +297,7 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 - [x] M-03 Komponen bersama (`app/components/ui/`): kartu, panel, tombol, pil status, tab segmen, banner aksi, kartu ringkas, baris daftar, baris riwayat
 - [x] M-04 Dashboard sesuai mockup (U-05 sudah menyiapkan data dari server)
 - [ ] M-05 Pesanan: daftar, form pesanan baru, detail pesanan (layar 1, 2, dan detail) — daftar sedang dikerjakan; form mendapat subtotal/total langsung dan validasi diskon di PR terpisah
-- [ ] M-06 Order Supplier satu menu dengan tab Order dan Faktur (layar 3, 4)
+- [x] M-06 Order Supplier satu menu dengan tab Order dan Faktur (layar 3, 4); tab Faktur memuat daftar dan form yang ada, bentuk layar 5 menunggu M-07
 - [ ] M-07 Faktur supplier: isi, cocokkan dengan hitungan sistem, modal per barang, jika dicatat (layar 5; tunduk K2, K3)
 - [ ] M-08 Invoice: daftar, tinjau dan edit draf, invoice terbit dan kirim WhatsApp (layar 6–8; tunduk K1, K4, K5, K6) — trigger draf otomatis dan RPC edit draf ditambahkan pada PR D-10; perlu UAT sebelum checklist ditutup
 - [ ] M-09 Pembayaran: daftar piutang/hutang dan catat pembayaran dengan alokasi (layar 9, 10)
