@@ -73,14 +73,14 @@ Halaman (`--page`) berisi satu shell putih: maks 1480 px, rata tengah, padding 2
 - Logo bulat 56 px ("J", latar `#1b1c21`, huruf `#f8c9d3`) di atas rail, tautan ke Dashboard.
 - Rail 72 px, latar `#1b1c21`, sudut 36, ikon vertikal jarak 8. Tombol ikon 44×44 bulat. Aktif: latar `#f8c9d3`, ikon `#17181c`, `aria-current="page"`.
 - **Hanya ikon**, tanpa teks. Nama lewat `title` dan `aria-label`.
-- Urutan: Dashboard, Pesanan, Order supplier / Faktur supplier, Master data, Invoice, Pembayaran, Keuangan; spasi fleksibel; Pemberitahuan; avatar pengguna 44 px.
+- Urutan: Dashboard, Pesanan, Faktur Supplier, Master data, Invoice, Pembayaran, Keuangan; spasi fleksibel; Pemberitahuan; avatar pengguna 44 px.
 - Ikon: SVG garis 24×24, stroke 1.8, ujung bulat, `currentColor`.
 
 ### Mobile (≤ 820 px)
 - Rail hilang; muncul **bottom bar** menempel di bawah layar (referensi pola: aplikasi perbankan; warna: mockup Jena). Latar `#1b1c21`, sudut atas 24, padding 10/8/18 (bawah menyertakan jarak aman gestur HP), 5 slot sama lebar.
 - Slot (tiap ikon **berlabel teks** 11 px/600): **Dashboard, Pesanan, Order, Invoice, Lainnya**.
 - Tidak aktif: ikon dan label `#a9acb4`. Aktif: ikon `#17181c` di dalam lingkaran/pil `#f8c9d3` (44×32), label `#f8c9d3`, `aria-current="page"`. Target sentuh minimal 44 px.
-- **Order** adalah satu menu "Order supplier" berisi dua tab, **Order** dan **Faktur** (tab memperbarui URL; lencana pink pada Faktur = jumlah faktur perlu dicek).
+- **Faktur Supplier** adalah menu tersendiri untuk mencatat faktur langsung dari dokumen supplier. PO dibuat manual di luar ERP, sehingga tidak ada tab atau form buat order supplier di aplikasi.
 - **Lainnya** membuka halaman sendiri (rute sungguhan, bukan lembar geser) berisi kartu profil, lalu menu **Pembayaran, Master Data, Keuangan, Pengaturan**, dan Keluar. Saat di halaman Pembayaran, Master Data, atau Keuangan, slot Lainnya yang tampil aktif. Tidak ada ikon pemberitahuan sampai fiturnya ada (prinsip 8).
 - Shell mobile: lebar 390 px, padding halaman 20 px.
 
@@ -88,7 +88,7 @@ Halaman (`--page`) berisi satu shell putih: maks 1480 px, rata tengah, padding 2
 - **Dashboard:** sapaan h1 + tanggal; kanan: tombol Cari dan "+ Pesanan baru".
 - **Halaman detail:** tautan kembali kecil di atas judul (desktop: "‹ Semua pesanan"; mobile: tombol bulat 44 px bergaris dengan panah) lalu h1 + pil status + keterangan satu baris. Aksi destruktif (mis. "Batalkan pesanan") di kanan atas sebagai tombol garis merah.
 - **Halaman daftar (HP):** h1 28 px + keterangan 13 px; kanan: tombol cari (44 px, bergaris) dan tombol bulat "+" 48 px (aksi utama membuat dokumen baru). Di bawahnya: tab segmen bila ada dua bagian (Order|Faktur, Piutang|Hutang, Pelanggan|Supplier|Barang), banner aksi, kartu ringkas, filter, lalu daftar.
-- **Halaman faktur supplier:** jejak kecil "Order supplier · Faktur supplier" di atas h1.
+- **Halaman Faktur Supplier:** judul dan tindakan pencatatan faktur, tanpa breadcrumb ke halaman Order Supplier.
 - **Daftar + editor (Invoice):** h1 + satu kalimat penjelasan; di bawahnya dua kartu berdampingan (daftar kiri, editor kanan).
 
 ### Grid per layar (desktop)
@@ -141,7 +141,7 @@ Halaman (`--page`) berisi satu shell putih: maks 1480 px, rata tengah, padding 2
 | Komponen | Spesifikasi |
 |---|---|
 | Pil status tambahan | Menunggu balasan = kuning; Dibalas = mint; Dicatat = mint; Draf (order/faktur) = abu; Draf · ada selisih = pink |
-| Banner aksi | blok pastel (kuning = perlu tinjauan; pink = ada masalah), kalimat pertama tebal, tombol solid kecil di kanan ("Tinjau", "Periksa", "Buat order") |
+| Banner aksi | blok pastel (kuning = perlu tinjauan; pink = ada masalah), kalimat pertama tebal, tombol solid kecil di kanan ("Tinjau", "Periksa", "Catat faktur") |
 | Kartu ringkas | dua kartu sebaris di atas daftar: label 12 px `--muted`, angka 20–22 px/800, satuan 12 px `--teal-text` |
 | Kartu total gelap | latar `#17181c`, teks putih, label 12 px opacity .75, angka 26–34 px/800; dipakai untuk total pesanan, total tagihan, saldo ringkasan |
 | Baris daftar | kartu `--card`, ikon bulat 44 (warna pastel sesuai status), kiri "nomor · nama" 14/700 dan keterangan langkah berikutnya 12 px `--muted`, kanan nilai 14/800 dan pil status |
@@ -271,8 +271,8 @@ Target lokasi `app/components/ui/` (belum ada; buat saat implementasi): `Field`,
 9. Setelah tombol "Buat/Catat" ditekan, scroll ke form dan fokuskan kolom pertama. Simpan draf otomatis pada form panjang.
 
 ### Alur lintas layar
-- Alur: Pesanan → Order supplier → Faktur supplier → **Draf invoice otomatis** → tinjau dan edit → **Terbitkan** → **Kirim WhatsApp** → Pembayaran → Lunas. Tidak ada layar atau menu Pengiriman (D-09).
-- Pesanan terkonfirmasi: tombol **Buat order supplier**. Draf invoice yang belum ditinjau ditandai dengan banner "menunggu tinjauan" di Daftar Pesanan, Daftar Invoice, dan Dashboard.
+- Alur penjualan di ERP: Pesanan → **Draf invoice otomatis** → tinjau dan edit → **Terbitkan** → **Kirim WhatsApp** → Pembayaran → Lunas. Pembelian supplier dicatat terpisah melalui menu Faktur Supplier; PO dibuat manual di luar ERP dan tidak memiliki halaman di aplikasi. Tidak ada layar atau menu Pengiriman (D-09).
+- Pesanan terkonfirmasi membuat draf invoice pelanggan untuk ditinjau. Draf invoice yang belum ditinjau ditandai dengan banner "menunggu tinjauan" di Daftar Pesanan, Daftar Invoice, dan Dashboard.
 - Invoice terbit: tombol **Kirim WhatsApp**, **Unduh PDF**, **Catat pembayaran**, **Batalkan invoice**. Tombol Kirim WhatsApp **membuka WhatsApp** dengan pesan dan tautan PDF; aplikasi tidak mengirim pesan sendiri (D-06).
 - Pembayaran mendukung alokasi ke satu atau banyak invoice; sisa dana dicatat sebagai uang muka (`ACCOUNTING_POLICY_AND_CUTOVER.md` bagian 9).
 - Langkah di setiap pesanan ditampilkan sebagai kartu "Langkah Berikutnya".
@@ -327,7 +327,7 @@ Dihapus karena tidak berlaku lagi setelah mockup: U-03 (dropdown menu atas), U-0
 
 ## 13. Pertanyaan terbuka untuk pemilik
 
-Sudah diputuskan: bottom bar HP 5 slot berlabel dengan halaman Lainnya; satu menu Order supplier dengan tab Order dan Faktur; draf invoice otomatis yang ditinjau dan diedit (K5, perlu dicatat di `PRODUCT_SPEC.md`).
+Sudah diputuskan: bottom bar HP 5 slot berlabel dengan halaman Lainnya; menu Faktur Supplier berdiri sendiri tanpa halaman buat order; PO dibuat manual di luar ERP dan tidak menjadi prasyarat capture faktur; draf invoice pelanggan otomatis yang ditinjau dan diedit.
 
 1. **Keuangan (layar 14, 15) perlu diskusi:** isi tab, siapa yang mencatat biaya operasional, alur Tutup Buku dan PPN, dan bagaimana tampilan Buku Besar yang belum dirilis. Jangan dibangun sebelum dibahas (M-11).
 2. K1 sampai K4: putuskan dan catat di `PRODUCT_SPEC.md` (status PKP, ongkir/biaya lain, nota kredit) bersama pembaruan D-10 (K5).
