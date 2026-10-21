@@ -153,7 +153,15 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
   }
 
   function productSuggestions(line: InvoiceLineDraft) {
-    const query = `${line.product_code} ${line.product_name}`.trim().toLowerCase();
+    const code = line.product_code.trim().toLowerCase();
+    const name = line.product_name.trim().toLowerCase();
+    const exactSelection = products.some(product =>
+      product.code.toLowerCase() === code &&
+      product.name.toLowerCase() === name &&
+      product.unit.toLowerCase() === line.unit.trim().toLowerCase()
+    );
+    if (exactSelection) return [];
+    const query = name || code;
     if (query.length < 2) return [];
     return products
       .filter(product => `${product.code} ${product.name}`.toLowerCase().includes(query))
