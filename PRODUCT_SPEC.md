@@ -16,7 +16,7 @@
 
 ## 2. Alur target
 
-Pesanan Pelanggan (SO) → Order ke Supplier (PO; satu SO dapat dipecah ke beberapa supplier) → Faktur Supplier → Invoice Pelanggan manual dari SO terkonfirmasi → Pembayaran dan alokasi → Jurnal → Laporan dan Dashboard.
+Pesanan Pelanggan (SO) → Draf invoice pelanggan otomatis untuk ditinjau → Terbitkan invoice → Pembayaran dan alokasi → Jurnal → Laporan dan Dashboard. Pembelian supplier dicatat sebagai Faktur Supplier langsung dari dokumen; PO dibuat manual di luar ERP dan bukan prasyarat pencatatan.
 
 Invoice pelanggan tidak bergantung pada shipment atau event pengiriman sistem. Sebelum menerbitkan invoice, Owner/Admin wajib mengonfirmasi penyerahan barang melalui komunikasi/bukti di luar aplikasi sesuai kebijakan akuntansi.
 
