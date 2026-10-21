@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { AccountingLedgerManager } from "@/app/components/accounting-ledger-manager";
 import { FinancialReportManager, type FinancialReportTab } from "@/app/components/financial-report-manager";
-import { useEffect, useMemo, useState } from "react";
+import { SegmentedTabs } from "@/app/components/ui/segmented-tabs";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const tabs = ["Ikhtisar", "Laba rugi", "Neraca", "Jurnal umum", "Buku Besar", "Tutup Buku", "PPN", "Hutang & piutang"] as const;
@@ -12,16 +13,28 @@ type StatusData = { salesDrafts: number; salesDraftValue: number; supplierDrafts
 const empty: StatusData = { salesDrafts: 0, salesDraftValue: 0, supplierDrafts: 0, supplierReportedValue: 0, role: "" };
 const currency = (n: number) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(n)}`;
 const pathByTab: Record<Tab, string> = { "Ikhtisar": "", "Laba rugi": "laba-rugi", "Neraca": "neraca", "Jurnal umum": "jurnal", "Buku Besar": "buku-besar", "Tutup Buku": "tutup-buku", "PPN": "ppn", "Hutang & piutang": "hutang-piutang" };
+const tabHelp: Record<Tab, string> = {
+  "Ikhtisar": "Pantau ringkasan pembukuan dan kesiapan periode dari jurnal yang sudah dibukukan.",
+  "Laba rugi": "Pendapatan dan beban yang sudah dibukukan dalam rentang tanggal terpilih.",
+  "Neraca": "Saldo kumulatif buku besar sampai tanggal laporan; belum memasukkan saldo awal.",
+  "Jurnal umum": "Kelola akun, kebijakan, periode, dan jurnal berimbang. Pencatatan ke pembukuan mengikuti persetujuan.",
+  "Buku Besar": "Lihat mutasi kronologis dan saldo berjalan berdasarkan akun.",
+  "Tutup Buku": "Periksa status periode dan kontrol yang perlu ditinjau sebelum penutupan.",
+  "PPN": "Bandingkan akun kontrol PPN dengan dokumen yang sudah dicatat. Bukan pelaporan pajak.",
+  "Hutang & piutang": "Tinjau saldo terbuka dan umur tagihan berdasarkan dokumen serta jurnal.",
+};
 
 export default function FinanceReportsPage() {
   const [tab, setTab] = useState<Tab>("Ikhtisar");
   const [data, setData] = useState<StatusData>(empty);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   useEffect(() => {
     const sync = () => { const slug = window.location.hash.slice(1); const match = tabs.find(t => pathByTab[t] === slug); if (match) setTab(match); };
     sync(); window.addEventListener("hashchange", sync); return () => window.removeEventListener("hashchange", sync);
   }, []);
+
   useEffect(() => {
     let live = true;
     async function load() {
@@ -36,7 +49,8 @@ export default function FinanceReportsPage() {
           supabase.from("sales_invoices").select("status,total_amount").limit(2000),
           supabase.from("supplier_invoices").select("status,invoice_total_reported").limit(2000),
         ]);
-        if (sales.error) throw sales.error; if (supplier.error) throw supplier.error;
+        if (sales.error) throw sales.error;
+        if (supplier.error) throw supplier.error;
         const salesDrafts = (sales.data ?? []).filter(row => row.status === "draft");
         const supplierDrafts = (supplier.data ?? []).filter(row => row.status === "draft");
         if (live) setData({ salesDrafts: salesDrafts.length, salesDraftValue: salesDrafts.reduce((sum, row) => sum + Number(row.total_amount), 0), supplierDrafts: supplierDrafts.length, supplierReportedValue: supplierDrafts.reduce((sum, row) => sum + Number(row.invoice_total_reported), 0), role });
@@ -45,32 +59,62 @@ export default function FinanceReportsPage() {
     }
     void load(); return () => { live = false; };
   }, []);
-  const tabBlurb = useMemo(() => ({
-    "Ikhtisar": "Ringkasan saldo dan aktivitas berdasarkan jurnal yang sudah diposting.",
-    "Laba rugi": "Pendapatan dan beban yang sudah diposting dalam rentang tanggal terpilih.",
-    "Neraca": "Saldo kumulatif ledger sampai tanggal laporan; setup ini tidak memasukkan saldo awal.",
-    "Jurnal umum": "Konfigurasi COA, kebijakan, periode, dan jurnal berimbang; posting tetap terkunci sampai persetujuan dicatat.",
-    "Buku Besar": "Mutasi kronologis dan saldo berjalan dari jurnal posted untuk akun yang dipilih.",
-    "Tutup Buku": "Status periode akuntansi dan pengingat kontrol sebelum penutupan.",
-    "PPN": "Ringkasan akun kontrol PPN dari angka yang dimasukkan dan diposting; bukan pelaporan pajak.",
-    "Hutang & piutang": "Saldo akun kontrol AR/AP berdasarkan jurnal posted; bukan analisis umur tagihan.",
-  } as Record<Tab, string>)[tab], [tab]);
-  function choose(next: Tab) { setTab(next); const slug = pathByTab[next]; window.history.replaceState(null, "", `${window.location.pathname}${slug ? `#${slug}` : ""}`); }
-  return <main className="page-wrap">
-    <div className="mb-6"><p className="page-kicker">Akuntansi & laporan</p><h1 className="page-title">Keuangan</h1><p className="page-description">Laporan internal berbasis jurnal posted; bukan pengganti review akuntan atau pelaporan pajak.</p></div>
-    <div className="demo-banner mb-5"><strong>Sumber angka: buku besar.</strong> Hanya jurnal yang sudah diposting masuk ke laporan. Draft invoice, capture faktur supplier, dan pembayaran yang belum diposting bukan saldo akuntansi. Ringkasan PPN bukan SPT/e-Faktur.</div>
-    {error && <p role="alert" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
-    <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Stat label="Draft invoice pelanggan" value={loading ? "…" : String(data.salesDrafts)} detail="Bukan piutang" href="/invoice-pelanggan" />
-      <Stat label="Nilai draft pelanggan" value={loading ? "…" : currency(data.salesDraftValue)} detail="Tanpa PPN; bukan pendapatan" href="/invoice-pelanggan" />
-      <Stat label="Capture faktur supplier" value={loading ? "…" : String(data.supplierDrafts)} detail="Bukan hutang/AP" href="/operasional#invoices" />
-      <Stat label="Nilai faktur terlapor" value={loading ? "…" : currency(data.supplierReportedValue)} detail="Sesuai dokumen; bukan HPP" href="/operasional#invoices" />
+
+  function choose(next: Tab) {
+    setTab(next);
+    const slug = pathByTab[next];
+    window.history.replaceState(null, "", `${window.location.pathname}${slug ? `#${slug}` : ""}`);
+  }
+
+  const items = useMemo(() => tabs.map(value => ({ value, label: value })), []);
+  return <main className="page-wrap finance-page">
+    <header className="finance-heading">
+      <div>
+        <p className="page-kicker">Laporan & pembukuan</p>
+        <h1 className="page-title">Keuangan</h1>
+        <p className="page-description">Ringkasan keuangan internal Jena Medical Center.</p>
+      </div>
+      <div className="finance-heading-status"><span className="finance-live-dot" aria-hidden="true" />Pembukuan internal</div>
+    </header>
+
+    <div className="finance-notice" role="note">
+      <span className="finance-notice-mark" aria-hidden="true">i</span>
+      <p><strong>Angka laporan bersumber dari jurnal yang sudah dibukukan.</strong> Draf invoice dan capture faktur supplier belum menjadi pendapatan, piutang, atau hutang. Ringkasan PPN bukan SPT/e-Faktur.</p>
+    </div>
+
+    {error && <p role="alert" className="finance-error">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
+
+    <section className="finance-documents" aria-labelledby="finance-documents-title">
+      <div className="finance-section-heading">
+        <div><h2 id="finance-documents-title">Dokumen belum dibukukan</h2><p>Informasi operasional, terpisah dari saldo buku besar.</p></div>
+        <span className="finance-outline-pill">Status dokumen</span>
+      </div>
+      <div className="finance-stat-grid">
+        <Stat label="Draf invoice pelanggan" value={loading ? "…" : String(data.salesDrafts)} detail="Jumlah dokumen · belum menjadi piutang" href="/invoice-pelanggan" tone="pink" />
+        <Stat label="Nilai draf pelanggan" value={loading ? "…" : currency(data.salesDraftValue)} detail="Belum termasuk PPN · bukan pendapatan" href="/invoice-pelanggan" tone="yellow" />
+        <Stat label="Draf faktur supplier" value={loading ? "…" : String(data.supplierDrafts)} detail="Belum menjadi hutang usaha" href="/operasional#invoices" tone="mint" />
+        <Stat label="Nilai tercetak faktur" value={loading ? "…" : currency(data.supplierReportedValue)} detail="Mengikuti dokumen · bukan HPP" href="/operasional#invoices" tone="gray" />
+      </div>
     </section>
-    <section className="card card-pad"><div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Laporan dan buku">{tabs.map(item => <button className="tab-button" key={item} role="tab" aria-selected={tab === item} onClick={() => choose(item)}>{item}</button>)}</div>
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold">{tab === "Ikhtisar" ? "Ikhtisar keuangan" : tab}</h2><p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--muted)]">{tabBlurb}</p></div><span className="status-pill">{loading ? "Memuat" : tab === "Jurnal umum" ? "Setup & posting" : "Data ledger"}</span></div>
-      {tab === "Jurnal umum" ? <AccountingLedgerManager/> : <FinancialReportManager tab={tab as FinancialReportTab}/>}
+
+    <section className="finance-report-shell" aria-label="Laporan keuangan">
+      <div className="finance-report-top">
+        <div className="finance-report-title"><span className="finance-report-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 15v-4m4 4V7m4 8V9m4 6v-3" /></svg></span><div><h2>Laporan keuangan</h2><p>Pilih laporan untuk melihat ringkasan dan rincian.</p></div></div>
+        <span className="finance-source-status"><span aria-hidden="true" />{loading ? "Memuat data" : "Buku besar"}</span>
+      </div>
+      <SegmentedTabs items={items} value={tab} onChange={choose} label="Pilih laporan keuangan" className="finance-tabs" />
+      <div className="finance-tab-context"><div><h3>{tab === "Ikhtisar" ? "Ikhtisar" : tab}</h3><p>{tabHelp[tab]}</p></div><span className="finance-period-note">{tab === "Jurnal umum" ? "Konfigurasi" : "Data aktual"}</span></div>
+      {tab === "Jurnal umum" ? <AccountingLedgerManager /> : <FinancialReportManager tab={tab as FinancialReportTab} />}
     </section>
-    <p className="mt-4 text-xs leading-5 text-[var(--muted-soft)]">UAT pada akun owner/admin/viewer tetap diperlukan. Angka ini belum mencakup rekonsiliasi bank, jurnal penyesuaian, perhitungan HPP otomatis, backup/restore, atau pelaporan SPT/e-Faktur; tinjau setiap selisih sebelum tutup periode.</p>
+
+    <footer className="finance-footnote">Pembukuan internal saja. Belum termasuk rekonsiliasi bank, saldo awal, dan perhitungan HPP otomatis. Tinjau selisih sebelum tutup periode; angka pajak bukan pelaporan resmi.</footer>
   </main>;
 }
-function Stat({ label, value, detail, href }: { label: string; value: string; detail: string; href: string }) { return <Link href={href} className="card card-pad transition hover:shadow-md"><p className="text-xs text-[var(--muted)]">{label}</p><p className="mt-2 text-lg font-bold tabular-nums">{value}</p><p className="mt-1 text-[11px] text-[var(--muted-soft)]">{detail}</p></Link>; }
+
+function Stat({ label, value, detail, href, tone }: { label: string; value: string; detail: string; href: string; tone: "pink" | "yellow" | "mint" | "gray" }) {
+  return <Link href={href} className={`finance-stat finance-stat-${tone}`}>
+    <span className="finance-stat-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H5V5a2 2 0 0 1 2-2Zm7 0v5h5M8 13h8M8 17h5" /></svg></span>
+    <span className="finance-stat-copy"><span className="finance-stat-label">{label}</span><strong className="finance-stat-value">{value}</strong><span className="finance-stat-detail">{detail}</span></span>
+    <span className="finance-stat-arrow" aria-hidden="true">↗</span>
+  </Link>;
+}
