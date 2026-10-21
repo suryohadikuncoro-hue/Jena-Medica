@@ -1,245 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode, type CSSProperties } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { IconInvoice, IconOrder, IconPembayaran, IconPesanan } from "@/app/components/icons";
-import { ActionBanner, Button, ButtonLink, SegmentedTabs, TotalCard, type Tone } from "@/app/components/ui";
+import { ActionBanner, Button, ButtonLink, TotalCard, type Tone } from "@/app/components/ui";
 
 type Period = "7d" | "30d" | "ytd";
-type Counts = {
-  confirmedOrders: number;
-  sentPurchaseOrders: number;
-  supplierInvoiceDrafts: number;
-  customerInvoiceDrafts: number;
-  issuedInvoices: number;
-  customerPayments: number;
-  supplierPayments: number;
-};
+type Counts = { confirmedOrders: number; sentPurchaseOrders: number; supplierInvoiceDrafts: number; customerInvoiceDrafts: number; issuedInvoices: number; customerPayments: number; supplierPayments: number };
 type DayPoint = { date: string; orders: number; invoices: number };
-const emptyCounts: Counts = {
-  confirmedOrders: 0,
-  sentPurchaseOrders: 0,
-  supplierInvoiceDrafts: 0,
-  customerInvoiceDrafts: 0,
-  issuedInvoices: 0,
-  customerPayments: 0,
-  supplierPayments: 0,
-};
-const periodOptions: { key: Period; label: string }[] = [
-  { key: "7d", label: "7 hari" },
-  { key: "30d", label: "30 hari" },
-  { key: "ytd", label: "Tahun ini" },
-];
-
-function localDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-function sinceDate(period: Period) {
-  const date = new Date();
-  if (period === "ytd") return `${date.getFullYear()}-01-01`;
-  date.setDate(date.getDate() - (period === "7d" ? 6 : 29));
-  return localDate(date);
-}
-function formatCount(value: number) {
-  return new Intl.NumberFormat("id-ID").format(value);
-}
-function periodCaption(period: Period) {
-  const start = new Date(`${sinceDate(period)}T12:00:00`);
-  const end = new Date();
-  const date = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
-  return `${date.format(start)} – ${date.format(end)}`;
-}
-function greetingName(user: { user_metadata?: Record<string, unknown>; email?: string } | null) {
-  const metadata = user?.user_metadata ?? {};
-  const name = metadata.full_name ?? metadata.name ?? metadata.display_name;
-  if (typeof name === "string" && name.trim()) return name.trim().split(/\s+/)[0];
-  return user?.email?.split("@")[0] ?? "";
-}
-
-async function exactCount(
-  supabase: ReturnType<typeof getSupabaseBrowserClient>,
-  table: string,
-  status: string,
-  dateColumn: string,
-  start: string,
-  end = localDate(new Date()),
-) {
-  const { count, error } = await supabase
-    .from(table)
-    .select("id", { count: "exact", head: true })
-    .eq("status", status)
-    .gte(dateColumn, start)
-    .lte(dateColumn, end);
-  if (error) throw error;
-  return count ?? 0;
-}
-
+const emptyCounts: Counts = { confirmedOrders: 0, sentPurchaseOrders: 0, supplierInvoiceDrafts: 0, customerInvoiceDrafts: 0, issuedInvoices: 0, customerPayments: 0, supplierPayments: 0 };
+const periods: { key: Period; label: string }[] = [{ key: "7d", label: "7 hari" }, { key: "30d", label: "30 hari" }, { key: "ytd", label: "Tahun ini" }];
+function localDate(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function sinceDate(p: Period) { const d = new Date(); if (p === "ytd") return `${d.getFullYear()}-01-01`; d.setDate(d.getDate() - (p === "7d" ? 6 : 29)); return localDate(d); }
+function fmt(n: number) { return new Intl.NumberFormat("id-ID").format(n); }
+function greetingName(user: { user_metadata?: Record<string, unknown>; email?: string } | null) { const m=user?.user_metadata??{}; const n=m.full_name??m.name??m.display_name; return typeof n === "string" && n.trim() ? n.trim().split(/\s+/)[0] : user?.email?.split("@")[0]??""; }
+async function exactCount(db: ReturnType<typeof getSupabaseBrowserClient>, table: string, status: string, dateColumn: string, start: string, end = localDate(new Date())) { const {count,error}=await db.from(table).select("id",{count:"exact",head:true}).eq("status",status).gte(dateColumn,start).lte(dateColumn,end); if(error) throw error; return count??0; }
+function StatTile({label,value,unit,note,href,tone="default"}:{label:string;value:string;unit:string;note:string;href:string;tone?:string}) { return <Link className={`dash-mock-stat dash-mock-${tone}`} href={href}><span className="dash-mock-stat-label">{label}</span><strong>{value}<small> {unit}</small></strong><span className="dash-mock-stat-note">{note}</span><svg className="dash-mock-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></Link>; }
+function ActionTile({label,count,unit,href,action,tone,icon}:{label:string;count:string;unit:string;href:string;action:string;tone:Tone;icon:ReactNode}) { return <article className="dash-mock-action"><span className="dash-mock-action-icon" aria-hidden="true">{icon}</span><span className="dash-mock-action-label">{label}</span><strong>{count}<small> {unit}</small></strong><ButtonLink href={href} size="sm" className={`dash-mock-action-link dash-mock-action-${tone}`}>{action}</ButtonLink></article>; }
+function MonitorTile({label,value,detail,href,tone}:{label:string;value:string;detail:string;href:string;tone:"pink"|"yellow"|"mint"}) { return <Link href={href} className={`dash-mock-monitor dash-mock-monitor-${tone}`}><span>{label}</span><strong>{value}</strong><small>{detail}</small></Link>; }
+function points(values:number[],max:number) { return values.map((v,i)=>`${28+i*(544/Math.max(values.length-1,1))},${146-(v/max)*116}`).join(" "); }
 export default function DashboardPage() {
-  const [period, setPeriod] = useState<Period>("7d");
-  const [counts, setCounts] = useState<Counts>(emptyCounts);
-  const [activity, setActivity] = useState<DayPoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [name, setName] = useState("");
-  const start = useMemo(() => sinceDate(period), [period]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setMessage("");
-    if (!isSupabaseConfigured()) {
-      setMessage("Supabase belum dikonfigurasi pada environment ini.");
-      setLoading(false);
-      return;
-    }
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setMessage("Masuk untuk melihat ringkasan transaksi aktual.");
-        setCounts(emptyCounts);
-        setActivity([]);
-        setLoading(false);
-        return;
-      }
-      const role = String(session.user.app_metadata?.business_role ?? "");
-      if (!["owner", "admin", "viewer"].includes(role)) {
-        setMessage("Akun ini belum memiliki role bisnis yang valid.");
-        setCounts(emptyCounts);
-        setActivity([]);
-        setLoading(false);
-        return;
-      }
-      setName(greetingName(session.user));
-      const [confirmedOrders, sentPurchaseOrders, supplierInvoiceDrafts, customerInvoiceDrafts, issuedInvoices, customerPayments, supplierPayments] = await Promise.all([
-        exactCount(supabase, "sales_orders", "confirmed", "order_date", start),
-        exactCount(supabase, "purchase_orders", "sent", "order_date", start),
-        exactCount(supabase, "supplier_invoices", "draft", "invoice_date", start),
-        exactCount(supabase, "sales_invoices", "draft", "invoice_date", start),
-        exactCount(supabase, "sales_invoices", "issued", "invoice_date", start),
-        exactCount(supabase, "customer_payments", "recorded", "payment_date", start),
-        exactCount(supabase, "supplier_payments", "recorded", "payment_date", start),
-      ]);
-      setCounts({ confirmedOrders, sentPurchaseOrders, supplierInvoiceDrafts, customerInvoiceDrafts, issuedInvoices, customerPayments, supplierPayments });
-
-      const today = new Date();
-      const days = Array.from({ length: 7 }, (_, index) => {
-        const date = new Date(today);
-        date.setDate(today.getDate() - (6 - index));
-        return localDate(date);
-      });
-      const points = await Promise.all(days.map(async (date) => {
-        const [orders, invoices] = await Promise.all([
-          exactCount(supabase, "sales_orders", "confirmed", "order_date", date, date),
-          exactCount(supabase, "sales_invoices", "issued", "invoice_date", date, date),
-        ]);
-        return { date, orders, invoices };
-      }));
-      setActivity(points);
-    } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : "Ringkasan tidak dapat dimuat dari Supabase.");
-      setCounts(emptyCounts);
-      setActivity([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [start]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => { void load(); }, 0);
-    return () => window.clearTimeout(timer);
-  }, [load]);
-
-  const dash = (value: number) => (loading ? "—" : formatCount(value));
-  const actions: { label: string; detail: string; count: number; action: string; href: string; tone: Tone; icon: ReactNode }[] = [
-    { label: "Pesanan terkonfirmasi", detail: "Periksa progres dan tindak lanjut", count: counts.confirmedOrders, action: "Buka pesanan", href: "/", tone: "yellow", icon: <IconPesanan /> },
-    { label: "Menunggu balasan", detail: "Order supplier terkirim", count: counts.sentPurchaseOrders, action: "Catat balasan", href: "/operasional", tone: "yellow", icon: <IconOrder /> },
-    { label: "Faktur perlu dicek", detail: "Faktur supplier draf", count: counts.supplierInvoiceDrafts, action: "Periksa", href: "/operasional", tone: "pink", icon: <IconOrder /> },
-    { label: "Draf invoice pelanggan", detail: "Belum diterbitkan", count: counts.customerInvoiceDrafts, action: "Tinjau draf", href: "/invoice-pelanggan", tone: "gray", icon: <IconInvoice /> },
-  ];
-  const quick = [
-    { label: "Pesanan", href: "/", tone: "pink", icon: <IconPesanan /> },
-    { label: "Order", href: "/operasional", tone: "yellow", icon: <IconOrder /> },
-    { label: "Faktur", href: "/operasional", tone: "mint", icon: <IconOrder /> },
-    { label: "Invoice", href: "/invoice-pelanggan", tone: "yellow", icon: <IconInvoice /> },
-    { label: "Bayar", href: "/pembayaran", tone: "pink", icon: <IconPembayaran /> },
-  ];
-  const maxActivity = Math.max(1, ...activity.flatMap(point => [point.orders, point.invoices]));
-  const todayLabel = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date());
-  const periodLabel = periodOptions.find(option => option.key === period)?.label ?? "";
-
+  const [period,setPeriod]=useState<Period>("7d"); const [counts,setCounts]=useState<Counts>(emptyCounts); const [activity,setActivity]=useState<DayPoint[]>([]); const [loading,setLoading]=useState(true); const [message,setMessage]=useState(""); const [name,setName]=useState("");
+  const [activityFilter,setActivityFilter]=useState<"all"|"orders"|"invoices">("all");
+  const start=useMemo(()=>sinceDate(period),[period]);
+  const load=useCallback(async()=>{ setLoading(true); setMessage(""); if(!isSupabaseConfigured()){setMessage("Supabase belum dikonfigurasi pada environment ini.");setLoading(false);return;} try { const db=getSupabaseBrowserClient(); const {data:{session}}=await db.auth.getSession(); if(!session){setMessage("Masuk untuk melihat ringkasan transaksi aktual.");setCounts(emptyCounts);setActivity([]);setLoading(false);return;} const role=String(session.user.app_metadata?.business_role??""); if(!["owner","admin","viewer"].includes(role)){setMessage("Akun ini belum memiliki role bisnis yang valid.");setCounts(emptyCounts);setActivity([]);setLoading(false);return;} setName(greetingName(session.user)); const [confirmedOrders,sentPurchaseOrders,supplierInvoiceDrafts,customerInvoiceDrafts,issuedInvoices,customerPayments,supplierPayments]=await Promise.all([exactCount(db,"sales_orders","confirmed","order_date",start),exactCount(db,"purchase_orders","sent","order_date",start),exactCount(db,"supplier_invoices","draft","invoice_date",start),exactCount(db,"sales_invoices","draft","invoice_date",start),exactCount(db,"sales_invoices","issued","invoice_date",start),exactCount(db,"customer_payments","recorded","payment_date",start),exactCount(db,"supplier_payments","recorded","payment_date",start)]); setCounts({confirmedOrders,sentPurchaseOrders,supplierInvoiceDrafts,customerInvoiceDrafts,issuedInvoices,customerPayments,supplierPayments}); const today=new Date(); const days=Array.from({length:7},(_,i)=>{const d=new Date(today);d.setDate(today.getDate()-(6-i));return localDate(d);}); const data=await Promise.all(days.map(async date=>{const [orders,invoices]=await Promise.all([exactCount(db,"sales_orders","confirmed","order_date",date,date),exactCount(db,"sales_invoices","issued","invoice_date",date,date)]);return {date,orders,invoices};}));setActivity(data); } catch(e) { setMessage(e instanceof Error?e.message:"Ringkasan tidak dapat dimuat dari Supabase.");setCounts(emptyCounts);setActivity([]); } finally {setLoading(false);} },[start]);
+  useEffect(()=>{const t=window.setTimeout(()=>void load(),0);return()=>window.clearTimeout(t);},[load]);
+  const show=(n:number)=>loading?"—":fmt(n); const today=new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date()); const totalInvoices=counts.customerInvoiceDrafts+counts.issuedInvoices; const max=Math.max(1,...activity.flatMap(x=>[x.orders,x.invoices])); const orderPoints=points(activity.map(x=>x.orders),max); const invoicePoints=points(activity.map(x=>x.invoices),max); const progress=totalInvoices?counts.issuedInvoices/totalInvoices*100:0;
+  const quick=[{label:"Pesanan",href:"/",tone:"pink",icon:<IconPesanan/>},{label:"Order",href:"/operasional",tone:"yellow",icon:<IconOrder/>},{label:"Faktur",href:"/operasional",tone:"mint",icon:<IconOrder/>},{label:"Invoice",href:"/invoice-pelanggan",tone:"yellow",icon:<IconInvoice/>},{label:"Bayar",href:"/pembayaran",tone:"pink",icon:<IconPembayaran/>}] as const;
   return <main className="page-wrap dash-wrap">
-    <header className="dash-header">
-      <div><h1 className="dash-greeting">Halo{name ? `, ${name}` : ""}</h1><p className="dash-date">{todayLabel} · angka dari dokumen operasional</p></div>
-      <div className="dash-header-actions"><Button size="sm" className="dash-desktop-only" onClick={() => void load()} disabled={loading}>{loading ? "Memuat…" : "Muat ulang"}</Button><ButtonLink variant="solid" href="/">+ Pesanan baru</ButtonLink></div>
-    </header>
-    {message && <ActionBanner className="dash-message" action={message.includes("Masuk") ? <ButtonLink href="/login" variant="solid" size="sm">Masuk</ButtonLink> : undefined}><b>{loading ? "Memuat data." : "Ringkasan belum tersedia."}</b> {message}</ActionBanner>}
-
-    <div className="dash-mobile-only dash-hero">
-      <TotalCard label={`Invoice terbit · ${periodLabel}`} value={dash(counts.issuedInvoices)} note={`${dash(counts.customerInvoiceDrafts)} draf invoice menunggu tinjauan`} />
-      <nav className="dash-quick" aria-label="Aksi cepat">{quick.map(item => <Link key={item.label} href={item.href} className="dash-quick-item"><span className={`dash-quick-icon ui-tone-${item.tone}`}>{item.icon}</span>{item.label}</Link>)}</nav>
-    </div>
-
-    <div className="dash-grid">
-      <div className="dash-col">
-        <section className="dash-sec dash-order-1" aria-labelledby="summary-heading">
-          <div className="dash-sec-head"><div><h2 id="summary-heading">Ringkasan</h2><p>Dokumen yang perlu diproses</p></div></div>
-          <SegmentedTabs label="Pilih periode" items={periodOptions.map(option => ({ value: option.key, label: option.label }))} value={period} onChange={setPeriod} />
-          <div className="dash-stat-grid">
-            <SummaryCard label="SO terkonfirmasi" note="status pesanan pada periode" unit="pesanan" value={dash(counts.confirmedOrders)} href="/" />
-            <SummaryCard label="Menunggu supplier" note="order terkirim, belum dibalas" unit="order" value={dash(counts.sentPurchaseOrders)} href="/operasional" />
-            <SummaryCard label="Faktur perlu dicek" note="draf faktur supplier" unit="faktur" value={dash(counts.supplierInvoiceDrafts)} href="/operasional" />
-            <SummaryCard label="Draf invoice" note="belum diterbitkan" unit="draf" value={dash(counts.customerInvoiceDrafts)} href="/invoice-pelanggan" />
-          </div>
-        </section>
-        <section className="dash-sec dash-order-5" aria-labelledby="status-heading">
-          <div className="dash-sec-head"><div><h2 id="status-heading">Status invoice</h2><p>Jumlah dokumen pada periode pilihan</p></div></div>
-          <div className="dash-stat-grid">
-            <SummaryCard label="Draf" unit="invoice" value={dash(counts.customerInvoiceDrafts)} href="/invoice-pelanggan" />
-            <SummaryCard label="Terbit" unit="invoice" value={dash(counts.issuedInvoices)} href="/invoice-pelanggan" />
-            <SummaryCard label="Penerimaan tercatat" unit="pembayaran" value={dash(counts.customerPayments)} href="/pembayaran" />
-            <SummaryCard label="Pembayaran supplier" unit="pembayaran" value={dash(counts.supplierPayments)} href="/pembayaran" />
-          </div>
-        </section>
+    <header className="dash-header"><div><h1 className="dash-greeting">Halo{name?`, ${name}`:""}</h1><p className="dash-date">{today} · angka dari dokumen operasional</p></div><div className="dash-header-actions"><Button size="sm" className="dash-desktop-only" onClick={()=>void load()} disabled={loading}>{loading?"Memuat…":"Muat ulang"}</Button><ButtonLink variant="solid" href="/">+ Pesanan baru</ButtonLink></div></header>
+    {message&&<ActionBanner className="dash-message" action={message.includes("Masuk")?<ButtonLink href="/login" variant="solid" size="sm">Masuk</ButtonLink>:undefined}><b>{loading?"Memuat data.":"Ringkasan belum tersedia."}</b> {message}</ActionBanner>}
+    <section className="dash-mobile-hero" aria-label="Ringkasan invoice"><TotalCard label="Invoice pelanggan terbit" value={show(counts.issuedInvoices)} note={`${show(counts.customerInvoiceDrafts)} draf menunggu tinjauan · hitungan dokumen, bukan nilai piutang`}/><nav className="dash-quick" aria-label="Aksi cepat">{quick.map(x=><Link key={x.label} href={x.href} className="dash-quick-item"><span className={`dash-quick-icon ui-tone-${x.tone}`}>{x.icon}</span>{x.label}</Link>)}</nav></section>
+    <div className="dash-mock-grid">
+      <div className="dash-mock-left">
+        <section className="dash-mock-section" aria-labelledby="summary-heading"><div className="dash-mock-heading"><div><h2 id="summary-heading">Ringkasan</h2><p>Dokumen yang perlu diproses</p></div></div><div className="dash-mock-summary-grid">
+          <StatTile label="Pesanan terkonfirmasi" value={show(counts.confirmedOrders)} unit="pesanan" note="periode terpilih" href="/" tone="yellow"/><StatTile label="Menunggu supplier" value={show(counts.sentPurchaseOrders)} unit="order" note="belum dibalas" href="/operasional" tone="mint"/><StatTile label="Faktur perlu dicek" value={show(counts.supplierInvoiceDrafts)} unit="faktur" note="draf supplier" href="/operasional" tone="pink"/><span className="dash-mock-mobile-stat"><StatTile label="Draf invoice" value={show(counts.customerInvoiceDrafts)} unit="invoice" note="menunggu tinjauan" href="/invoice-pelanggan"/></span>
+        </div><Link className="dash-mock-add" href="/" aria-label="Buat pesanan baru"><span aria-hidden="true">＋</span></Link></section>
+        <section className="dash-mock-section dash-invoice-overview" aria-labelledby="invoice-status-heading"><h2 id="invoice-status-heading" className="dash-sr-heading">Status invoice</h2><div className="dash-mock-progress-panel"><div className="dash-mock-ring" role="img" aria-label={`${show(counts.issuedInvoices)} invoice terbit dari ${show(totalInvoices)} invoice draft dan terbit`} style={{"--dash-progress":`${progress}%`} as CSSProperties}><span><strong>{show(counts.issuedInvoices)} / {show(totalInvoices)}</strong><small>invoice terbit</small></span></div></div><div className="dash-mock-progress-labels"><div><span>Ditagih</span><strong>{show(counts.issuedInvoices)} invoice</strong></div><div><span>Belum diterbitkan</span><strong>{show(counts.customerInvoiceDrafts)} invoice</strong></div></div><div className="dash-mock-status-strip"><div><span>Draf</span><strong>{show(counts.customerInvoiceDrafts)}</strong></div><div><span>Terbit</span><strong>{show(counts.issuedInvoices)}</strong></div><div><span>Penerimaan</span><strong>{show(counts.customerPayments)}</strong></div></div><div className="dash-mock-period" role="group" aria-label="Pilih periode">{periods.map(p=><button key={p.key} type="button" aria-pressed={period===p.key} onClick={()=>setPeriod(p.key)}>{p.label}</button>)}</div><p className="dash-mock-footnote">Pembayaran supplier tercatat: {show(counts.supplierPayments)}. Nilai keuangan hanya ditampilkan setelah jurnal diposting.</p></section>
       </div>
-
-      <div className="dash-col">
-        <section className="dash-sec dash-order-4" aria-labelledby="activity-heading">
-          <div className="dash-sec-head"><div><h2 id="activity-heading">Aktivitas Pesanan</h2><p>Jumlah pesanan terkonfirmasi dan invoice terbit per hari</p></div><span className="dash-range">{periodCaption("7d")}</span></div>
-          <div className="ui-card dash-chart-card">
-            <div className="dash-legend"><span><i className="dash-dot dash-dot-orders" />Pesanan</span><span><i className="dash-dot dash-dot-invoices" />Ditagih</span></div>
-            {loading ? <div className="dash-chart-skeleton ui-skeleton" aria-label="Memuat aktivitas" /> : activity.length ? <div className="dash-chart" role="img" aria-label="Grafik jumlah pesanan terkonfirmasi dan invoice terbit per hari selama tujuh hari terakhir">{activity.map(point => <div className="dash-day" key={point.date}><div className="dash-bars"><span className="dash-bar dash-bar-orders" title={`${point.orders} pesanan`} style={{ height: point.orders ? `${Math.max(5, point.orders / maxActivity * 100)}%` : "0%" }} /><span className="dash-bar dash-bar-invoices" title={`${point.invoices} invoice terbit`} style={{ height: point.invoices ? `${Math.max(5, point.invoices / maxActivity * 100)}%` : "0%" }} /></div><span className="dash-day-label">{new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date(`${point.date}T12:00:00`))}</span></div>)}</div> : <p className="dash-empty">Data aktivitas belum tersedia.</p>}
-            <p className="dash-note">Grafik menampilkan jumlah dokumen, bukan nilai penjualan atau pendapatan.</p>
-          </div>
-        </section>
-        <section className="dash-sec dash-order-2" aria-labelledby="action-heading">
-          <div className="dash-sec-head"><div><h2 id="action-heading">Perlu Tindakan</h2><p>Urut dari yang paling mendesak</p></div></div>
-          <div className="dash-action-list">{actions.map(item => <div key={item.label} className="ui-card dash-action-row"><span className={`ui-row-icon ui-tone-${item.tone}`} aria-hidden="true">{item.icon}</span><span className="ui-row-text"><strong>{item.label}</strong><small>{dash(item.count)} dokumen · {item.detail}</small></span><ButtonLink href={item.href} size="sm">{item.action}</ButtonLink></div>)}</div>
-        </section>
+      <div className="dash-mock-center">
+        <section className="dash-mock-section dash-mock-activity" aria-labelledby="activity-heading"><div className="dash-mock-heading"><div><h2 id="activity-heading">Aktivitas Pesanan</h2><p>Jumlah pesanan terkonfirmasi dan invoice terbit per hari</p></div></div><div className="dash-mock-chart-card"><div className="dash-mock-chart-head"><div><strong>Aktivitas dokumen</strong><span>{new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short"}).format(new Date(`${sinceDate("7d")}T12:00:00`))} – {new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short",year:"numeric"}).format(new Date())}</span></div><div className="dash-mock-legend"><span><i className="dash-mock-dot dash-mock-dot-orders"/>Pesanan</span><span><i className="dash-mock-dot dash-mock-dot-invoices"/>Ditagih</span></div></div>{loading?<div className="dash-chart-skeleton ui-skeleton" aria-label="Memuat aktivitas"/>:activity.length?<svg className="dash-mock-chart" viewBox="0 0 600 190" role="img" aria-label="Grafik jumlah pesanan dan invoice per hari selama tujuh hari terakhir" preserveAspectRatio="none"><g className="dash-mock-grid-lines"><line x1="48" y1="30" x2="572" y2="30"/><line x1="48" y1="88" x2="572" y2="88"/><line x1="48" y1="146" x2="572" y2="146"/><text x="5" y="34">{max}</text><text x="5" y="92">{Math.round(max*2/3)}</text><text x="5" y="150">0</text></g>{activityFilter!=="invoices"&&<polyline points={orderPoints} className="dash-mock-line dash-mock-line-orders"/>}{activityFilter!=="orders"&&<polyline points={invoicePoints} className="dash-mock-line dash-mock-line-invoices"/>}{activity.map((x,i)=><text key={x.date} x={28+i*(544/Math.max(activity.length-1,1))} y="174" textAnchor="middle">{new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"short"}).format(new Date(`${x.date}T12:00:00`))}</text>)}</svg>:<p className="dash-empty">Data aktivitas belum tersedia.</p>}<p className="dash-mock-chart-note">Grafik menunjukkan jumlah dokumen, bukan nilai penjualan atau pendapatan.</p></div><p className="dash-mock-customer-label">Tampilkan seri</p><div className="dash-mock-customer-chips" role="group" aria-label="Filter seri aktivitas"><button type="button" aria-pressed={activityFilter==="all"} onClick={()=>setActivityFilter("all")}>Semua</button><button type="button" aria-pressed={activityFilter==="orders"} onClick={()=>setActivityFilter("orders")}><i className="dash-mock-dot dash-mock-dot-orders"/>Pesanan</button><button type="button" aria-pressed={activityFilter==="invoices"} onClick={()=>setActivityFilter("invoices")}><i className="dash-mock-dot dash-mock-dot-invoices"/>Invoice</button></div></section>
+        <section className="dash-mock-section dash-mock-actions" aria-labelledby="action-heading"><div className="dash-mock-heading"><div><h2 id="action-heading">Perlu Tindakan</h2><p>Urut dari yang paling mendesak</p></div></div><div className="dash-mock-action-grid"><ActionTile label="Pesanan terkonfirmasi" count={show(counts.confirmedOrders)} unit="pesanan" href="/" action="Buka pesanan" tone="yellow" icon={<IconPesanan/>}/><ActionTile label="Menunggu balasan" count={show(counts.sentPurchaseOrders)} unit="order" href="/operasional" action="Catat balasan" tone="yellow" icon={<IconOrder/>}/><ActionTile label="Faktur perlu dicek" count={show(counts.supplierInvoiceDrafts)} unit="faktur" href="/operasional" action="Periksa" tone="pink" icon={<IconInvoice/>}/><ActionTile label="Draf invoice pelanggan" count={show(counts.customerInvoiceDrafts)} unit="draf" href="/invoice-pelanggan" action="Tinjau draf" tone="gray" icon={<IconInvoice/>}/></div></section>
       </div>
-
-      <div className="dash-col">
-        <section className="dash-sec dash-order-3" aria-labelledby="monitor-heading">
-          <div className="dash-sec-head"><div><h2 id="monitor-heading">Perlu Dipantau</h2><p>Dokumen yang butuh perhatian</p></div></div>
-          <div className="dash-monitor-list">
-            <MonitorCard tone="pink" eyebrow="Faktur supplier" title="Draf untuk diperiksa" count={dash(counts.supplierInvoiceDrafts)} href="/operasional" detail="Belum masuk pembukuan" />
-            <MonitorCard tone="yellow" eyebrow="Invoice pelanggan" title="Masih berupa draf" count={dash(counts.customerInvoiceDrafts)} href="/invoice-pelanggan" detail="Belum diterbitkan" />
-            <MonitorCard tone="mint" eyebrow="Invoice pelanggan" title="Sudah diterbitkan" count={dash(counts.issuedInvoices)} href="/invoice-pelanggan" detail="Status invoice, bukan status pembayaran" />
-          </div>
-          <p className="dash-note">Pengiriman diurus supplier dan pelanggan, tidak dicatat di sini.</p>
-        </section>
-      </div>
-    </div>
-    <p className="dash-note dash-footnote">Angka pada halaman ini dihitung dari dokumen aktual di Supabase. Angka tersebut bukan saldo kas, piutang, hutang, pendapatan, atau laba.</p>
+      <aside className="dash-mock-right"><section className="dash-mock-section" aria-labelledby="monitor-heading"><div className="dash-mock-heading"><div><h2 id="monitor-heading">Perlu Dipantau</h2><p>Dokumen yang butuh perhatian</p></div></div><div className="dash-mock-monitor-list"><MonitorTile label="Faktur supplier" value={show(counts.supplierInvoiceDrafts)} detail="Draf untuk diperiksa · belum masuk pembukuan" href="/operasional" tone="pink"/><MonitorTile label="Invoice pelanggan" value={show(counts.customerInvoiceDrafts)} detail="Draf · belum diterbitkan" href="/invoice-pelanggan" tone="yellow"/><MonitorTile label="Invoice pelanggan" value={show(counts.issuedInvoices)} detail="Terbit · status invoice, bukan status pembayaran" href="/invoice-pelanggan" tone="mint"/></div><p className="dash-mock-monitor-note">Pengiriman diurus supplier dan pelanggan, tidak dicatat di sini.</p></section></aside>
+    </div><p className="dash-mock-bottom-note">Angka pada halaman ini dihitung dari dokumen aktual di Supabase; bukan saldo kas, piutang, hutang, pendapatan, atau laba.</p>
   </main>;
-}
-
-function SummaryCard({ label, note, unit, value, href }: { label: string; note?: string; unit: string; value: string; href: string }) {
-  return <Link href={href} className="ui-card ui-stat"><div className="ui-stat-label">{label}</div><div className="ui-stat-value">{value}<span className="ui-stat-unit"> {unit}</span></div>{note ? <div className="ui-stat-note">{note}</div> : null}</Link>;
-}
-function MonitorCard({ tone, eyebrow, title, count, href, detail }: { tone: "pink" | "yellow" | "mint"; eyebrow: string; title: string; count: string; href: string; detail: string }) {
-  return <Link href={href} className={`dash-monitor-card ui-tone-${tone}`}><span className="dash-monitor-top"><span>{eyebrow}</span><strong>{count}</strong></span><strong className="dash-monitor-title">{title}</strong><small>{detail}</small></Link>;
 }
