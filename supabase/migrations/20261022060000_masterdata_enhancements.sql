@@ -142,7 +142,7 @@ begin
   update public.customer_product_prices
   set unit_price = p_unit_price,
       valid_from = p_valid_from,
-      note = nullif(pg_catalog.btrim(p_note), ''),
+      note = nullif(pg_catalog.btrim(p_note), '')
   where id = p_price_id;
 end;
 $$;
@@ -181,7 +181,7 @@ begin
   end if;
   v_end := greatest(current_date - 1, v_price.valid_from);
   update public.customer_product_prices
-  set valid_until = v_end,
+  set valid_until = v_end
   where id = p_price_id;
 end;
 $$;
