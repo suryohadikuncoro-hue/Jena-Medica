@@ -4,6 +4,8 @@
 **Sumber kebenaran:** keputusan produk ada di dokumen ini; kebijakan akuntansi/pajak rinci ada di `ACCOUNTING_POLICY_AND_CUTOVER.md`; pedoman tampilan ada di `UI_UX_GUIDELINES.md`. Aturan kerja agent ada di `AGENTS.md`.
 **Prinsip status:** keputusan yang disetujui tidak berarti implementasinya sudah tersedia. Untuk status skema terkini, gunakan `DATABASE_INTEGRATION_READINESS.md` dan `SUPABASE_INTEGRATION.md`.
 
+> **Status rekonsiliasi Production — 21 Oktober 2026 (baca-saja):** Supabase remote mencatat 10 migration; migration dasar D-09/D-10 tercatat dengan version `20261017185346`, sedangkan arsip sebelumnya memakai `20261017150000`. Arsip migration diselaraskan ke version remote tanpa mengubah SQL. Migration lanjutan D-10 dari PR #46, #49, #50, dan #51 belum diterapkan ke Production. RPC remote `create_customer_invoice(uuid,date,text,jsonb)` belum memiliki guard nilai kumulatif; RPC `update_customer_invoice_draft` belum tersedia. Pemeriksaan data sebelumnya tidak menemukan invoice aktif yang melampaui nilai/kuantitas SO, tetapi pengujian runtime belum dilakukan. Tidak ada perubahan database atau deployment dalam audit ini.
+
 ## 1. Model bisnis
 
 - Jena Medical Center adalah distributor B2B barang medis dengan model **drop-ship**. Tidak ada gudang, saldo stok, batch, FEFO, atau persediaan fisik dalam sistem.
@@ -40,7 +42,7 @@ Jika kode, dokumen teknis, atau instruksi agent bertentangan dengan keputusan in
 
 ## 4. Status fitur dan skema saat audit
 
-Status berikut adalah **kondisi teramati per 17 Oktober 2026**, bukan target desain. Supabase memiliki 9 migration dan 27 tabel publik; semua tabel publik memakai RLS dan memiliki policy.
+Status berikut adalah **snapshot historis per 17 Oktober 2026**, bukan status remote terkini. Untuk kondisi terkini, gunakan blok rekonsiliasi di awal dokumen dan `DATABASE_INTEGRATION_READINESS.md`.
 
 | Area | Kondisi remote yang teramati | Target/pekerjaan tersisa |
 |---|---|---|
@@ -48,7 +50,7 @@ Status berikut adalah **kondisi teramati per 17 Oktober 2026**, bukan target des
 | Master pelanggan/supplier/barang dan harga khusus | Ada dan aktif | UAT role-based dan verifikasi data sebelum cutover |
 | SO/PO split dan capture faktur supplier | Ada | Validasi akhir sesuai D-01/D-02 dan alur invoice supplier |
 | Shipment/pengiriman | Remote audit: tabel dan RPC ada, 1 record `shipped`; kode branch ini telah menghapus UI shipment | Migration D-09 menghapus tabel/record/RPC/trigger; belum diterapkan remote |
-| Invoice pelanggan | Migration accounting framework telah menyediakan metadata dan RPC penerbitan/posting. Migration D-09/D-10 di repo memutus relasi shipment, tetapi belum mengimplementasikan trigger D-10 dan editor draf. Status remote belum diverifikasi ulang. | PR D-10 menambahkan draf otomatis pada transisi SO ke confirmed, RPC edit draf, dan pembatas satu draf aktif per SO. PR #49/#50 memperbaiki urutan lock dan batas nilai saat edit draf; PR lanjutan mengusulkan batas nilai pada jalur pembuatan invoice. Migration belum diterapkan ke production. Perlu rekonsiliasi D-11, review SQL, pengujian pembulatan/concurrency, build, dan UAT sebelum rilis bersama kode. |
+| Invoice pelanggan | Migration accounting framework telah menyediakan metadata dan RPC penerbitan/posting. Migration dasar D-09/D-10 tercatat di remote dengan version `20261017185346`; arsipnya diselaraskan pada PR dokumentasi ini. Migration lanjutan D-10 dari PR #46, #49, #50, #51 belum diterapkan ke Production. RPC remote belum memiliki guard nilai kumulatif pada jalur create, dan RPC edit draft belum tersedia. | PR D-10 menambahkan draf otomatis pada transisi SO ke confirmed, RPC edit draf, dan pembatas satu draf aktif per SO. PR #49/#50 memperbaiki urutan lock dan batas nilai saat edit draf; PR #51 menambahkan batas nilai pada jalur pembuatan invoice. Migration belum diterapkan ke production. Perlu rekonsiliasi D-11, review SQL, pengujian pembulatan/concurrency, build, dan UAT sebelum rilis bersama kode. |
 | Pembayaran | 1 customer payment dan 1 supplier payment berstatus `recorded` | Konfirmasi apakah data uji; jangan anggap otomatis aman dihapus |
 | Kerangka akuntansi | Migration sudah diterapkan; 10 akun COA, profile `draft`, mapping 0, periode 0, jurnal 0 | Konfigurasi COA/mapping/policy dan periode, lalu UAT sebelum posting |
 | Laporan GL/keuangan final, audit umum, backup/restore teruji | Belum lengkap/terverifikasi | Selesaikan sebelum cutover |
