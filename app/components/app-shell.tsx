@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { applyThemeMode, isDarkMode, OPEN_SEARCH_EVENT, readThemeMode } from "@/lib/theme";
-import { IconDashboard, IconInvoice, IconKeuangan, IconLainnya, IconMasterData, IconMoon, IconOrder, IconPembayaran, IconPesanan, IconSearch, IconSun, IconUser } from "@/app/components/icons";
+import { IconDashboard, IconInvoice, IconKeuangan, IconLainnya, IconMasterData, IconMoon, IconPembayaran, IconPesanan, IconSearch, IconSun, IconUser } from "@/app/components/icons";
 
 type NavItem = { label: string; href: string; icon: ReactNode; match: (path: string) => boolean };
 
@@ -13,7 +13,7 @@ const starts = (prefix: string) => (path: string) => path === prefix || path.sta
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <IconDashboard />, match: starts("/dashboard") },
   { label: "Pesanan", href: "/", icon: <IconPesanan />, match: path => path === "/" },
-  { label: "Order supplier", href: "/operasional", icon: <IconOrder />, match: starts("/operasional") },
+  { label: "Faktur Supplier", href: "/operasional", icon: <IconInvoice />, match: starts("/operasional") },
   { label: "Master data", href: "/master-data", icon: <IconMasterData />, match: starts("/master-data") },
   { label: "Invoice", href: "/invoice-pelanggan", icon: <IconInvoice />, match: starts("/invoice-pelanggan") },
   { label: "Pembayaran", href: "/pembayaran", icon: <IconPembayaran />, match: starts("/pembayaran") },
@@ -23,7 +23,7 @@ const navItems: NavItem[] = [
 const bottomItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: <IconDashboard />, match: starts("/dashboard") },
   { label: "Pesanan", href: "/", icon: <IconPesanan />, match: path => path === "/" },
-  { label: "Order", href: "/operasional", icon: <IconOrder />, match: starts("/operasional") },
+  { label: "Faktur Supplier", href: "/operasional", icon: <IconInvoice />, match: starts("/operasional") },
   { label: "Invoice", href: "/invoice-pelanggan", icon: <IconInvoice />, match: starts("/invoice-pelanggan") },
   { label: "Lainnya", href: "/lainnya", icon: <IconLainnya />, match: path => ["/lainnya", "/pembayaran", "/master-data", "/keuangan"].some(prefix => starts(prefix)(path)) },
 ];
@@ -31,8 +31,7 @@ const bottomItems: NavItem[] = [
 const searchItems = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Pesanan Pelanggan", href: "/" },
-  { label: "Order ke Supplier", href: "/operasional" },
-  { label: "Faktur Supplier", href: "/operasional#invoices" },
+  { label: "Faktur Supplier", href: "/operasional" },
   { label: "Invoice Pelanggan", href: "/invoice-pelanggan" },
   { label: "Pembayaran", href: "/pembayaran" },
   { label: "Piutang & Hutang", href: "/pembayaran" },
