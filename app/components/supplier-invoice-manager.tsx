@@ -181,12 +181,12 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         p_tax_status: draft.tax_status,
         p_price_mode: draft.tax_status === "taxed" ? "unknown" : draft.tax_status === "non_taxed" ? "not_applicable" : "unknown",
         p_tax_rate_reported: rate,
-        p_discount_mode: draft.discount_mode,
-        p_discount_value_reported: nonNegative(draft.discount_value, "Nilai diskon")!,
-        p_subtotal_reported: nonNegative(draft.subtotal, "Subtotal")!,
-        p_discount_amount_reported: nonNegative(draft.discount_amount, "Nominal diskon")!,
+        p_discount_mode: "none",
+        p_discount_value_reported: 0,
+        p_subtotal_reported: reportedLines.reduce((sum, line) => sum + line.line_total_reported, 0),
+        p_discount_amount_reported: 0,
         p_tax_amount_reported: taxAmount,
-        p_other_charges_reported: nonNegative(draft.other_charges, "Biaya lain")!,
+        p_other_charges_reported: 0,
         p_invoice_total_reported: nonNegative(draft.total, "Total faktur")!,
         p_notes: draft.notes,
         p_lines: reportedLines,
@@ -263,16 +263,9 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         </div>)}</div>
       </div>
 
-      <div className="mt-5"><h3 className="text-sm font-semibold">Ringkasan sesuai faktur asli</h3><p className="mt-1 text-xs text-[var(--muted)]">Salin ringkasan nominal sesuai faktur supplier asli. Sistem tidak menebak tarif atau menghitung PPN otomatis.</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="text-xs text-[var(--muted)]">Subtotal dilaporkan (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.subtotal} onChange={event => updateDraft("subtotal", event.target.value)} /></label>
-          <label className="text-xs text-[var(--muted)]">Jenis diskon faktur<select className="field mt-1" value={draft.discount_mode} onChange={event => { const value = event.target.value as DiscountMode; setDraft(current => ({ ...current, discount_mode: value, discount_value: value === "none" ? "0" : current.discount_value })); }}><option value="none">Tanpa diskon</option><option value="amount">Nominal</option><option value="percent">Persentase</option></select></label>
-          <label className="text-xs text-[var(--muted)]">Nilai diskon sesuai faktur{draft.discount_mode === "percent" ? " (%)" : " (Rp)"}<input required className="field mt-1" type="number" min="0" max={draft.discount_mode === "percent" ? 100 : undefined} step="0.01" value={draft.discount_value} onChange={event => updateDraft("discount_value", event.target.value)} disabled={draft.discount_mode === "none"} /></label>
-          <label className="text-xs text-[var(--muted)]">Nominal diskon tercetak (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.discount_amount} onChange={event => updateDraft("discount_amount", event.target.value)} /></label>
-          <label className="text-xs text-[var(--muted)]">PPN tercetak (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.tax_amount} onChange={event => updateDraft("tax_amount", event.target.value)} disabled={draft.tax_status === "non_taxed"} /></label>
-          <label className="text-xs text-[var(--muted)]">Biaya lain tercetak (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.other_charges} onChange={event => updateDraft("other_charges", event.target.value)} /></label>
-          <label className="text-xs text-[var(--muted)] sm:col-span-2">Total faktur supplier (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.total} onChange={event => updateDraft("total", event.target.value)} /></label>
-        </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs text-[var(--muted)]">PPN sesuai faktur (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.tax_amount} onChange={event => updateDraft("tax_amount", event.target.value)} disabled={draft.tax_status === "non_taxed"} /></label>
+        <label className="text-xs text-[var(--muted)]">Total faktur supplier (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.total} onChange={event => updateDraft("total", event.target.value)} placeholder="Total akhir pada faktur asli" /></label>
       </div>
       <label className="mt-4 block text-xs text-[var(--muted)]">Catatan<textarea className="field mt-1 min-h-20 py-2" maxLength={2000} value={draft.notes} onChange={event => updateDraft("notes", event.target.value)} placeholder="Referensi dokumen atau catatan pemeriksaan" /></label>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[var(--muted)]">Tersimpan sebagai draft; belum dihitung sebagai hutang, modal/HPP, pajak masukan, atau jurnal.</p><button type="submit" className="primary-button" disabled={saving || !canWrite}>{saving ? "Menyimpan…" : "Simpan draft faktur"}</button></div>
