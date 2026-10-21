@@ -2,7 +2,7 @@
 
 **Status Production terverifikasi — 22 Oktober 2026:** Supabase remote kini mencatat 15 migration, termasuk lima migration lanjutan D-10 dengan versi `20261021184121` sampai `20261021184142`. RPC `update_customer_invoice_draft(uuid,date,text,jsonb)` tersedia dan indeks satu draf aktif per SO aktif. Uji transaksional sementara berhasil: konfirmasi SO membuat satu draf, konfirmasi ulang tidak menggandakan draf, draf dapat diedit, kuantitas berlebih ditolak, dan jumlah jurnal tidak berubah; seluruh perubahan uji di-`ROLLBACK`. CI `main` lulus untuk lint, build Next.js, dan build Cloudflare Worker.
 
-**Belum dianggap selesai untuk cutover:** deployment Cloudflare live belum dapat diverifikasi; dua SO terkonfirmasi yang sudah ada belum memiliki invoice dan tidak di-backfill karena status data uji vs transaksi riil harus dipastikan (D-05); UAT nilai kumulatif jalur create, pembulatan, concurrency, dan UI Owner/Admin/Viewer masih perlu dilengkapi. Bagian audit di bawah yang mencatat status 21 Oktober adalah snapshot historis dan tidak menggantikan status ini.
+**Belum dianggap selesai untuk cutover:** deployment Cloudflare live belum dapat diverifikasi; dua SO terkonfirmasi yang sudah ada belum memiliki invoice dan tidak di-backfill karena status data uji vs transaksi riil harus dipastikan (D-05); UAT guard nilai kumulatif jalur create, concurrency, dan pembulatan lintas beberapa invoice, dan UI Owner/Admin/Viewer masih perlu dilengkapi. Bagian audit di bawah yang mencatat status 21 Oktober adalah snapshot historis dan tidak menggantikan status ini.
 
 **Snapshot data historis:** 17 Oktober 2026  
 **Mode audit:** baca-saja; tidak menjalankan DDL, migration, pembersihan data, atau deployment.  
