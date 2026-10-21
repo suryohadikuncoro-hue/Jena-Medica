@@ -341,6 +341,7 @@ kbd { border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; col
 .customer-invoice-tabs button[aria-pressed="true"] { background: var(--mock-ink); color: #fff; }
 .customer-invoice-list, .customer-invoice-form { border-radius: 22px; }
 .customer-invoice-list > div > button { border-radius: 15px; background: var(--mock-panel); }
+.invoice-mobile-label { display: none; }
 .supplier-invoice-screen .supplier-invoice-form, .supplier-invoice-screen .supplier-invoice-list { border-radius: 22px; }
 .supplier-invoice-screen .supplier-invoice-form { background: #fff; }
 .supplier-invoice-screen .supplier-invoice-form > div:nth-of-type(3) { border-radius: 15px; }
@@ -356,6 +357,20 @@ kbd { border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; col
   .order-detail-meta .order-detail-address { grid-column: 1 / -1; }
   .order-detail-subpanel, .order-next-steps { padding: 14px; }
   .order-item-row { align-items: flex-start; flex-direction: column; }
+}
+@media screen and (max-width: 640px) {
+  .customer-invoice-screen .invoice-items-scroll { overflow: visible; }
+  .customer-invoice-screen .invoice-print-table { display: block; width: 100%; min-width: 0 !important; border-collapse: separate; }
+  .customer-invoice-screen .invoice-print-table thead { display: none; }
+  .customer-invoice-screen .invoice-print-table tbody { display: grid; gap: 10px; }
+  .customer-invoice-screen .invoice-print-table tbody tr { display: grid; gap: 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 12px; }
+  .customer-invoice-screen .invoice-print-table tbody td { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border: 0; padding: 0; text-align: left; }
+  .customer-invoice-screen .invoice-print-table tbody td:first-child { display: block; border-bottom: 1px solid var(--border); padding-bottom: 9px; }
+  .customer-invoice-screen .invoice-print-table tbody td:first-child strong { overflow-wrap: anywhere; }
+  .customer-invoice-screen .invoice-mobile-label { display: block; flex: 0 0 auto; color: var(--muted); font-size: 10px; line-height: 1.4; }
+  .customer-invoice-screen .invoice-mobile-label--item { margin-bottom: 4px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .customer-invoice-screen .invoice-mobile-value { min-width: 0; max-width: 65%; overflow-wrap: anywhere; text-align: right; }
+  .customer-invoice-screen .invoice-print-table tbody td:last-child { font-weight: 650; }
 }
 @media (min-width: 1100px) {
   .supplier-invoice-screen .supplier-invoice-form { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .85fr); align-items: start; gap: 14px 18px; }

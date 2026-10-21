@@ -255,7 +255,7 @@ export function CustomerInvoiceManager() {
         <div className="my-4 grid gap-4 sm:grid-cols-2"><div><p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">Pelanggan</p><p className="mt-1 font-semibold">{selectedInvoice.customer_name_snapshot}</p><p className="text-xs text-[var(--muted)]">{selectedInvoice.customer_code_snapshot}</p></div><div><p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">Pesanan</p><p className="mt-1 font-semibold">{selectedInvoiceOrder?.order_number ?? "—"}</p><p className="text-xs text-[var(--muted)]">SO tanggal {displayDate(selectedInvoiceOrder?.order_date)}</p></div></div>
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-950">{selectedInvoice.status === "issued" ? <><strong>Invoice komersial telah diterbitkan dan AR dibukukan.</strong> Nilai pajak mengikuti keputusan manual yang disetujui; dokumen ini bukan Faktur Pajak/e-Faktur.</> : selectedInvoice.status === "draft" ? <><strong>Dokumen draft, bukan tagihan final atau Faktur Pajak.</strong> Nilai belum termasuk pajak dan belum dibukukan.</> : <><strong>Dokumen dibatalkan.</strong> Dokumen tersimpan sebagai jejak audit.</>}</div>
         <div className="mb-4 rounded-lg bg-[var(--surface-muted)] p-3 text-xs"><p className="font-semibold">Alamat pelanggan</p><p className="mt-1">{selectedInvoice.ship_to_address_snapshot}</p></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[540px] border-collapse text-left text-xs invoice-print-table"><thead><tr className="border-y border-[var(--border)] text-[var(--muted)]"><th className="py-2 pr-2">Barang</th><th className="px-2 py-2 text-right">Qty</th><th className="px-2 py-2 text-right">Harga/unit</th><th className="py-2 pl-2 text-right">Jumlah setelah diskon SO</th></tr></thead><tbody>{selectedInvoiceLines.map(line => <tr key={line.id} className="border-b border-[var(--border)] align-top"><td className="py-3 pr-2"><strong>{line.product_name_snapshot}</strong><p className="mt-1 text-[10px] text-[var(--muted)]">{line.product_code_snapshot} · {line.unit_snapshot}{line.price_overridden ? " · harga override SO" : " · harga snapshot SO"}</p></td><td className="px-2 py-3 text-right tabular-nums">{Number(line.quantity).toLocaleString("id-ID")} {line.unit_snapshot}</td><td className="px-2 py-3 text-right tabular-nums">{money(line.unit_price_snapshot)}</td><td className="py-3 pl-2 text-right font-semibold tabular-nums">{money(line.line_total)}</td></tr>)}</tbody></table></div>
+        <InvoiceItemTable lines={selectedInvoiceLines} />
         <div className="ml-auto mt-4 max-w-sm space-y-2 border-t border-[var(--border)] pt-3 text-sm"><div className="flex justify-between"><span>Subtotal setelah diskon</span><strong>{money(selectedInvoice.subtotal_amount)}</strong></div>{selectedInvoice.status === "issued" && <div className="flex justify-between"><span>PPN sesuai keputusan</span><strong>{money(selectedInvoice.tax_amount)}</strong></div>}<div className="flex justify-between text-base font-bold"><span>{selectedInvoice.status === "issued" ? "Total invoice" : "Total sementara · sebelum pajak"}</span><strong>{money(selectedInvoice.total_amount)}</strong></div></div>
         {selectedInvoice.notes && <p className="mt-4 text-xs text-[var(--muted)]">Catatan: {selectedInvoice.notes}</p>}
         {selectedInvoice.status === "void" && <p className="mt-4 rounded-lg bg-slate-100 p-3 text-xs text-slate-700">Alasan pembatalan: {selectedInvoice.void_reason}</p>}
@@ -273,6 +273,46 @@ export function CustomerInvoiceManager() {
     </div>}
     {showVoidForm && selectedInvoice?.status === "draft" && <form className="screen-only card card-pad mt-3" onSubmit={voidInvoice}><h3 className="font-semibold">Batalkan draft invoice</h3><label className="mt-3 block text-xs text-[var(--muted)]">Alasan<input required minLength={3} className="field mt-1" value={voidReason} onChange={event => setVoidReason(event.target.value)} /></label><div className="mt-3 flex justify-end gap-2"><button type="button" className="tab-button" onClick={() => setShowVoidForm(false)}>Kembali</button><button type="submit" className="tab-button" disabled={voidSaving}>{voidSaving ? "Menyimpan…" : "Konfirmasi pembatalan"}</button></div></form>}
   </main>;
+}
+
+function InvoiceItemTable({ lines }: { lines: CustomerInvoiceLine[] }) {
+  return (
+    <div className="invoice-items-scroll overflow-x-auto">
+      <table className="w-full min-w-[540px] border-collapse text-left text-xs invoice-print-table" aria-label="Rincian barang pada invoice">
+        <thead>
+          <tr className="border-y border-[var(--border)] text-[var(--muted)]">
+            <th scope="col" className="py-2 pr-2">Barang</th>
+            <th scope="col" className="px-2 py-2 text-right">Qty</th>
+            <th scope="col" className="px-2 py-2 text-right">Harga/unit</th>
+            <th scope="col" className="py-2 pl-2 text-right">Jumlah setelah diskon SO</th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map(line => (
+            <tr key={line.id} className="border-b border-[var(--border)] align-top">
+              <td className="py-3 pr-2">
+                <span className="invoice-mobile-label invoice-mobile-label--item">Barang</span>
+                <strong>{line.product_name_snapshot}</strong>
+                <p className="mt-1 text-[10px] text-[var(--muted)]">{line.product_code_snapshot} · {line.unit_snapshot}{line.price_overridden ? " · harga override SO" : " · harga snapshot SO"}</p>
+              </td>
+              <td className="px-2 py-3 text-right tabular-nums">
+                <span className="invoice-mobile-label">Qty</span>
+                <span className="invoice-mobile-value">{Number(line.quantity).toLocaleString("id-ID")} {line.unit_snapshot}</span>
+              </td>
+              <td className="px-2 py-3 text-right tabular-nums">
+                <span className="invoice-mobile-label">Harga/unit</span>
+                <span className="invoice-mobile-value">{money(line.unit_price_snapshot)}</span>
+              </td>
+              <td className="py-3 pl-2 text-right font-semibold tabular-nums">
+                <span className="invoice-mobile-label">Jumlah setelah diskon SO</span>
+                <span className="invoice-mobile-value">{money(line.line_total)}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function Kpi({ label, value }: { label: string; value: string }) {
