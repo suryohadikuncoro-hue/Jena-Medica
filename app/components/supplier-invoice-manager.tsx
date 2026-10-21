@@ -187,7 +187,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         p_discount_amount_reported: 0,
         p_tax_amount_reported: taxAmount,
         p_other_charges_reported: 0,
-        p_invoice_total_reported: nonNegative(draft.total, "Total faktur")!,
+        p_invoice_total_reported: reportedLines.reduce((sum, line) => sum + line.line_total_reported, 0) + taxAmount,
         p_notes: draft.notes,
         p_lines: reportedLines,
       };
@@ -263,10 +263,6 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         </div>)}</div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-xs text-[var(--muted)]">PPN sesuai faktur (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.tax_amount} onChange={event => updateDraft("tax_amount", event.target.value)} disabled={draft.tax_status === "non_taxed"} /></label>
-        <label className="text-xs text-[var(--muted)]">Total faktur supplier (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.total} onChange={event => updateDraft("total", event.target.value)} placeholder="Total akhir pada faktur asli" /></label>
-      </div>
       <label className="mt-4 block text-xs text-[var(--muted)]">Catatan<textarea className="field mt-1 min-h-20 py-2" maxLength={2000} value={draft.notes} onChange={event => updateDraft("notes", event.target.value)} placeholder="Referensi dokumen atau catatan pemeriksaan" /></label>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[var(--muted)]">Tersimpan sebagai draft; belum dihitung sebagai hutang, modal/HPP, pajak masukan, atau jurnal.</p><button type="submit" className="primary-button" disabled={saving || !canWrite}>{saving ? "Menyimpan…" : "Simpan draft faktur"}</button></div>
     </form>}
