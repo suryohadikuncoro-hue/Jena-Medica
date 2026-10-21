@@ -1,17 +1,19 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
-**Diperbarui:** 17 Oktober 2026  
+**Rekonsiliasi terbaru — 21 Oktober 2026 (baca-saja):** Production mencatat 10 migration. Migration dasar D-09/D-10 tercatat dengan version `20261017185346`; arsip GitHub diselaraskan tanpa perubahan SQL. Migration lanjutan D-10 dari PR #46, #49, #50, #51 belum diterapkan. RPC `create_customer_invoice(uuid,date,text,jsonb)` di remote belum memiliki guard nilai kumulatif; RPC `update_customer_invoice_draft` belum tersedia. Query data sebelumnya tidak menemukan invoice aktif yang melampaui nilai/kuantitas SO. Belum ada uji runtime untuk invoice parsial/pembulatan/concurrency. Tidak ada perubahan database atau deployment.
+
+**Snapshot data historis:** 17 Oktober 2026  
 **Mode audit:** baca-saja; tidak menjalankan DDL, migration, pembersihan data, atau deployment.  
 **Project:** `Jena Medical Center` (`sjiezdyxylwvqessyvml`), status Supabase `ACTIVE_HEALTHY`, region `ap-northeast-1`.  
 **Aturan:** keputusan produk yang disahkan ada di `PRODUCT_SPEC.md`; dokumen ini merekam kondisi remote teramati dan tidak menggantikan keputusan tersebut.
 
 ## 1. Status skema dan migration remote
 
-Audit mencatat **9 migration remote** dan **27 tabel publik**. Semua tabel publik memiliki RLS aktif dan policy; audit juga tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`.
+Snapshot audit 17 Oktober mencatat **9 migration remote** dan **27 tabel publik**. Riwayat remote yang diperiksa ulang pada 21 Oktober mencatat **10 migration**. Semua tabel publik memiliki RLS aktif dan policy; audit juga tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`.
 
 Versi migration berikut adalah versi yang tercatat di Supabase. Arsip di `supabase/migrations/` harus memakai version ID yang sama dengan remote (D-11).
 
-Branch ini menambahkan migration **belum diterapkan** `20261017150000_d10_invoice_from_sales_order_drop_shipment_module.sql`. Migration tersebut melepas dependensi shipment dari invoice dan menyediakan RPC invoice manual dari SO terkonfirmasi. Snapshot remote di atas tetap kondisi sebelum migration: 9 migration dan 27 tabel publik. Audit ini tidak menjalankan DDL.
+Migration dasar D-09/D-10 tercatat pada remote sebagai `20261017185346_d10_invoice_from_sales_order_drop_shipment_module.sql`. Arsip ini diselaraskan tanpa mengubah isi SQL. Migration lanjutan D-10 untuk draf otomatis/edit dan guard nilai kumulatif belum diterapkan. Audit ini tidak menjalankan DDL.
 
 | Version ID | Migration | Status remote |
 |---|---|---|
@@ -23,9 +25,9 @@ Branch ini menambahkan migration **belum diterapkan** `20261017150000_d10_invoic
 | `20261016175827` | `customer_invoices_per_delivery_drafts` | Tercatat; desain invoice lama akan diubah sesuai D-10 |
 | `20261016205342` | `auto_customer_invoice_on_delivery_drafts` | Tercatat; trigger lama ditargetkan dihapus sesuai D-09/D-10 |
 | `20261016215508` | `payments_and_invoice_allocations` | Tercatat |
-| `20261016225329` | `accounting_posting_framework` | Tercatat; framework ada tetapi gate posting belum dibuka |
+| `20261016225329` | `accounting_posting_framework` | Tercatat; framework ada tetapi gate posting belum dibuka |\n| `20261017185346` | `d10_invoice_from_sales_order_drop_shipment_module` | Tercatat; arsip diselaraskan di PR #52 |
 
-PR #31 memperbaiki nama arsip migration yang sebelumnya tidak sama dengan version ID remote. Isi SQL pada migration yang sudah diterapkan tidak berubah. Perubahan nama arsip bukan migration database dan tidak mengubah schema/data remote.
+PR #31 menyelaraskan arsip migration lama. PR #52 menyelaraskan arsip dasar D-09/D-10 dengan version ID remote tanpa mengubah isi SQL. Perubahan nama arsip bukan migration database dan tidak mengubah schema/data remote.
 
 ## 2. Snapshot data remote yang diaudit
 
@@ -66,9 +68,9 @@ Shipment berstatus `shipped` bukan berarti delivered. Catatan pembayaran `record
 
 ## 4. D-09 dan D-10: keputusan target vs kondisi saat ini
 
-**D-09 — tidak ada pencatatan pengiriman.** Snapshot remote audit masih menemukan tabel `shipments`, `shipment_lines`, `shipment_status_events`, RPC terkait, dan trigger auto-invoice pada status delivered. Instruksi pemilik adalah menghapus langsung objek dan record shipment legacy; backup bukan prasyarat D-09. Migration tersedia pada branch ini tetapi belum diterapkan ke Supabase remote.
+**D-09 — tidak ada pencatatan pengiriman.** Snapshot historis 17 Oktober menemukan tabel shipment, RPC terkait, dan trigger auto-invoice. Migration dasar D-09/D-10 tercatat di remote pada 21 Oktober; audit ini tidak memverifikasi ulang seluruh objek pascamigration. Instruksi pemilik adalah menghapus objek dan record shipment legacy; backup bukan prasyarat D-09.
 
-**D-10 — invoice manual berbasis SO.** Snapshot remote audit masih mengharuskan `sales_invoices.shipment_id` dan RPC invoice bergantung pada shipment. Kode aplikasi pada branch ini disiapkan untuk invoice manual dari SO terkonfirmasi, tanpa `shipment_id`; migration pengubah schema/RPC belum diterapkan ke remote. Batas kuantitas/nilai kumulatif dijaga dalam RPC baru dengan locking SO.
+**D-10 — invoice manual berbasis SO.** Snapshot historis 17 Oktober menunjukkan invoice bergantung pada shipment. Migration dasar D-09/D-10 tercatat di remote, tetapi migration lanjutan untuk draf otomatis/edit dan batas nilai kumulatif belum diterapkan. Guard kuantitas/nilai yang lebih lengkap berada pada migration lanjutan di GitHub dan belum aktif di Production.
 
 Jangan mengembangkan alur shipment baru. D-09/D-10 telah disetujui; kode/migration pada branch ini menghapus objek shipment legacy dan memindahkan invoice ke SO. Record pembayaran tetap dipertahankan. Migration belum dijalankan di database remote.
 
@@ -86,7 +88,7 @@ Ini snapshot advisor saat audit; jalankan ulang setelah perubahan schema dan seb
 ## 6. Aplikasi, validasi, dan batas verifikasi
 
 - Aplikasi memakai Supabase JS di browser dengan `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Service-role key tidak boleh dipakai di browser.
-- Pada snapshot remote yang diaudit, route lama `/pengiriman-piutang` menggabungkan shipment dan pembayaran, sedangkan invoice terikat shipment. Pada branch PR ini, route shipment telah dihapus, pembayaran dipindahkan ke `/pembayaran`, dan UI invoice memakai SO. Migration baru belum diterapkan remote.
+- Pada snapshot remote yang diaudit, route lama `/pengiriman-piutang` menggabungkan shipment dan pembayaran, sedangkan invoice terikat shipment. Pada branch PR ini, route shipment telah dihapus, pembayaran dipindahkan ke `/pembayaran`, dan UI invoice memakai SO. Migration lanjutan D-10 belum diterapkan remote.
 - Framework akuntansi memiliki approval gate, tetapi UAT UI end-to-end ber-role Owner/Admin/Viewer terhadap alur baru belum dilakukan.
 - Audit ini tidak memverifikasi domain Cloudflare live, tidak menjalankan build, dan tidak menguji transaksi UI.
 - Jangan mengklaim lint/build lulus dari dokumen historis tanpa menjalankannya kembali pada commit yang sedang direview.
