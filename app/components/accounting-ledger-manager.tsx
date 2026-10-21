@@ -37,7 +37,22 @@ const mappingSpecs = [
 ] as const;
 const money = (value: number | string) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(Number(value) || 0)}`;
 const dateLabel = (value: string | null) => value ? new Date(`${value.slice(0, 10)}T00:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "—";
+function formatSaveConfigurationError(cause: unknown) {
+  if (cause instanceof Error) return cause.message;
+  if (typeof cause !== "object" || cause === null) return "Konfigurasi tidak dapat disimpan.";
 
+  const error = cause as { message?: unknown; code?: unknown; details?: unknown; hint?: unknown };
+  const message = typeof error.message === "string" && error.message.trim()
+    ? error.message.trim()
+    : "Konfigurasi tidak dapat disimpan.";
+  const metadata = [
+    typeof error.code === "string" && error.code ? `Kode: ${error.code}` : "",
+    typeof error.details === "string" && error.details ? `Detail: ${error.details}` : "",
+    typeof error.hint === "string" && error.hint ? `Petunjuk: ${error.hint}` : "",
+  ].filter(Boolean);
+
+  return [message, ...metadata].join("\n");
+}
 async function readPages<T>(fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
   const rows: T[] = [];
   for (let from = 0; ; from += 500) {
@@ -223,7 +238,7 @@ export function AccountingLedgerManager() {
       });
       if (rpcError) throw rpcError;
       setNotice("Konfigurasi disimpan sebagai draft. Posting tetap terkunci sampai referensi dan persetujuan eksplisit dicatat."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Konfigurasi tidak dapat disimpan."); }
+    } catch (cause) { setError(formatSaveConfigurationError(cause)); }
     finally { setSaving(false); }
   }
 
@@ -260,7 +275,7 @@ export function AccountingLedgerManager() {
 
   return <section className="space-y-5">
     <div className="demo-banner"><strong>Posting dikunci secara default.</strong> Tidak ada COA, mapping, atau periode contoh. Posting AP/AR/jurnal hanya tersedia setelah mapping akun dan referensi kebijakan disimpan serta disetujui Owner/Admin. PPN diinput dari keputusan yang disetujui; aplikasi tidak menghitung tarif atau DPP.</div>
-    {error && <p role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <a className="ml-2 underline" href="/login">Masuk</a>}</p>}
+    {error && <p role="alert" className="whitespace-pre-wrap rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <a className="ml-2 underline" href="/login">Masuk</a>}</p>}
     {notice && <p role="status" className="rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
     {loading ? <div className="card card-pad text-sm text-[var(--muted)]">Memuat konfigurasi ledger…</div> : schemaReady && <>
       <div className="grid gap-3 sm:grid-cols-3">
