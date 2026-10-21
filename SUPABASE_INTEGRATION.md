@@ -42,17 +42,17 @@ Jangan anggap shipment `shipped` sebagai `delivered`. Status payment `recorded` 
 
 Keputusan final: hapus menu/halaman/komponen pengiriman, tabel shipment, RPC terkait, dan trigger invoice otomatis ketika shipment menjadi delivered. Jangan menambahkan tracking, resi, surat jalan, kurir, atau penerimaan barang.
 
-Kondisi remote saat audit: objek shipment legacy masih ada, sementara kode pada branch ini menyiapkan route pembayaran mandiri dan invoice berbasis SO. Migration D-09/D-10 belum diterapkan ke remote. Tidak perlu menunggu backup sebagai prasyarat penghapusan shipment; record pembayaran harus dipertahankan.
+Snapshot historis 17 Oktober menemukan objek shipment legacy. Migration dasar D-09/D-10 kini tercatat dalam riwayat remote sebagai version `20261017185346`; query audit ulang ini tidak memverifikasi ulang setiap objek shipment setelah migration tersebut. Tidak perlu menunggu backup sebagai prasyarat penghapusan shipment; record pembayaran harus dipertahankan.
 
 ### D-10 — invoice manual dari SO
 
 Keputusan final: Owner/Admin membuat invoice secara manual dari SO yang telah dikonfirmasi. Satu SO dapat memiliki beberapa invoice, dengan batas kumulatif kuantitas/nilai di database. Invoice tidak memiliki `shipment_id`; draft tidak mengakui pendapatan. Pendapatan dan piutang timbul saat invoice diterbitkan, sesuai `ACCOUNTING_POLICY_AND_CUTOVER.md`.
 
-Snapshot remote saat audit: schema `sales_invoices` masih mengharuskan `shipment_id`; RPC dan trigger invoice draft masih bergantung pada shipment. Branch PR ini menyediakan migration untuk mengubah model ke invoice manual berbasis SO, tetapi migration belum diterapkan ke Supabase remote.
+Snapshot historis 17 Oktober menunjukkan schema invoice lama bergantung pada shipment. Migration dasar D-09/D-10 tercatat diterapkan remote, tetapi RPC edit draf dan pengaman nilai kumulatif lanjutan belum tersedia; status aktual objek dasar harus divalidasi ulang setelah prosedur rilis.
 
 ### D-11 — arsip migration
 
-Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsip yang harus menggunakan version ID remote dan isi SQL yang sama untuk migration yang sudah diterapkan. Empat nama arsip diselaraskan ke version ID remote tanpa mengubah konten SQL. Migration baru D-09/D-10 di bawah belum ada pada remote. Jangan mengubah isi migration yang telah diterapkan atau menjalankan migration baru sebelum kode dan schema siap dilepas bersama.
+Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsip yang harus menggunakan version ID remote dan isi SQL yang sama untuk migration yang sudah diterapkan. Nama arsip migration dasar D-09/D-10 diselaraskan ke version ID remote tanpa mengubah konten SQL. Migration lanjutan D-10 belum ada pada remote. Jangan mengubah isi migration yang telah diterapkan atau menjalankan migration baru sebelum kode dan schema siap dilepas bersama.
 
 ## 5. Daftar migration remote
 
@@ -64,9 +64,9 @@ Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsi
 - `supabase/migrations/20261016175827_customer_invoices_per_delivery_drafts.sql` — legacy, target D-10
 - `supabase/migrations/20261016205342_auto_customer_invoice_on_delivery_drafts.sql` — legacy, target D-09/D-10
 - `supabase/migrations/20261016215508_payments_and_invoice_allocations.sql`
-- `supabase/migrations/20261016225329_accounting_posting_framework.sql`
+- `supabase/migrations/20261016225329_accounting_posting_framework.sql`\n- `supabase/migrations/20261017185346_d10_invoice_from_sales_order_drop_shipment_module.sql` — tercatat di remote
 
-**Migration dasar D-09/D-10 yang sudah tercatat di remote:** `supabase/migrations/20261017185346_d10_invoice_from_sales_order_drop_shipment_module.sql` (arsip diselaraskan tanpa mengubah SQL). **Migration lanjutan yang belum diterapkan:** `supabase/migrations/20261020042000_d10_auto_draft_edit.sql`, `supabase/migrations/20261021152000_d10_invoice_lock_order.sql`, `supabase/migrations/20261021160000_d10_invoice_value_cap.sql`, dan `supabase/migrations/20261021170000_d10_create_invoice_value_cap.sql`. Migration ini menghapus modul shipment beserta data shipment legacy, menanggalkan `shipment_id`/`shipment_line_id` dari invoice, dan mengganti RPC invoice menjadi manual dari SO. Pembayaran pelanggan/supplier tidak dihapus. Remote masih berisi 9 migration dan schema legacy sampai migration baru diterapkan; empat rename arsip di atas tidak mengubah schema.
+**Migration dasar D-09/D-10 yang sudah tercatat di remote:** `supabase/migrations/20261017185346_d10_invoice_from_sales_order_drop_shipment_module.sql` (arsip diselaraskan tanpa mengubah SQL). **Migration lanjutan yang belum diterapkan:** `supabase/migrations/20261020042000_d10_auto_draft_edit.sql`, `supabase/migrations/20261021152000_d10_invoice_lock_order.sql`, `supabase/migrations/20261021160000_d10_invoice_value_cap.sql`, dan `supabase/migrations/20261021170000_d10_create_invoice_value_cap.sql`. Migration ini menghapus modul shipment beserta data shipment legacy, menanggalkan `shipment_id`/`shipment_line_id` dari invoice, dan mengganti RPC invoice menjadi manual dari SO. Pembayaran pelanggan/supplier tidak dihapus. Remote mencatat 10 migration. Empat migration lanjutan D-10 belum diterapkan; audit baca-saja ini tidak menjalankan DDL.
 
 ## 6. Integrasi dan otorisasi
 
@@ -74,7 +74,7 @@ Schema remote adalah sumber kebenaran. Folder `supabase/migrations/` adalah arsi
 - `create_sales_order` dan `confirm_sales_order` membuat/mengonfirmasi SO dan menyimpan snapshot di database.
 - `create_purchase_order` membuat PO dari SO terkonfirmasi, mendukung split dan memakai locking untuk batas kuantitas SO.
 - `create_supplier_invoice` / `void_supplier_invoice` mencatat atau membatalkan draft faktur supplier; nilai berasal dari dokumen sumber.
-- RPC shipment dan trigger invoice berbasis delivered masih ada pada remote audit; migration pending pada branch ini menghapusnya. Kode aplikasi branch ini tidak lagi mengandalkan shipment.
+- Snapshot historis mencatat RPC shipment dan trigger invoice berbasis delivered; migration dasar D-09/D-10 tercatat di remote. Audit ini tidak memverifikasi ulang semua objek shipment setelah migration dasar. Kode aplikasi tidak lagi mengandalkan shipment.
 - Capture pembayaran/alokasi memiliki RPC server-side dan idempotency. Alokasi operasional tidak otomatis membuat jurnal.
 - Fungsi posting akuntansi hanya boleh digunakan setelah profil, referensi kebijakan, mapping akun, dan periode memenuhi gate database. COA belum disahkan/mapping belum ada pada snapshot audit.
 - Perubahan transaksi harus memakai RPC dan pemeriksaan role. Viewer hanya baca. Jangan mengandalkan sekadar menyembunyikan tombol di UI.
@@ -87,7 +87,7 @@ Temuan lain: perlindungan kata sandi bocor Supabase Auth dinonaktifkan; Performa
 
 ## 8. Route dan batas fitur
 
-Pada kode branch ini, route shipment lama sudah dihapus; invoice pelanggan dibuat manual dari SO, dan pembayaran tersedia mandiri di `/pembayaran`. Supabase remote masih memakai schema legacy sampai migration pending diterapkan. Karena itu, invoice baru tidak dapat dibuat melalui RPC SO-based hingga migration tersebut diterapkan.
+Pada kode branch ini, route shipment lama sudah dihapus; invoice pelanggan dibuat manual dari SO, dan pembayaran tersedia mandiri di `/pembayaran`. Supabase remote memiliki migration dasar D-09/D-10, tetapi migration lanjutan D-10 untuk draf otomatis/edit dan batas nilai belum diterapkan. Karena itu, invoice baru tidak dapat dibuat melalui RPC SO-based hingga migration tersebut diterapkan.
 
 Belum boleh diklaim selesai: Faktur Pajak/e-Faktur dari aplikasi, penghitungan pajak tervalidasi otomatis, nota kredit lengkap, seluruh pengakuan HPP aktual, laporan GL/laba-rugi/neraca penuh, rekonsiliasi bank, audit log umum, workflow lampiran, backup/restore teruji, dan UAT role-based end-to-end. Lihat `ACCOUNTING_POLICY_AND_CUTOVER.md` untuk prasyarat cutover.
 
