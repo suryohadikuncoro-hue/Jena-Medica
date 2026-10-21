@@ -314,7 +314,7 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 - [ ] U-09 Validasi per kolom dengan scroll dan fokus ke kesalahan pertama
 - [ ] U-10 Ganti warna Tailwind langsung dengan token; lengkapi mode gelap
 - [ ] U-11 Form pesanan: total langsung, label terlihat, penanda harga khusus, peringatan margin — total pra-pajak, validasi diskon, dan penanda harga khusus/manual diimplementasikan; label terlihat dan peringatan margin masih tersisa. Peringatan margin menunggu sumber biaya modal yang tervalidasi.
-- [ ] U-12 Combobox dengan pencarian untuk barang dan baris PO
+- [ ] U-12 Combobox dengan pencarian untuk barang dan baris PO (baris Faktur Supplier kini dicatat langsung dari dokumen, tanpa referensi PO wajib)
 - [ ] U-13 `MoneyInput` dengan format Rp
 - [ ] U-14 Ganti istilah teknis sesuai kamus; ringkas banner peringatan
 - [ ] U-16 Dialog/Drawer: Escape, focus trap, kembalikan fokus
