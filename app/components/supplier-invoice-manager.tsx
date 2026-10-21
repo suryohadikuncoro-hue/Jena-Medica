@@ -168,7 +168,9 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         quantity: nonNegative(line.quantity, `Kuantitas item ${index + 1}`)!,
         unit_price_reported: nonNegative(line.unit_price_reported, `Harga/unit item ${index + 1}`)!,
         line_discount_reported: nonNegative(line.line_discount_reported, `Diskon item ${index + 1}`)!,
-        line_total_reported: nonNegative(line.line_total_reported, `Total item ${index + 1}`)!,
+        line_total_reported: line.line_total_reported.trim() === ""
+          ? Number(line.quantity) * Number(line.unit_price_reported) - Number(line.line_discount_reported || 0)
+          : nonNegative(line.line_total_reported, `Total item ${index + 1}`)!,
       }));
       if (reportedLines.some(line => line.quantity <= 0 || !line.product_name || !line.unit)) throw new Error("Nama barang, satuan, dan kuantitas faktur wajib diisi.");
       const rate = nonNegative(draft.tax_rate, "Tarif PPN sesuai dokumen", false);
@@ -263,7 +265,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         </div>)}</div>
       </div>
 
-      <div className="mt-5"><h3 className="text-sm font-semibold">Ringkasan sesuai faktur asli</h3><p className="mt-1 text-xs text-[var(--muted)]">Isi angka tercetak sebagai sumber kebenaran. Usulan di bawah hanya untuk membantu memeriksa kecocokan; PPN tidak dihitung atau ditebak oleh sistem.</p>
+      <div className="mt-5"><h3 className="text-sm font-semibold">Ringkasan sesuai faktur asli</h3><p className="mt-1 text-xs text-[var(--muted)]">Salin ringkasan nominal sesuai faktur supplier asli. Sistem tidak menebak tarif atau menghitung PPN otomatis.</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-xs text-[var(--muted)]">Subtotal dilaporkan (Rp)<input required className="field mt-1" type="number" min="0" step="0.01" value={draft.subtotal} onChange={event => updateDraft("subtotal", event.target.value)} /></label>
           <label className="text-xs text-[var(--muted)]">Jenis diskon faktur<select className="field mt-1" value={draft.discount_mode} onChange={event => { const value = event.target.value as DiscountMode; setDraft(current => ({ ...current, discount_mode: value, discount_value: value === "none" ? "0" : current.discount_value })); }}><option value="none">Tanpa diskon</option><option value="amount">Nominal</option><option value="percent">Persentase</option></select></label>
