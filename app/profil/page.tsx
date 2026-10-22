@@ -61,7 +61,7 @@ export default function ProfilePage() {
 
     <h2 className="pf-h2">Pengaturan</h2>
     <div className="pf-list">
-      <div className="pf-row pf-row-off" aria-disabled="true"><div><strong>Pengaturan usaha</strong><p>Profil usaha, pajak, periode, pengguna</p></div><span className="chip-yellow">Segera</span></div>
+      <Link href="/pengaturan-usaha" className="pf-row"><div><strong>Pengaturan usaha</strong><p>Ringkasan konfigurasi usaha dan akses modul</p></div><span className="chip-mint">Buka →</span></Link>
       <div className="pf-row"><div><strong>Tampilan</strong><p>Terang atau gelap</p></div>
         <div role="group" aria-label="Tema" className="pf-seg"><button type="button" aria-pressed={!dark} onClick={() => setTheme("light")}>Terang</button><button type="button" aria-pressed={dark} onClick={() => setTheme("dark")}>Gelap</button></div></div>
     </div>
