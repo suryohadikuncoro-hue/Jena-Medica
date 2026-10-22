@@ -77,6 +77,7 @@ export function CustomerInvoiceManager() {
   const [voidSaving, setVoidSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [reviewed, setReviewed] = useState(false);
   const canWrite = role === "owner" || role === "admin";
 
   const load = useCallback(async () => {
@@ -155,12 +156,12 @@ export function CustomerInvoiceManager() {
   const whatsappHref = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(whatsappText)}` : "";
 
   function openCreateForm() {
-    setError(""); setNotice(""); setEditingInvoiceId(""); setShowForm(true); setSalesOrderId(""); setInvoiceDate(localDate()); setNotes(""); setLineQuantities({});
+    setError(""); setNotice(""); setReviewed(false); setEditingInvoiceId(""); setShowForm(true); setSalesOrderId(""); setInvoiceDate(localDate()); setNotes(""); setLineQuantities({});
   }
 
   function openEditDraft() {
     if (!selectedInvoice || selectedInvoice.status !== "draft") return;
-    setError(""); setNotice(""); setEditingInvoiceId(selectedInvoice.id); setShowForm(true);
+    setError(""); setNotice(""); setReviewed(false); setEditingInvoiceId(selectedInvoice.id); setShowForm(true);
     setSalesOrderId(selectedInvoice.sales_order_id); setInvoiceDate(selectedInvoice.invoice_date);
     setNotes(selectedInvoice.notes ?? "");
     setLineQuantities(Object.fromEntries((linesByInvoice.get(selectedInvoice.id) ?? []).map(line => [line.sales_order_line_id, String(line.quantity)])));
@@ -171,6 +172,7 @@ export function CustomerInvoiceManager() {
     event.preventDefault(); setError(""); setNotice(""); setSaving(true);
     try {
       if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk membuat invoice.");
+      if (!reviewed) throw new Error("Periksa ringkasan invoice dan centang konfirmasi sebelum menyimpan.");
       if (!selectedOrder || selectedOrder.status !== "confirmed") throw new Error("Pilih SO yang sudah terkonfirmasi.");
       if (!invoiceDate) throw new Error("Tanggal invoice wajib diisi.");
       const selectedLines = availableOrderLines
@@ -220,6 +222,7 @@ export function CustomerInvoiceManager() {
     <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> draf dibuat otomatis saat SO dikonfirmasi. Draf bukan invoice final, Faktur Pajak/e-Faktur, atau jurnal. Pendapatan dan piutang baru diakui saat invoice diterbitkan melalui workflow akuntansi yang disetujui.</div>
     {error && <p role="alert" className="screen-only mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
     {notice && <p role="status" className="screen-only mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
+    <div className="transaction-stepper screen-only" aria-label="Tahapan transaksi"><span className="is-done">1. SO</span><span className="is-done">2. Konfirmasi</span><span className={selectedInvoice?.status === "issued" ? "is-done" : "is-current"}>3. Invoice</span><span className={selectedInvoice?.status === "issued" ? "is-current" : ""}>4. Kirim</span></div>
 
     {showForm && <form className="screen-only card card-pad mb-5 customer-invoice-form" onSubmit={createInvoice}>
       <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{editingInvoiceId ? "Tinjau dan edit draf invoice" : "Buat invoice dari pesanan"}</h2><p className="mt-1 text-xs text-[var(--muted)]">Atur kuantitas yang akan ditagihkan. Draf tidak mengakui pendapatan/piutang; batas kumulatif dijaga database.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div>
@@ -227,7 +230,7 @@ export function CustomerInvoiceManager() {
       {selectedOrder && <div className="mt-3 rounded-xl bg-[var(--surface-muted)] p-3 text-sm"><strong>{customerById.get(selectedOrder.customer_id)?.legal_name ?? "Pelanggan"}</strong><p className="mt-1 text-xs text-[var(--muted)]">SO {selectedOrder.order_number} · tanggal {displayDate(selectedOrder.order_date)} · jatuh tempo SO {displayDate(selectedOrder.due_date)}</p><p className="mt-1 text-xs text-[var(--muted)]">{selectedOrder.ship_to_address_snapshot}</p></div>}
       {selectedOrder && <div className="mt-4 space-y-2">{availableOrderLines.length === 0 ? <p className="rounded-xl border border-dashed border-[var(--border)] p-4 text-sm text-[var(--muted)]">Semua kuantitas pada SO ini sudah ditagihkan.</p> : availableOrderLines.map(line => <div key={line.id} className="grid gap-2 rounded-xl border border-[var(--border)] p-3 sm:grid-cols-[2fr_1fr_1fr_1fr] sm:items-center"><div><p className="font-medium">{line.product_name_snapshot}</p><p className="text-xs text-[var(--muted)]">{line.product_code_snapshot} · {line.unit_snapshot}</p></div><div className="text-xs"><p className="text-[var(--muted)]">Harga/unit</p><strong>{money(line.unit_price_snapshot)}</strong></div><div className="text-xs"><p className="text-[var(--muted)]">Sisa yang bisa ditagih</p><strong>{line.available.toLocaleString("id-ID")} {line.unit_snapshot}</strong></div><label className="text-xs text-[var(--muted)]">Qty invoice<input className="field mt-1" type="number" min="0" max={line.available} step="0.0001" value={lineQuantities[line.id] ?? ""} onChange={event => setLineQuantities(current => ({ ...current, [line.id]: event.target.value }))} /></label></div>)}</div>}
       <label className="mt-3 block text-xs text-[var(--muted)]">Catatan internal<textarea className="field mt-1 min-h-20 py-2" value={notes} onChange={event => setNotes(event.target.value)} placeholder="Catatan opsional" /></label>
-      <div className="mt-4 flex justify-end"><button type="submit" className="primary-button" disabled={saving || !selectedOrder || availableOrderLines.length === 0}>{saving ? "Menyimpan…" : editingInvoiceId ? "Simpan perubahan draf" : "Simpan draft invoice"}</button></div>
+      <div className="order-review-card"><strong>Ringkasan sebelum disimpan</strong><span>{selectedOrder?.order_number ?? "SO belum dipilih"} · {selectedOrder ? (customerById.get(selectedOrder.customer_id)?.legal_name ?? "Pelanggan") : "Pelanggan belum dipilih"}</span><span>{availableOrderLines.filter(line => lineQuantities[line.id]?.trim()).length} item · Tanggal {invoiceDate || "belum diisi"}</span><label><input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} /> Saya sudah memeriksa SO, kuantitas, harga, tanggal, dan alamat sebelum menyimpan.</label></div><div className="mt-4 flex justify-end"><button type="submit" className="primary-button" disabled={saving || !selectedOrder || availableOrderLines.length === 0}>{saving ? "Menyimpan…" : editingInvoiceId ? "Simpan perubahan draf" : "Simpan draft invoice"}</button></div>
     </form>}
 
     <section className="screen-only mb-5 grid gap-3 sm:grid-cols-3">
@@ -243,7 +246,7 @@ export function CustomerInvoiceManager() {
         {loading ? <p className="py-6 text-sm text-[var(--muted)]">Memuat invoice…</p> : visibleInvoices.length === 0 ? <div className="rounded-xl border border-dashed border-[var(--border)] p-6 text-center"><p className="font-medium">Belum ada invoice</p><p className="mt-1 text-xs text-[var(--muted)]">Pilih SO terkonfirmasi untuk membuat draft invoice.</p></div> : <div className="space-y-2">{visibleInvoices.map(row => {
           const order = salesOrderById.get(row.sales_order_id);
           return <button key={row.id} type="button" onClick={() => { setSelectedInvoiceId(row.id); setShowVoidForm(false); }} className={`w-full rounded-xl border p-3 text-left ${selectedInvoice?.id === row.id ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--border)] hover:bg-[var(--surface-muted)]"}`}>
-            <div className="flex items-start justify-between gap-2"><div><p className="font-mono text-[11px] text-[var(--accent)]">{row.invoice_number}</p><h3 className="mt-1 text-sm font-semibold">{row.customer_name_snapshot}</h3></div><span className="status-pill">{row.status === "draft" ? "Draft" : row.status === "issued" ? "Terbit · dibukukan" : "Dibatalkan"}</span></div>
+            <div className="flex items-start justify-between gap-2"><div><p className="font-mono text-[11px] text-[var(--accent)]">{row.invoice_number}</p><h3 className="mt-1 text-sm font-semibold">{row.customer_name_snapshot}</h3></div><span className="status-pill">{row.status === "draft" ? "Draft" : row.status === "issued" ? "Diterbitkan" : "Dibatalkan"}</span></div>
             <div className="mt-2 flex flex-wrap justify-between gap-1 text-xs text-[var(--muted)]"><span>{order?.order_number ?? "SO"} · {displayDate(row.invoice_date)}</span><strong className="text-[var(--foreground)]">{money(row.total_amount)}</strong></div>
           </button>;
         })}</div>}
@@ -251,7 +254,7 @@ export function CustomerInvoiceManager() {
 
       {selectedInvoice ? <article id="invoice-print" className="print-document card card-pad">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--border)] pb-4">
-          <div><p className="page-kicker">Jena Medical Center</p><h2 className="mt-1 text-xl font-bold">Invoice Penjualan</h2><p className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${selectedInvoice.status === "draft" ? "bg-amber-100 text-amber-900" : "bg-slate-200 text-slate-800"}`}>{selectedInvoice.status === "draft" ? "DRAFT · BELUM DITERBITKAN" : selectedInvoice.status === "issued" ? "TERBIT · AR POSTED" : "DIBATALKAN"}</p></div>
+          <div><p className="page-kicker">Jena Medical Center</p><h2 className="mt-1 text-xl font-bold">Invoice Penjualan</h2><p className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${selectedInvoice.status === "draft" ? "bg-amber-100 text-amber-900" : "bg-slate-200 text-slate-800"}`}>{selectedInvoice.status === "draft" ? "DRAFT · BELUM DITERBITKAN" : selectedInvoice.status === "issued" ? "DITERBITKAN · AR TERCATAT" : "DIBATALKAN"}</p></div>
           <div className="text-left sm:text-right"><p className="text-xs text-[var(--muted)]">Nomor dokumen</p><p className="mt-1 font-mono text-sm font-semibold">{invoiceNumber}</p><p className="mt-2 text-xs text-[var(--muted)]">Tanggal {displayDate(selectedInvoice.invoice_date)}</p><p className="text-xs text-[var(--muted)]">Jatuh tempo {displayDate(selectedInvoice.due_date)}</p></div>
         </div>
         <div className="my-4 grid gap-4 sm:grid-cols-2"><div><p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">Pelanggan</p><p className="mt-1 font-semibold">{selectedInvoice.customer_name_snapshot}</p><p className="text-xs text-[var(--muted)]">{selectedInvoice.customer_code_snapshot}</p></div><div><p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-soft)]">Pesanan</p><p className="mt-1 font-semibold">{selectedInvoiceOrder?.order_number ?? "—"}</p><p className="text-xs text-[var(--muted)]">SO tanggal {displayDate(selectedInvoiceOrder?.order_date)}</p></div></div>
@@ -265,13 +268,13 @@ export function CustomerInvoiceManager() {
       </article> : <div className="screen-only card card-pad flex min-h-80 items-center justify-center text-center"><div><h2 className="font-semibold">Pilih invoice untuk pratinjau</h2><p className="mt-1 text-sm text-[var(--muted)]">PDF dapat disimpan melalui fungsi cetak browser.</p></div></div>}
     </section>
 
-    {selectedInvoice && <div className="screen-only mt-4 flex flex-wrap gap-2">
+    {selectedInvoice && <div className="screen-only transaction-actions mt-4 flex flex-wrap gap-2">
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="primary-button" onClick={openEditDraft}>Tinjau / edit draf</button>}
       <button type="button" className="primary-button" onClick={() => window.print()}>Cetak / Simpan PDF</button>
-      {selectedInvoice.status === "issued" && phone ? <a className="tab-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Siapkan WhatsApp</a> : <button type="button" className="tab-button" disabled title={selectedInvoice.status === "draft" ? "Terbitkan invoice terlebih dahulu" : "Nomor WhatsApp pelanggan yang valid diperlukan"}>Siapkan WhatsApp</button>}
+      {selectedInvoice.status === "issued" && phone ? <a className="primary-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Kirim via WhatsApp →</a> : <button type="button" className="tab-button" disabled title={selectedInvoice.status === "draft" ? "Terbitkan invoice terlebih dahulu" : "Nomor WhatsApp pelanggan yang valid diperlukan"}>Siapkan WhatsApp</button>}
       {selectedInvoice.status === "draft" && <Link className="primary-button inline-flex items-center" href="/keuangan#jurnal">Buka antrean issue &amp; posting AR →</Link>}
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setShowVoidForm(value => !value); setVoidReason(""); }}>Batalkan draft</button>}
-      <p className="basis-full text-xs text-[var(--muted)]">WhatsApp hanya membuka teks siap kirim; tidak mengirim otomatis dan tidak melampirkan PDF. Cetak/Simpan PDF menggunakan dialog browser.</p>
+      <p className="basis-full text-xs text-[var(--muted)]">WhatsApp membuka pesan siap kirim di aplikasi WhatsApp. Lampirkan PDF dari tombol Cetak / Simpan PDF sebelum menekan Kirim.</p>
     </div>}
     {showVoidForm && selectedInvoice?.status === "draft" && <form className="screen-only card card-pad mt-3" onSubmit={voidInvoice}><h3 className="font-semibold">Batalkan draft invoice</h3><label className="mt-3 block text-xs text-[var(--muted)]">Alasan<input required minLength={3} className="field mt-1" value={voidReason} onChange={event => setVoidReason(event.target.value)} /></label><div className="mt-3 flex justify-end gap-2"><button type="button" className="tab-button" onClick={() => setShowVoidForm(false)}>Kembali</button><button type="submit" className="tab-button" disabled={voidSaving}>{voidSaving ? "Menyimpan…" : "Konfirmasi pembatalan"}</button></div></form>}
   </main>;

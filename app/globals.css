@@ -625,6 +625,7 @@ kbd { border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; col
 .order-detail-primary-cta:hover { opacity:.88; text-decoration:none; }
 .order-detail-primary-cta span { font-size:17px; }
 @media (max-width:640px) { .order-detail-primary-cta { min-height:46px; margin-top:13px; font-size:12px; } }
+@media (max-width:640px) { .order-detail-primary-cta { position: sticky; bottom: calc(78px + env(safe-area-inset-bottom)); z-index: 24; box-shadow: 0 -6px 18px rgba(20,24,28,.12); } }
 
 
 /* ===== PR 1: Token pastel dan font aplikasi ===== */
@@ -716,6 +717,22 @@ body { font-family: var(--font-app-sans), system-ui, sans-serif; }
   .app-head { height: 58px; padding: 0 12px; }
   .search-trigger { width: 42px; justify-content: center; padding: 0; }
   .mbar-c-on { color: var(--rail-active-bg); }
+}
+.transaction-stepper { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 16px; border-radius: 16px; background: var(--surface-muted); padding: 6px; }
+.transaction-stepper span { min-height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 11px; color: var(--muted); font-size: 10px; font-weight: 750; text-align: center; }
+.transaction-stepper .is-done { background: var(--pastel-mint-bg); color: var(--pastel-mint-fg); }
+.transaction-stepper .is-current { background: var(--rail-bg); color: #fff; }
+.order-review-card { display: grid; gap: 5px; margin-top: 16px; border: 1px solid color-mix(in srgb, var(--teal) 24%, var(--border)); border-radius: 16px; background: color-mix(in srgb, var(--mint) 28%, var(--card)); padding: 14px; color: var(--foreground); font-size: 12px; }
+.order-review-card strong { font-size: 13px; }
+.order-review-card span { color: var(--muted); }
+.order-review-card label { display: flex; align-items: flex-start; gap: 8px; margin-top: 4px; font-size: 11px; line-height: 1.45; }
+.order-review-card input { margin-top: 2px; accent-color: var(--teal); }
+.transaction-actions { position: relative; }
+@media (max-width: 640px) {
+  .transaction-stepper { position: sticky; top: 62px; z-index: 20; gap: 3px; border-radius: 14px; }
+  .transaction-stepper span { min-height: 31px; font-size: 9px; }
+  .transaction-actions { position: sticky; bottom: calc(78px + env(safe-area-inset-bottom)); z-index: 25; margin-right: -2px; margin-left: -2px; border: 1px solid var(--border); border-radius: 18px; background: color-mix(in srgb, var(--shell) 94%, transparent); padding: 10px; box-shadow: 0 -8px 24px rgba(20,24,28,.12); backdrop-filter: blur(12px); }
+  .transaction-actions > a, .transaction-actions > button { flex: 1 1 auto; }
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-rail-btn, .mbar-i, .mbar-c, .mobile-menu-panel { scroll-behavior: auto; transition: none; }
