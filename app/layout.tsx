@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Jena Medica" },
   formatDetection: { telephone: false },
   icons: {
-    icon: [{ url: "/icons/icon-192.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icons/icon-192.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", type: "image/png", sizes: "180x180" }],
   },
 };
 
