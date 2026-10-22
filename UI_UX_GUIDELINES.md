@@ -320,7 +320,7 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 - [ ] M-07 Faktur supplier: isi, cocokkan dengan hitungan sistem, modal per barang, jika dicatat (layar 5; tunduk K2, K3)
 - [ ] M-08 Invoice: daftar, tinjau dan edit draf, invoice terbit dan kirim WhatsApp (layar 6–8; tunduk K1, K4, K5, K6) — trigger draf otomatis dan RPC edit draf ditambahkan pada PR D-10; perlu UAT sebelum checklist ditutup
 - [ ] M-09 Pembayaran: daftar piutang/hutang dan catat pembayaran dengan alokasi (layar 9, 10)
-- [ ] M-10 Master Data: pelanggan, supplier, barang, harga khusus (layar 12, 13)
+- [x] M-10 Master Data: nested <main> diperbaiki, CSS lama (primary-button, tab-button, demo-banner, warna Tailwind langsung) diganti ActionBanner; layar 12–13 (visual mockup) menyusul setelah PR ini
 - [ ] M-11 Keuangan: Ikhtisar dan Laba Rugi (layar 14, 15) — **tunda sampai didiskusikan**
 
 **Perbaikan dari audit lama yang masih berlaku**
