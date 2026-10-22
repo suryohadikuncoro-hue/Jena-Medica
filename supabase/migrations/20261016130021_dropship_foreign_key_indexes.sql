@@ -1,4 +1,3 @@
--- Cover every foreign key identified by the Supabase performance advisor.
 create index customers_created_by_idx on public.customers (created_by);
 create index suppliers_created_by_idx on public.suppliers (created_by);
 create index products_created_by_idx on public.products (created_by);

@@ -540,8 +540,7 @@ declare
   v_invoice_id uuid;
   v_status text;
 begin
-  if not app_private.has_business_role(array['owner', 'admin']) then raise exception using errcode = '42501', message = 'Owner/Admin role required'; end if;
-  if p_reason is null or pg_catalog.length(pg_catalog.btrim(p_reason)) < 3 then raise exception using errcode = '22023', message = 'Void reason must contain at least 3 characters'; end if;
+  if not app_private.has_business_role(array['owner', 'admin']) then raise exception using errcode = '42501', message = 'Void reason must contain at least 3 characters'; end if;
   select b.payment_id into v_payment_id from public.supplier_payment_allocation_batches b where b.id = p_batch_id;
   if not found then raise exception using errcode = 'P0002', message = 'Supplier allocation batch was not found'; end if;
   perform 1 from public.supplier_payments p where p.id = v_payment_id for update;

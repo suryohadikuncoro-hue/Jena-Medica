@@ -1,4 +1,3 @@
--- Direct supplier-invoice capture. PO is manual/external, so it is not required to record a supplier invoice.
 alter table public.supplier_invoice_lines alter column purchase_order_line_id drop not null;
 alter table public.supplier_invoice_lines
   add column if not exists product_code_input text,
