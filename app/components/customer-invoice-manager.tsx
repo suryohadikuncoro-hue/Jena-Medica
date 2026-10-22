@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { friendlyErrorMessage } from "@/lib/error-message";
+import { downloadInvoicePdf, shareInvoicePdf, type InvoicePdfData } from "@/lib/invoice-pdf";
 
 type InvoiceStatus = "draft" | "issued" | "void";
 type Customer = { id: string; code: string; legal_name: string; phone: string | null };
@@ -45,14 +46,6 @@ function displayDate(value: string | null | undefined) {
   const [year, month, day] = value.slice(0, 10).split("-").map(Number);
   return new Date(year, month - 1, day).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
-function whatsappNumber(value: string | null) {
-  if (!value) return "";
-  const digits = value.replace(/\D/g, "");
-  if (digits.startsWith("62") && digits.length >= 9 && digits.length <= 15) return digits;
-  if (digits.startsWith("0") && digits.length >= 9 && digits.length <= 14) return `62${digits.slice(1)}`;
-  return "";
-}
-
 export function CustomerInvoiceManager() {
   const configured = isSupabaseConfigured();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -63,6 +56,7 @@ export function CustomerInvoiceManager() {
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pdfSaving, setPdfSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | InvoiceStatus>("all");
@@ -147,13 +141,6 @@ export function CustomerInvoiceManager() {
   const selectedInvoiceOrder = selectedInvoice ? salesOrderById.get(selectedInvoice.sales_order_id) : undefined;
   const selectedInvoiceLines = selectedInvoice ? linesByInvoice.get(selectedInvoice.id) ?? [] : [];
   const invoiceNumber = selectedInvoice ? (selectedInvoice.issued_invoice_number ?? selectedInvoice.invoice_number) : "";
-  const phone = whatsappNumber(selectedInvoice?.customer_phone_snapshot ?? null);
-  const whatsappText = selectedInvoice
-    ? selectedInvoice.status === "issued"
-      ? `Halo ${selectedInvoice.customer_name_snapshot}, invoice ${invoiceNumber} untuk pesanan ${selectedInvoiceOrder?.order_number ?? ""} telah diterbitkan. Total ${money(selectedInvoice.total_amount)}. Jatuh tempo: ${displayDate(selectedInvoice.due_date)}. Ini invoice komersial, bukan Faktur Pajak.`
-      : `Halo ${selectedInvoice.customer_name_snapshot}, ${selectedInvoice.status === "void" ? "dokumen invoice " + selectedInvoice.invoice_number + " telah dibatalkan." : "draf invoice " + selectedInvoice.invoice_number + " untuk pesanan " + (selectedInvoiceOrder?.order_number ?? "") + " telah disiapkan."} Nilai sementara ${money(selectedInvoice.total_amount)}; PPN belum dihitung dan dokumen ini belum final. Jatuh tempo: ${displayDate(selectedInvoice.due_date)}.`
-    : "";
-  const whatsappHref = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(whatsappText)}` : "";
 
   function openCreateForm() {
     setError(""); setNotice(""); setReviewed(false); setEditingInvoiceId(""); setShowForm(true); setSalesOrderId(""); setInvoiceDate(localDate()); setNotes(""); setLineQuantities({});
@@ -214,6 +201,55 @@ export function CustomerInvoiceManager() {
     finally { setVoidSaving(false); }
   }
 
+  function invoicePdfPayload(invoice: CustomerInvoice): InvoicePdfData {
+    const order = salesOrderById.get(invoice.sales_order_id);
+    return {
+      invoiceNumber: invoice.issued_invoice_number ?? invoice.invoice_number,
+      status: invoice.status,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      customerName: invoice.customer_name_snapshot,
+      customerCode: invoice.customer_code_snapshot,
+      customerPhone: invoice.customer_phone_snapshot,
+      shipToAddress: invoice.ship_to_address_snapshot,
+      orderNumber: order?.order_number ?? null,
+      orderDate: order?.order_date ?? null,
+      notes: invoice.notes,
+      subtotal: invoice.subtotal_amount,
+      taxAmount: invoice.tax_amount,
+      total: invoice.total_amount,
+      taxStatus: invoice.tax_status,
+      paymentTermsDays: order?.payment_terms_days_snapshot ?? null,
+      lines: (linesByInvoice.get(invoice.id) ?? []).map(line => ({
+        productName: line.product_name_snapshot,
+        productCode: line.product_code_snapshot,
+        unit: line.unit_snapshot,
+        quantity: line.quantity,
+        unitPrice: line.unit_price_snapshot,
+        lineTotal: line.line_total,
+      })),
+    };
+  }
+
+  async function sendInvoicePdf(mode: "share" | "download") {
+    if (!selectedInvoice) return;
+    setError(""); setNotice(""); setPdfSaving(true);
+    try {
+      const payload = invoicePdfPayload(selectedInvoice);
+      if (mode === "download") {
+        const fileName = downloadInvoicePdf(payload);
+        setNotice(`PDF ${fileName} diunduh. Buka WhatsApp lalu lampirkan file tersebut.`);
+        return;
+      }
+      const result = await shareInvoicePdf(payload, selectedInvoice.customer_phone_snapshot);
+      if (result.cancelled) setNotice("Pengiriman dibatalkan.");
+      else if (result.shared) setNotice(`PDF ${result.fileName} dikirim melalui menu bagikan perangkat. Pilih WhatsApp pada daftar aplikasi.`);
+      else setNotice(`PDF ${result.fileName} diunduh. WhatsApp dibuka; lampirkan file PDF tersebut pada chat pelanggan.`);
+    } catch (cause) {
+      setError(friendlyErrorMessage(cause, "Gagal membuat PDF invoice."));
+    } finally { setPdfSaving(false); }
+  }
+
   return <main className="page-wrap customer-invoice-screen">
     <div className="screen-only mb-6 flex flex-wrap items-end justify-between gap-4">
       <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Draf dibuat otomatis saat SO dikonfirmasi. Tinjau kuantitas dan detail sebelum menerbitkan; satu SO dapat ditagih beberapa kali.</p></div>
@@ -270,11 +306,12 @@ export function CustomerInvoiceManager() {
 
     {selectedInvoice && <div className="screen-only transaction-actions mt-4 flex flex-wrap gap-2">
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="primary-button" onClick={openEditDraft}>Tinjau / edit draf</button>}
-      <button type="button" className="primary-button" onClick={() => window.print()}>Cetak / Simpan PDF</button>
-      {selectedInvoice.status === "issued" && phone ? <a className="primary-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Kirim via WhatsApp →</a> : <button type="button" className="tab-button" disabled title={selectedInvoice.status === "draft" ? "Terbitkan invoice terlebih dahulu" : "Nomor WhatsApp pelanggan yang valid diperlukan"}>Siapkan WhatsApp</button>}
+      <button type="button" className="primary-button" disabled={pdfSaving || selectedInvoice.status !== "issued"} onClick={() => void sendInvoicePdf("share")} title={selectedInvoice.status === "issued" ? "Buat PDF A4 lalu buka menu bagikan perangkat" : "Terbitkan invoice terlebih dahulu"}>{pdfSaving ? "Menyiapkan PDF…" : "Kirim PDF via WhatsApp →"}</button>
+      <button type="button" className="tab-button" disabled={pdfSaving} onClick={() => void sendInvoicePdf("download")}>Unduh PDF A4</button>
+      <button type="button" className="tab-button" onClick={() => window.print()}>Cetak</button>
       {selectedInvoice.status === "draft" && <Link className="primary-button inline-flex items-center" href="/keuangan#jurnal">Buka antrean issue &amp; posting AR →</Link>}
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setShowVoidForm(value => !value); setVoidReason(""); }}>Batalkan draft</button>}
-      <p className="basis-full text-xs text-[var(--muted)]">WhatsApp membuka pesan siap kirim di aplikasi WhatsApp. Lampirkan PDF dari tombol Cetak / Simpan PDF sebelum menekan Kirim.</p>
+      <p className="basis-full text-xs text-[var(--muted)]">Tombol Kirim PDF membuat dokumen A4 resmi dari data invoice, lalu membuka menu bagikan perangkat agar Anda memilih WhatsApp dan mengirim berkas PDF-nya. Bila perangkat tidak mendukung berbagi berkas, PDF otomatis diunduh dan chat WhatsApp pelanggan dibuka untuk lampiran manual.</p>
     </div>}
     {showVoidForm && selectedInvoice?.status === "draft" && <form className="screen-only card card-pad mt-3" onSubmit={voidInvoice}><h3 className="font-semibold">Batalkan draft invoice</h3><label className="mt-3 block text-xs text-[var(--muted)]">Alasan<input required minLength={3} className="field mt-1" value={voidReason} onChange={event => setVoidReason(event.target.value)} /></label><div className="mt-3 flex justify-end gap-2"><button type="button" className="tab-button" onClick={() => setShowVoidForm(false)}>Kembali</button><button type="submit" className="tab-button" disabled={voidSaving}>{voidSaving ? "Menyimpan…" : "Konfirmasi pembatalan"}</button></div></form>}
   </main>;
