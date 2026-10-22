@@ -8,7 +8,7 @@ import { ActionBanner, ButtonLink } from "@/app/components/ui";
 const PERIODS = ["Hari", "Minggu", "Bulan", "3 bulan", "6 bulan", "Tahun"] as const;
 type Docs = { salesDrafts: number; salesDraftValue: number; supplierDrafts: number; supplierReportedValue: number };
 const emptyDocs: Docs = { salesDrafts: 0, salesDraftValue: 0, supplierDrafts: 0, supplierReportedValue: 0 };
-const rp = (n: number) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Math.abs(n))};
+const rp = (n: number) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Math.abs(n))}`;
 
 export default function FinanceDashboardPage() {
   const [period, setPeriod] = useState<(typeof PERIODS)[number]>("Bulan");
