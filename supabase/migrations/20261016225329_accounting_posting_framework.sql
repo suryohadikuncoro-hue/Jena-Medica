@@ -249,7 +249,6 @@ begin
     left join pg_catalog.jsonb_array_elements(p_mappings) x(value) on x.value->>'mapping_key' = needed.mapping_key
     where x.value is null
   ) then raise exception using errcode = '22023', message = 'All required mapping keys must be supplied'; end if;
-
   delete from public.accounting_account_mappings;
   for v_item in select value from pg_catalog.jsonb_array_elements(p_mappings) as items(value) loop
     v_key := v_item->>'mapping_key';

@@ -34,7 +34,6 @@ create table public.sales_invoices (
   )
 );
 
--- A delivered shipment may have at most one active draft invoice; voided drafts remain auditable.
 create unique index sales_invoices_one_active_per_shipment_uq
   on public.sales_invoices (shipment_id) where status <> 'void';
 create index sales_invoices_customer_date_idx on public.sales_invoices (customer_id, invoice_date desc);

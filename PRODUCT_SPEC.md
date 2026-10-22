@@ -4,7 +4,7 @@
 **Sumber kebenaran:** keputusan produk ada di dokumen ini; kebijakan akuntansi/pajak rinci ada di `ACCOUNTING_POLICY_AND_CUTOVER.md`; pedoman tampilan ada di `UI_UX_GUIDELINES.md`. Aturan kerja agent ada di `AGENTS.md`.
 **Prinsip status:** keputusan yang disetujui tidak berarti implementasinya sudah tersedia. Untuk status skema terkini, gunakan `DATABASE_INTEGRATION_READINESS.md` dan `SUPABASE_INTEGRATION.md`.
 
-> **Status implementasi Production — 22 Oktober 2026:** Lima migration lanjutan D-10 sudah diterapkan di Supabase. Uji transaksional awal untuk trigger draf otomatis, idempotensi, edit draf, dan penolakan kuantitas berlebih lulus dengan rollback. CI `main` lulus. Ini belum menyatakan cutover siap: deployment Cloudflare live, UAT pembulatan/nilai kumulatif/concurrency/UI ber-role, serta klasifikasi dua SO lama tanpa invoice masih perlu diverifikasi.
+> **Status implementasi Production — 23 Oktober 2026:** Seluruh migration D-10 dan master data (24 migration total) sudah diterapkan di Supabase dan arsip `supabase/migrations/` sinkron 24/24 dengan history remote (md5 identik). Objek shipment legacy sudah tidak ada di remote (D-09 selesai di schema). Deployment Cloudflare live `https://jena-medica.fa-mitra.my.id` terverifikasi menjalankan commit `main` terkini (build `3a8ecc7e`, commit `ea42494`), dan CI `main` lulus. Ini belum menyatakan cutover siap: UAT pembulatan/nilai kumulatif/concurrency/UI ber-role, klasifikasi data uji vs riil (D-05) termasuk dua SO lama tanpa invoice, aktivasi Leaked Password Protection, dan backup/restore teruji masih perlu diselesaikan.
 
 ## 1. Model bisnis
 
@@ -49,18 +49,18 @@ Status berikut adalah **snapshot historis per 17 Oktober 2026**, bukan status re
 | Dashboard operasional | Tidak dinilai terpisah pada audit remote 17 Oktober 2026 | Branch `feat/dashboard-mockup` menambahkan filter 7 hari/30 hari/tahun berjalan, ringkasan status dan antrean tindakan berbasis hitungan server Supabase, serta grafik aktivitas 7 hari. Deployment dan verifikasi data aktual masih diperlukan. |
 | Master pelanggan/supplier/barang dan harga khusus | Ada dan aktif | UAT role-based dan verifikasi data sebelum cutover |
 | SO/PO split dan capture faktur supplier | Ada | Validasi akhir sesuai D-01/D-02 dan alur invoice supplier |
-| Shipment/pengiriman | Migration dasar D-09/D-10 tercatat di remote; objek shipment legacy ditargetkan terhapus oleh migration dasar tersebut | Verifikasi objek remote setelah migration dasar dan sebelum rilis kode; migration lanjutan D-10 belum diterapkan |
-| Invoice pelanggan | Migration accounting framework telah menyediakan metadata dan RPC penerbitan/posting. Migration dasar D-09/D-10 tercatat di remote dengan version `20261017185346`; arsipnya diselaraskan pada PR dokumentasi ini. Migration lanjutan D-10 dari PR #46, #49, #50, #51 belum diterapkan ke Production. RPC remote belum memiliki guard nilai kumulatif pada jalur create, dan RPC edit draft belum tersedia. | PR D-10 menambahkan draf otomatis pada transisi SO ke confirmed, RPC edit draf, dan pembatas satu draf aktif per SO. PR #49/#50 memperbaiki urutan lock dan batas nilai saat edit draf; PR #51 menambahkan batas nilai pada jalur pembuatan invoice. Migration lanjutan belum diterapkan ke Production. Review SQL statis dilakukan; pengujian runtime untuk pembulatan/concurrency, build, dan UAT masih diperlukan sebelum rilis bersama kode. |
-| Pembayaran | 1 customer payment dan 1 supplier payment berstatus `recorded` | Konfirmasi apakah data uji; jangan anggap otomatis aman dihapus |
-| Kerangka akuntansi | Migration sudah diterapkan; 10 akun COA, profile `draft`, mapping 0, periode 0, jurnal 0 | Konfigurasi COA/mapping/policy dan periode, lalu UAT sebelum posting |
+| Shipment/pengiriman | Objek shipment (tabel, RPC, trigger) sudah dihapus dari Production oleh migration `20261017185346`; diverifikasi ulang 23 Oktober 2026 | Selesai di tingkat schema; jangan menambah kembali modul pengiriman |
+| Invoice pelanggan | Model D-10 aktif penuh di Production: draf otomatis saat SO dikonfirmasi (idempoten), edit draf, lock order, batas nilai kumulatif jalur create/edit, dan tanggal invoice masa depan | UAT pembulatan, nilai kumulatif lintas invoice, concurrency, dan UI ber-role masih diperlukan |
+| Pembayaran | 2 customer payment dan 1 supplier payment tercatat | Konfirmasi apakah data uji (D-05); jangan anggap otomatis aman dihapus |
+| Kerangka akuntansi | 10 akun COA, profile `approved` (21 Oktober 2026), mapping 10, periode 1, jurnal 4 entri | Rekonsiliasi kualitas data dan UAT sebelum angka laporan dianggap final |
 | Laporan GL/keuangan final, audit umum, backup/restore teruji | Belum lengkap/terverifikasi | Selesaikan sebelum cutover |
 
-Data yang teramati juga mencakup 1 customer, 1 supplier, 2 produk, 2 SO berstatus `confirmed`, 2 baris SO, 1 harga customer-product, dan 1 PO berstatus `sent`. Status/kegunaan record harus diverifikasi sebelum pembersihan; jangan mengasumsikan seluruh record operasional adalah data uji.
+Data yang teramati pada 23 Oktober 2026 mencakup 2 customer, 1 supplier, 2 produk, 5 SO berstatus `confirmed` (6 baris), 1 harga customer-product, 3 PO (4 baris), 3 invoice `issued` (4 baris), 1 faktur supplier, dan 4 entri jurnal. Dua SO `confirmed` belum memiliki invoice sama sekali. Status/kegunaan record harus diverifikasi sebelum pembersihan; jangan mengasumsikan seluruh record operasional adalah data uji.
 
 ## 5. Urutan pengerjaan
 
-1. Rekonsiliasi arsip migration dan status remote selesai pada PR dokumentasi #52; pertahankan version ID dan status remote tetap sinkron.
-2. D-09/D-10: UI shipment dihapus dan migration repository memutus relasi shipment dari invoice. PR lanjutan menambahkan draf otomatis saat SO dikonfirmasi, edit draf, serta pembatas satu draf aktif per SO. Validasi trigger, concurrency, alur tinjau/edit/terbitkan dan posting sebelum menerapkan migration bersama kode; jangan release parsial.
+1. Rekonsiliasi arsip migration dan status remote selesai (24/24 sinkron per 23 Oktober 2026); pertahankan version ID dan isi SQL arsip tetap cocok dengan history remote.
+2. D-09/D-10: seluruh migration sudah diterapkan bersama kode dan terverifikasi di Production. Sisa pekerjaan adalah UAT alur tinjau/edit/terbitkan, guard nilai kumulatif, concurrency, dan pembulatan.
 3. Lengkapi validasi faktur Supplier: hitungan usulan, angka tercetak, selisih, modal efektif, dan aturan posting D-01/D-02.
 4. Lengkapi invoice komersial, pratinjau/cetak bersih, dan tautan PDF WhatsApp sesuai D-06.
 5. Konfigurasikan profil pajak dan COA, mapping akun, referensi approval, serta periode akuntansi. Kerangka posting yang ada masih terkunci oleh konfigurasi.
@@ -91,4 +91,4 @@ Target cutover awal tahun buku adalah **1 Januari 2027**, tetapi hanya berlaku j
 - Faktur supplier adalah sumber data utama. Setiap baris menyimpan kode barang (opsional), nama barang, satuan, kuantitas, harga/unit, diskon baris, dan total baris sesuai dokumen.
 - UI tidak meminta `Mode Harga`; sistem tidak boleh menyimpulkan apakah harga termasuk PPN. Status pajak dan angka yang tercetak disalin dari dokumen, tanpa menghitung atau menebak pajak.
 - Referensi PO historis tetap dipertahankan bila ada, tetapi baris baru boleh tanpa PO. Data faktur tetap berstatus draft dan belum membentuk hutang/jurnal sampai alur akuntansi yang disetujui tersedia.
-- Status rilis: perubahan UI dan migration sedang disiapkan pada branch `feat/supplier-invoice-direct-capture`; belum diterapkan ke Production dan belum lolos lint/build/UAT.
+- Status rilis: sudah diterapkan ke Production melalui migration `20261021195006` (supplier invoice direct capture); UAT alur faktur supplier tetap diperlukan sebelum cutover.
