@@ -250,8 +250,27 @@ Mockup menampilkan beberapa hal yang tidak sejalan dengan keputusan pemilik atau
 Bagian ini dipertahankan dari pedoman lama karena mockup tidak membahasnya dan tidak bertentangan dengannya.
 
 ### Navigasi
-- Setiap item menu adalah **rute sungguhan** (mis. `/pesanan/SO-0007`), bukan hash. Tab di dalam halaman memperbarui URL. Halaman setelah login adalah Dashboard.
-- Pencarian global diberi label sesuai isinya ("Cari menu" bila hanya menu; "Cari transaksi" bila sudah mencari transaksi). Mendukung panah, Enter, Escape, focus trap, dan mengembalikan fokus.
+- Acuan visual tunggal: mockup yang disetujui pemilik (Canvas "Mockup Jena Business Suite"). Jika dokumen berbeda dengan mockup, mockup menang dan dokumen diperbaiki di PR yang sama.
+- **Desktop (≥1024px):** rail pil gelap melayang di kiri (lebar sekitar 76px). Isi dari atas: logo "J", Home, Dashboard, Pesanan, Order supplier, Invoice, Pembayaran, Master data, Keuangan; di bawah: tombol tema. Tidak ada flyout: setiap ikon langsung membuka halamannya. Menu aktif berlatar pink (`--rail-active-bg`). Setiap ikon punya `title` dan `aria-label`.
+- **Header tipis:** pencarian Ctrl/Cmd+K, "Buat Baru", notifikasi, status akun. Tidak ada top bar menu.
+- **Mobile (<1024px):** bottom bar hanya 3 menu: Home (kiri), Dashboard (tengah, tombol bulat menonjol), Profil (kanan), masing-masing berlabel. Layar modul dianggap berada di bawah Home (Home tetap menyala). Modul lain dibuka dari **Akses cepat** di Home: 6 kartu besar (Pesanan, Order supplier, Invoice, Pembayaran, Master data, Keuangan) dengan ikon pastel, nama, dan keterangan jumlah. Tidak ada menu Pelanggan terpisah: pelanggan dibuka lewat Master data. Profil berisi akun, Pengaturan usaha, tema, dan Keluar (menggantikan layar "Lainnya").
+- Skip link "Lewati ke konten" di awal halaman; fokus keyboard terlihat (outline 2px).
+- Daftar menu hanya diubah di `NAV` pada `app/components/app-shell.tsx`.
+- Tidak ada rute hash baru untuk navigasi utama.
+
+### Bahasa visual dan token
+- Font Plus Jakarta Sans (400–800) lewat `next/font`, variabel `--font-app-sans`.
+- Kartu radius 20–28px; tombol dan chip berbentuk pil; tombol utama pil solid gelap (mode gelap: pil terang), sekunder pil outline.
+- Warna pastel lewat token `--pastel-{pink,mint,yellow}-{bg,fg}`, rail lewat `--rail-*`; semuanya punya varian gelap di `[data-theme="dark"]`. Dilarang warna Tailwind langsung.
+- Kontras teks minimal 4,5:1. Pasangan yang sudah dihitung: pink 5,4, mint 5,9, kuning 5,9 (terang); pink 5,1, mint 6,3, kuning 6,2 (gelap). Teks abu `#859391` di atas putih hanya 3,2 sehingga tidak boleh dipakai untuk teks.
+- Grafik: garis/batang sederhana, tanpa 3D; satu aksen utama + satu sekunder; label langsung; angka dengan pemisah ribuan; selalu ada `role="img"` dan `aria-label` yang menyebut isinya.
+
+### Home dan Dashboard
+- **Home** (`/dashboard`): halaman yang dulu bernama Dashboard. Ringkasan dokumen operasional: pesanan, faktur, invoice, hal yang perlu ditindak. Tidak menampilkan nilai keuangan.
+- **Dashboard** (`/dashboard-keuangan`): laporan keuangan ringkas, tiga kolom: (kiri) kartu Kas dan bank, grafik pendapatan vs pengeluaran; (tengah) Progres, grafik laba bersih; (kanan) donat komposisi biaya, transaksi terbaru. Rentang waktu: Hari, Minggu, Bulan, 3 bulan, 6 bulan, Tahun.
+- Aturan D-04: angka hanya dari jurnal yang sudah dibukukan. Selama belum ada jurnal, tampilkan kartu "Dokumen belum dibukukan" (jumlah dokumen saja) dan keadaan kosong; jangan tampilkan grafik berisi angka karangan. Data contoh hanya lewat `PREVIEW = true` dan wajib berlabel "DATA CONTOH".
+- Pengeluaran di grafik = HPP (perkiraan sampai faktur dicatat) + biaya operasional.
+- Keuangan: tab yang belum didukung data (Arus Kas, Neraca dengan saldo awal) ditandai "Fase berikutnya" dan tidak dibangun dulu.
 
 ### Komponen bersama
 Target lokasi `app/components/ui/` (belum ada; buat saat implementasi): `Field`, `MoneyInput`, `Select/Combobox` (dengan pencarian), `DataTable` (mode kartu di mobile, pagination dari server), `StatCard`, `StatusBadge`, `Stepper`, `Drawer`, `Dialog`, `ConfirmDialog`, `Toast`, `EmptyState`, `Skeleton`, `PageHeader`.
@@ -345,3 +364,10 @@ Sudah diputuskan: bottom bar HP 5 slot berlabel dengan halaman Lainnya; menu Fak
 - [ ] Penyimpangan hanya dari bagian 9; hal di bagian 10 tidak dibangun dari mockup
 - [ ] Layar yang dibangun punya acuan di bagian 8; layar berstatus draf (14–15) tidak dibangun
 - [ ] Item backlog bagian 12 yang selesai dicentang
+
+- [ ] Tampilan dibandingkan dengan artboard terkait pada lebar 1440 dan 390, tema terang dan gelap.
+- [ ] Hanya token dari bagian Bahasa visual dan token; tidak ada warna langsung.
+- [ ] Navbar mobile tetap 3 menu; menu baru masuk ke Akses cepat, bukan ke bottom bar.
+- [ ] Navigasi lewat rail/bottom bar; tidak ada top bar menu atau flyout baru.
+- [ ] Grafik punya `aria-label`; tidak ada angka karangan.
+- [ ] `npm run lint`, `npm run build`, dan `npm run build:worker` hijau.

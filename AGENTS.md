@@ -37,12 +37,13 @@ Jika dokumen atau instruksi bertentangan, yang di atas menang:
 - Jangan menyimpan rahasia, kata sandi, token, atau nomor kartu di log atau audit.
 
 ## 5. UI/UX
-- Ikuti `UI_UX_GUIDELINES.md`. Tampilan mengikuti mockup yang disetujui pemilik (`design/Mockup_Jena_Business_Suite.pdf` dan `.html` untuk desktop, `design/mockup-hp/index.html` untuk 19 layar HP): menu di **rail kiri** pada desktop dan **bottom bar 5 slot berlabel** pada HP (Dashboard, Pesanan, Order, Invoice, Lainnya). Aturan lama "menu tetap di atas" sudah dicabut. Navigasi berupa rute sungguhan (bukan hash).
-- Hanya penyimpangan di `UI_UX_GUIDELINES.md` bagian 9 yang boleh berbeda dari mockup. Hal yang tercantum di bagian 10 (PPN, ongkir, nota kredit, pengiriman WhatsApp) **jangan dibangun dari mockup**; layar berstatus draf (Keuangan, layar 14–15) belum boleh dibangun sebelum dikonfirmasi pemilik. Untuk D-10, ikuti alur draf invoice otomatis yang sudah disahkan dan dicatat di `PRODUCT_SPEC.md`.
-- Pakai komponen bersama di `app/components/ui/`. Jangan membuat varian baru per halaman, dan jangan memakai kelas yang tidak terdefinisi.
-- Pakai token warna dari `UI_UX_GUIDELINES.md` bagian 3 (`--page`, `--shell`, `--card`, `--ink`, `--teal`, `--good`, `--warn`, `--bad`, dan seterusnya), bukan warna Tailwind atau hex langsung. Semua harus mendukung mode terang dan gelap.
-- Istilah di layar mengikuti kamus di UI guidelines: Hutang usaha (bukan AP), Piutang usaha (bukan AR), Batalkan (bukan void), Catat ke pembukuan (bukan posting).
-- Daftar memakai pagination dan filter dari server, bukan menarik ribuan baris ke browser.
+- Acuan tampilan satu-satunya: mockup yang disetujui pemilik (tautan di `UI_UX_GUIDELINES.md`). Jangan membuat gaya sendiri.
+- Navigasi utama: rail kiri 8 ikon (desktop, tanpa flyout) dan bottom bar 3 menu: Home, Dashboard (tengah), Profil (mobile); modul lain lewat Akses cepat di Home. Bukan menu di atas. Daftar menu hanya diubah di `app/components/app-shell.tsx`.
+- Warna hanya lewat token di `app/globals.css` (termasuk `--pastel-*` dan `--rail-*`) dan wajib punya varian gelap. Dilarang warna Tailwind langsung.
+- Font: Plus Jakarta Sans lewat `--font-app-sans`.
+- Komponen bersama dibuat di `app/components/ui/` ketika dipakai kedua kali; jangan menyalin gaya kartu/chip/tombol ke halaman.
+- Rujukan dokumen memakai path root (`UI_UX_GUIDELINES.md`, `PRODUCT_SPEC.md`), bukan `docs/...`.
+- Setiap PR UI mengisi checklist bagian 14 `UI_UX_GUIDELINES.md`.
 
 ## 6. Cara kerja
 - Kerjakan bertahap dan berurutan sesuai backlog di `PRODUCT_SPEC.md` bagian 5. Satu PR = satu tujuan jelas.
