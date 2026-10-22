@@ -288,7 +288,7 @@ export function buildInvoicePdf(data: InvoicePdfData): Blob {
   }
 
   // Signature block
-  const signatureY = Math.min(Math.max(noteY + 18, totalsY + 46), PAGE_HEIGHT - 46);
+  const signatureY = Math.min(Math.max(noteY + 18, PAGE_HEIGHT - 62), PAGE_HEIGHT - 46);
   doc.setDrawColor(...LINE);
   doc.setLineWidth(0.3);
   doc.line(MARGIN, signatureY, MARGIN + 52, signatureY);
