@@ -807,7 +807,7 @@ body { font-family: var(--font-app-sans), system-ui, sans-serif; }
 .home-hp-quick-icon { display:flex; width:40px; height:40px; flex:none; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,.58); color:#17181c; }
 [data-theme="dark"] .home-hp-quick-icon { background:rgba(255,255,255,.12); color:var(--ink); }
 @media (max-width:820px) {
-  .dash-wrap { padding-top:14px; }
+  .dash-wrap { padding-top:14px; padding-bottom:110px; }
   .dash-header { display:none; }
   .home-hp-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
   .home-hp-identity { display:flex; min-width:0; align-items:center; gap:10px; }
