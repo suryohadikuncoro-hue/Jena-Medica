@@ -48,7 +48,7 @@ export default function FinanceDashboardPage() {
         if(!session) throw new Error("Masuk untuk melihat laporan keuangan.");
         const role=String(session.user.app_metadata?.business_role??"");
         if(!["owner","admin","viewer"].includes(role)) throw new Error("Akun ini belum memiliki role bisnis yang valid.");
-        const [accounts,mappings,entries,lines,sales,suppliers]=await Promise.all([
+        const [accounts,mappings,entries,lines,sales,suppliers,profile,periods]=await Promise.all([
           readPages<Account>((from,to)=>db.from("chart_of_accounts").select("id,account_code,account_name,account_type,is_active").eq("is_active",true).range(from,to)),
           readPages<Mapping>((from,to)=>db.from("accounting_account_mappings").select("mapping_key,account_id").range(from,to)),
           readPages<Entry>((from,to)=>db.from("journal_entries").select("id,entry_date,status").eq("status","posted").order("entry_date").range(from,to)),
