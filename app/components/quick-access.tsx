@@ -15,11 +15,10 @@ export function QuickAccess({ counts, loading }: { counts: Counts; loading: bool
     { label: "Master data", href: "/master-data", hint: "Pelanggan, supplier, barang", tone: "yellow", icon: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14c2.6 0 4.5 1.8 4.5 4.5" /></> },
     { label: "Keuangan", href: "/keuangan", hint: "Laporan dan pembukuan", tone: "mint", icon: <path d="M5 20v-7M12 20V5M19 20v-10" /> },
   ];
-  return <section className="qa-section" aria-labelledby="qa-title">
-    <h2 id="qa-title" className="qa-title">Akses cepat</h2>
-    <p className="qa-sub">Ketuk untuk membuka modul</p>
-    <nav className="qa-grid" aria-label="Akses cepat">
-      {items.map(item => <Link key={item.label} href={item.href} className="qa-tile"><span className={`qa-icon chip-${item.tone}`}><Glyph>{item.icon}</Glyph></span><b>{item.label}</b><span className="qa-hint">{item.hint}</span></Link>)}
+  return <section className="qa-section home-hp-quick" aria-labelledby="qa-title">
+    <div className="home-hp-section-heading"><h2 id="qa-title" className="qa-title">Akses cepat</h2><span className="qa-sub">Geser untuk melihat</span></div>
+    <nav className="home-hp-quick-list" aria-label="Akses cepat">
+      {items.map(item => <Link key={item.label} href={item.href} className={`home-hp-quick-item home-hp-quick-${item.tone}`}><span className="home-hp-quick-icon"><Glyph>{item.icon}</Glyph></span><b>{item.label}</b><small>{item.hint}</small></Link>)}
     </nav>
   </section>;
 }
