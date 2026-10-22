@@ -24,13 +24,16 @@ export function PwaInstallPrompt() {
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", onInstalled);
 
-    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    if (standalone) setInstalled(true);
+    const initialStateFrame = window.requestAnimationFrame(() => {
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+      if (standalone) setInstalled(true);
 
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    if (isIos && !standalone) setShowIosHelp(true);
+      const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      if (isIos && !standalone) setShowIosHelp(true);
+    });
 
     return () => {
+      window.cancelAnimationFrame(initialStateFrame);
       window.removeEventListener("load", register);
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
