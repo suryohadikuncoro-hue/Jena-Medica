@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ActionBanner, ButtonLink } from "@/app/components/ui";
 
@@ -11,8 +11,8 @@ type Account = { id: string; account_code: string; account_name: string; account
 type Mapping = { mapping_key: string; account_id: string };
 type Entry = { id: string; entry_date: string; status: "posted" | "reversed" };
 type Line = { journal_entry_id: string; account_id: string; debit: number | string; credit: number | string };
-type Snapshot = { accounts: Account[]; mappings: Mapping[]; entries: Entry[]; lines: Line[]; draftSalesCount: number; draftSalesValue: number; draftSupplierCount: number; draftSupplierValue: number };
-const empty: Snapshot = { accounts: [], mappings: [], entries: [], lines: [], draftSalesCount: 0, draftSalesValue: 0, draftSupplierCount: 0, draftSupplierValue: 0 };
+type Snapshot = { accounts: Account[]; mappings: Mapping[]; entries: Entry[]; lines: Line[]; draftSalesCount: number; draftSalesValue: number; draftSupplierCount: number; draftSupplierValue: number; postingProfileStatus: string; accountingPeriodCount: number };
+const empty: Snapshot = { accounts: [], mappings: [], entries: [], lines: [], draftSalesCount: 0, draftSalesValue: 0, draftSupplierCount: 0, draftSupplierValue: 0, postingProfileStatus: "unknown", accountingPeriodCount: 0 };
 const cash = (n: number) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Math.round(n))}`;
 const count = (n: number) => new Intl.NumberFormat("id-ID").format(n);
 const dateLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -48,15 +48,19 @@ export default function FinanceDashboardPage() {
         if(!session) throw new Error("Masuk untuk melihat laporan keuangan.");
         const role=String(session.user.app_metadata?.business_role??"");
         if(!["owner","admin","viewer"].includes(role)) throw new Error("Akun ini belum memiliki role bisnis yang valid.");
-        const [accounts,mappings,entries,lines,sales,suppliers]=await Promise.all([
+        const [accounts,mappings,entries,lines,sales,suppliers,profile,periods]=await Promise.all([
           readPages<Account>((from,to)=>db.from("chart_of_accounts").select("id,account_code,account_name,account_type,is_active").eq("is_active",true).range(from,to)),
           readPages<Mapping>((from,to)=>db.from("accounting_account_mappings").select("mapping_key,account_id").range(from,to)),
           readPages<Entry>((from,to)=>db.from("journal_entries").select("id,entry_date,status").eq("status","posted").order("entry_date").range(from,to)),
           readPages<Line>((from,to)=>db.from("journal_lines").select("journal_entry_id,account_id,debit,credit").range(from,to)),
           readPages<{status:string;total_amount:number|string}>((from,to)=>db.from("sales_invoices").select("status,total_amount").eq("status","draft").range(from,to)),
-          readPages<{status:string;invoice_total_reported:number|string}>((from,to)=>db.from("supplier_invoices").select("status,invoice_total_reported").eq("status","draft").range(from,to))
+          readPages<{status:string;invoice_total_reported:number|string}>((from,to)=>db.from("supplier_invoices").select("status,invoice_total_reported").eq("status","draft").range(from,to)),
+          db.from("accounting_posting_profile").select("status").eq("singleton",true).maybeSingle(),
+          db.from("accounting_periods").select("id",{count:"exact",head:true})
         ]);
-        if(live) setData({accounts,mappings,entries,lines,draftSalesCount:sales.length,draftSalesValue:sales.reduce((n,r)=>n+Number(r.total_amount||0),0),draftSupplierCount:suppliers.length,draftSupplierValue:suppliers.reduce((n,r)=>n+Number(r.invoice_total_reported||0),0)});
+        if(profile.error) throw new Error(profile.error.message);
+        if(periods.error) throw new Error(periods.error.message);
+        if(live) setData({accounts,mappings,entries,lines,draftSalesCount:sales.length,draftSalesValue:sales.reduce((n,r)=>n+Number(r.total_amount||0),0),draftSupplierCount:suppliers.length,draftSupplierValue:suppliers.reduce((n,r)=>n+Number(r.invoice_total_reported||0),0),postingProfileStatus:profile.data?.status??"missing",accountingPeriodCount:periods.count??0});
       }catch(e){if(live)setMessage(e instanceof Error?e.message:"Data laporan tidak dapat dimuat.");}
       finally{if(live)setLoading(false);}
     };
@@ -87,23 +91,100 @@ export default function FinanceDashboardPage() {
   const emptyPeriod=metrics.postedCount===0;
   const money=(n:number)=>loading?"…":cash(n);
   const number=(n:number)=>loading?"…":count(n);
+  const mappingReady = data.mappings.length >= 10;
+  const periodReady = data.accountingPeriodCount > 0;
+  const postingReady = data.postingProfileStatus === "approved";
+  const hasCashMapping = data.mappings.some(m=>m.mapping_key==="cash"||m.mapping_key==="bank");
+  const mockCard: CSSProperties = {padding:20,borderRadius:24,background:"var(--dk-card)",minWidth:0};
+  const mockSub: CSSProperties = {margin:"3px 0 0",fontSize:12,color:"var(--dk-muted)"};
+  const mockTitle: CSSProperties = {margin:0,fontSize:20,fontWeight:700,letterSpacing:"-.02em"};
+  const mockPill: CSSProperties = {display:"inline-flex",alignItems:"center",minHeight:36,padding:"0 15px",borderRadius:999,fontSize:12,fontWeight:650,whiteSpace:"nowrap",background:"var(--dk-shell)",color:"var(--dk-muted)"};
+  const statusTag = (good:boolean): CSSProperties => ({display:"inline-flex",alignItems:"center",padding:"4px 10px",borderRadius:999,fontSize:11,fontWeight:700,background:good?"var(--pastel-mint-bg)":"var(--pastel-yellow-bg)",color:good?"var(--pastel-mint-fg)":"var(--pastel-yellow-fg)"});
+  const navTabs = [
+    ["Ikhtisar", "/dashboard-keuangan", true],
+    ["Laba rugi", "/keuangan#laba-rugi", false],
+    ["Neraca", "/keuangan#neraca", false],
+    ["Jurnal umum", "/keuangan#jurnal", false],
+    ["Buku Besar", "/keuangan#buku-besar", false],
+    ["Tutup Buku", "/keuangan#tutup-buku", false],
+    ["PPN", "/keuangan#ppn", false],
+    ["Hutang & piutang", "/pembayaran", false],
+  ] as const;
   return <main className="page-wrap dk-wrap">
-    <header className="dk-head"><div><p className="page-kicker">Ringkasan bisnis</p><h1 className="dk-title">Dashboard keuangan</h1><p className="dk-sub">Berdasarkan jurnal terposting di Supabase · {metrics.start} sampai {metrics.today}</p></div><div className="dk-periods" role="group" aria-label="Rentang waktu">{PERIODS.map(item=><button key={item} type="button" aria-pressed={period===item} className={`dk-pill ${period===item?"dk-pill-on":""}`} onClick={()=>setPeriod(item)}>{item}</button>)}</div></header>
-    {message&&<ActionBanner className="dk-message" action={message.includes("Masuk")?<ButtonLink href="/login" variant="solid" size="sm">Masuk</ButtonLink>:undefined}><b>{loading?"Memuat data.":"Laporan belum tersedia."}</b> {message}</ActionBanner>}
-    <section aria-labelledby="dk-docs" className="dk-docs"><div className="dk-section-head"><div><h2 id="dk-docs" className="dk-h2">Dokumen belum dibukukan</h2><p className="dk-sub">Dokumen operasional bukan saldo kas, pendapatan, piutang, hutang, atau laba.</p></div><span className="dk-label">Data aktual</span></div>
-      <div className="dk-kpis">
-        <Link href="/invoice-pelanggan" className="dk-kpi chip-pink"><span>Draf invoice pelanggan</span><strong>{number(data.draftSalesCount)}</strong><small>Belum menjadi piutang</small></Link>
-        <Link href="/invoice-pelanggan" className="dk-kpi chip-yellow"><span>Nilai draf pelanggan</span><strong>{money(data.draftSalesValue)}</strong><small>Belum termasuk PPN, bukan pendapatan</small></Link>
-        <Link href="/operasional#invoices" className="dk-kpi chip-mint"><span>Draf faktur supplier</span><strong>{number(data.draftSupplierCount)}</strong><small>Belum menjadi hutang usaha</small></Link>
-        <Link href="/operasional#invoices" className="dk-kpi chip-pink"><span>Nilai draf supplier</span><strong>{money(data.draftSupplierValue)}</strong><small>Nilai dokumen, bukan HPP</small></Link>
+    <header style={{display:"flex",flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",gap:14,marginBottom:18}}>
+      <div><h1 className="dk-title" style={{margin:0,fontSize:30,fontWeight:800,letterSpacing:"-.03em"}}>Dashboard</h1><p style={{...mockSub,fontSize:13}}>Laporan keuangan ringkas · {metrics.start} sampai {metrics.today} · dari jurnal yang sudah dibukukan</p></div>
+      <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:10}}>
+        <Link href="/keuangan" className="dk-mock-search">Cari laporan <span aria-hidden="true">⌕</span></Link>
+        <Link href="/pengaturan-usaha" className="dk-mock-user" aria-label="Pengaturan usaha">♧</Link>
       </div>
-    </section>
-    <section className="dk-grid3" aria-label="Ringkasan jurnal terposting">
-      <article className="dk-card"><h2 className="dk-h2">Kas dan bank</h2><p className="dk-sub">Mutasi bersih pada akun kas/bank yang dipetakan.</p><strong className="dk-finance-value">{money(metrics.cashBank)}</strong><p className="dk-note">Akumulasi jurnal yang tersedia; belum termasuk saldo awal di luar jurnal.</p></article>
-      <article className="dk-card"><h2 className="dk-h2">Pendapatan dan pengeluaran</h2><p className="dk-sub">Akumulasi pada periode terpilih.</p><div className="dk-finance-row"><span>Pendapatan</span><strong>{money(metrics.revenue)}</strong></div><div className="dk-finance-row"><span>Beban</span><strong>{money(metrics.expenses)}</strong></div><div className="dk-finance-row"><span>Selisih</span><strong>{money(metrics.revenue-metrics.expenses)}</strong></div></article>
-      <article className="dk-card"><h2 className="dk-h2">Laba/rugi periode</h2><p className="dk-sub">Pendapatan dikurangi beban dari jurnal terposting.</p><strong className="dk-finance-value">{money(metrics.profit)}</strong><p className="dk-note">Belum termasuk HPP otomatis atau penyesuaian yang belum dijurnal.</p><Link href="/keuangan" className="dk-link">Buka laporan akuntansi →</Link></article>
-    </section>
-    {!loading&&!message&&emptyPeriod&&<p className="dk-note" role="status">Belum ada jurnal terposting pada rentang waktu ini. Nilai nol ditampilkan berdasarkan data aktual, bukan angka contoh.</p>}
-    <p className="dk-note dk-foot">Angka merupakan ringkasan jurnal terposting, bukan laporan pajak resmi. Saldo kas/bank belum memperhitungkan saldo awal dan rekonsiliasi bank. Periksa buku besar sebelum menjadikannya dasar keputusan keuangan.</p>
+    </header>
+
+    <nav className="dk-tabs" aria-label="Navigasi laporan keuangan">
+      {navTabs.map(([label,href,active])=><Link key={label} href={href} className={`dk-tab ${active?"dk-tab-on":""}`} aria-current={active?"page":undefined}>{label}</Link>)}
+    </nav>
+    <div role="group" aria-label="Rentang waktu" style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:18}}>
+      {PERIODS.map(item=><button key={item} type="button" aria-pressed={period===item} className={`dk-period-choice ${period===item?"on":""}`} onClick={()=>setPeriod(item)}>{item}</button>)}
+    </div>
+    {message&&<ActionBanner className="dk-message" action={message.includes("Masuk")?<ButtonLink href="/login" variant="solid" size="sm">Masuk</ButtonLink>:undefined}><b>{loading?"Memuat data.":"Laporan belum tersedia."}</b> {message}</ActionBanner>}
+
+    <div className="dk-mock-grid">
+      <div className="dk-mock-col">
+        <section style={mockCard}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}><h2 style={mockTitle}>Kas dan bank</h2><span style={mockSub}>Per {metrics.today}</span></div>
+          <div className="dk-cash-panel">
+            <div style={{fontSize:12,opacity:.85}}>Mutasi bersih tercatat</div>
+            <div style={{marginTop:4,fontSize:28,fontWeight:800,letterSpacing:"-.02em"}}>{money(metrics.cashBank)}</div>
+            <div style={{display:"flex",justifyContent:"space-between",gap:10,marginTop:22,fontSize:12}}><span>Saldo awal<br/><b style={{fontSize:13}}>Belum terhubung</b></span><span style={{textAlign:"right"}}>Rekonsiliasi<br/><b style={{fontSize:13}}>Belum diverifikasi</b></span></div>
+          </div>
+          <p style={{...mockSub,marginTop:10,lineHeight:1.6}}>Angka merupakan mutasi jurnal akun kas/bank yang dipetakan, bukan saldo bank hasil rekonsiliasi.</p>
+        </section>
+        <section style={mockCard}>
+          <h2 style={mockTitle}>Pendapatan dan pengeluaran</h2>
+          <p style={mockSub}>Periode {period.toLowerCase()} · {metrics.start} — {metrics.today}</p>
+          <div style={{display:"flex",gap:14,margin:"14px 0 10px",fontSize:12,color:"var(--dk-muted)"}}><span><i className="dk-dot revenue"/>Pendapatan</span><span><i className="dk-dot expenses"/>Beban</span></div>
+          <div className="dk-chart-panel">
+            <div className="dk-bar-row"><span>Pendapatan</span><div className="dk-bar-track"><i className="revenue" style={{width:`${Math.max(metrics.revenue,0)/(Math.max(metrics.revenue,metrics.expenses,1))*100}%`}}/></div><b>{money(metrics.revenue)}</b></div>
+            <div className="dk-bar-row"><span>Beban</span><div className="dk-bar-track"><i className="expenses" style={{width:`${Math.max(metrics.expenses,0)/(Math.max(metrics.revenue,metrics.expenses,1))*100}%`}}/></div><b>{money(metrics.expenses)}</b></div>
+            {emptyPeriod&&<p className="dk-chart-empty">Belum ada jurnal terposting pada periode ini. Grafik akan terisi dari data aktual.</p>}
+          </div>
+          <p style={{...mockSub,marginTop:8,lineHeight:1.6}}>Beban mencerminkan akun bertipe beban yang telah dibukukan. HPP tidak diperkirakan jika belum tercatat di jurnal.</p>
+        </section>
+      </div>
+
+      <div className="dk-mock-col">
+        <section style={mockCard}>
+          <h2 style={mockTitle}>Progres</h2><p style={mockSub}>Kesiapan penagihan dan pembukuan</p>
+          <div className="dk-status-list">
+            <div><div className="dk-status-line"><span>Profil pembukuan</span><span style={statusTag(postingReady)}>{postingReady?"Disetujui":"Perlu ditinjau"}</span></div><p style={mockSub}>Status konfigurasi posting dari Supabase.</p></div>
+            <div><div className="dk-status-line"><span>Pemetaan akun</span><span style={statusTag(mappingReady)}>{data.mappings.length} pemetaan</span></div><div className="dk-progress-track"><i style={{width:`${Math.min(data.mappings.length/10*100,100)}%`}}/></div></div>
+            <div><div className="dk-status-line"><span>Periode akuntansi</span><span style={statusTag(periodReady)}>{periodReady?`${data.accountingPeriodCount} periode`:"Belum tersedia"}</span></div></div>
+            <div><div className="dk-status-line"><span>Kas/bank terpetakan</span><span style={statusTag(hasCashMapping)}>{hasCashMapping?"Tersedia":"Perlu ditinjau"}</span></div></div>
+          </div>
+          <Link href="/pengaturan-usaha" className="dk-mock-link">Periksa kesiapan →</Link>
+        </section>
+        <section style={mockCard}>
+          <div style={{display:"flex",flexWrap:"wrap",justifyContent:"space-between",alignItems:"flex-end",gap:10}}><div><h2 style={mockTitle}>Selisih pendapatan dan beban</h2><p style={mockSub}>Periode {period.toLowerCase()}</p></div><div style={{textAlign:"right"}}><div style={{fontSize:22,fontWeight:800}}>{money(metrics.profit)}</div><div style={{fontSize:12,fontWeight:700,color:metrics.profit>=0?"var(--dk-good)":"var(--dk-bad)"}}>Berdasarkan jurnal aktual</div></div></div>
+          <div className="dk-profit-panel"><div className="dk-profit-line"><span>Pendapatan</span><b>{money(metrics.revenue)}</b></div><div className="dk-profit-line"><span>Beban</span><b>{money(metrics.expenses)}</b></div><div className="dk-profit-line total"><span>Selisih</span><b>{money(metrics.profit)}</b></div></div>
+          <p style={{...mockSub,marginTop:8,lineHeight:1.6}}>Ini bukan laba bersih final apabila HPP, beban, saldo awal, atau jurnal lain belum lengkap.</p>
+        </section>
+      </div>
+
+      <div className="dk-mock-col">
+        <section style={mockCard}>
+          <h2 style={mockTitle}>Dokumen operasional</h2><p style={{...mockSub,marginBottom:12}}>Dokumen yang belum menjadi saldo akuntansi</p>
+          <div className="dk-doc-mini"><span>Draf invoice pelanggan</span><b>{number(data.draftSalesCount)}</b><small>{money(data.draftSalesValue)} · belum menjadi piutang</small></div>
+          <div className="dk-doc-mini"><span>Draf faktur supplier</span><b>{number(data.draftSupplierCount)}</b><small>{money(data.draftSupplierValue)} · belum menjadi hutang</small></div>
+        </section>
+        <section style={mockCard}>
+          <h2 style={mockTitle}>Biaya</h2><p style={mockSub}>Komposisi biaya periode terpilih</p>
+          <div className="dk-empty-visual"><span>Data komposisi belum tersedia</span><p>Belum ada ringkasan kategori biaya yang tervalidasi dari jurnal.</p><Link href="/keuangan">Periksa jurnal biaya →</Link></div>
+        </section>
+        <section style={mockCard}>
+          <h2 style={mockTitle}>Transaksi terbaru</h2>
+          <div className="dk-empty-visual"><span>Belum tersedia</span><p>Daftar transaksi terbaru perlu dihubungkan ke sumber jurnal dan pembayaran yang tervalidasi.</p><Link href="/keuangan#jurnal">Lihat jurnal →</Link></div>
+        </section>
+      </div>
+    </div>
+    <p className="dk-note dk-foot">Mockup digunakan sebagai acuan tata letak dan gaya. Nilai keuangan ditampilkan dari data Supabase yang tersedia; tidak ada angka contoh. Saldo awal, rekonsiliasi, progres penagihan, komposisi biaya, dan transaksi terbaru tidak direkayasa ketika sumbernya belum tersedia.</p>
   </main>;
 }
