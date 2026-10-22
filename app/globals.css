@@ -679,7 +679,7 @@ body { font-family: var(--font-app-sans), system-ui, sans-serif; }
 .icon-button { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid var(--border, #e4e5e2); border-radius: 50%; background: var(--surface, #fff); color: var(--foreground, #17181c); }
 .notification-dot { position: absolute; top: 8px; right: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--status-bad); }
 .notice-banner { border-radius: 14px; background: var(--pastel-yellow-bg); padding-top: 10px; padding-bottom: 10px; color: var(--pastel-yellow-fg); font-size: 12px; }
-@media (min-width: 1024px) {
+@media (min-width: 821px) {
   .app-frame { padding-left: 88px; }
   .nav-rail { position: fixed; z-index: 35; top: 18px; bottom: 18px; left: 14px; display: flex; width: 60px; flex-direction: column; align-items: center; gap: 15px; border-radius: 30px; background: var(--rail-bg); padding: 12px 8px; box-shadow: 0 12px 36px rgba(0,0,0,.13); }
   .nav-rail-logo { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 50%; background: var(--rail-active-bg); color: var(--rail-active-fg); font-size: 20px; font-weight: 850; }
@@ -689,7 +689,7 @@ body { font-family: var(--font-app-sans), system-ui, sans-serif; }
   .mbar { display: none; }
   .app-head { padding-right: 2rem; padding-left: 2rem; }
 }
-@media (max-width: 1023px) {
+@media (max-width: 820px) {
   .app-main { padding-bottom: 98px; }
   .app-head { height: 58px; padding: 0 12px; }
   .search-trigger { width: 42px; justify-content: center; padding: 0; }
@@ -833,4 +833,33 @@ body { font-family: var(--font-app-sans), system-ui, sans-serif; }
   .home-hp-invoice-card>strong { font-size:32px; }
   .home-hp-ring { width:72px; height:72px; }
   .home-hp-quick-item { width:90px; padding:10px; }
+}
+
+
+/* Dashboard keuangan: hierarki dan status mengikuti mockup Keuangan HP. */
+.dk-tabs { display:flex; gap:6px; overflow-x:auto; padding:2px 0 5px; margin:0 0 18px; scrollbar-width:thin; }
+.dk-tab { display:inline-flex; min-height:44px; flex:none; align-items:center; justify-content:center; border-radius:999px; padding:0 17px; color:var(--dk-muted); font-size:12px; font-weight:650; text-decoration:none; white-space:nowrap; }
+.dk-tab:hover { text-decoration:none; background:var(--dk-card); }
+.dk-tab-on { background:var(--dk-ink); color:var(--dk-on-ink); }
+.dk-warning { display:flex; align-items:flex-start; gap:12px; margin-bottom:20px; border-radius:22px; background:var(--pastel-yellow-bg); color:var(--pastel-yellow-fg); padding:16px; }
+.dk-warning-icon { display:grid; width:30px; height:30px; flex:none; place-items:center; border-radius:50%; background:var(--pastel-yellow-fg); color:var(--pastel-yellow-bg); font-weight:850; }
+.dk-warning h2 { margin:0; font-size:16px; font-weight:800; }
+.dk-warning p { margin:5px 0 0; font-size:12px; line-height:1.6; }
+.dk-docs-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.dk-setup { display:flex; flex-direction:column; gap:8px; border-radius:22px; background:var(--dk-card); padding:12px; }
+.dk-setup-row { display:flex; min-height:62px; align-items:center; justify-content:space-between; gap:12px; border-radius:16px; background:var(--dk-shell); padding:12px 14px; color:var(--dk-ink); text-decoration:none; }
+.dk-setup-row:hover { text-decoration:none; filter:brightness(.98); }
+.dk-setup-row strong { display:block; font-size:13px; font-weight:750; }
+.dk-setup-row p { margin:3px 0 0; color:var(--dk-muted); font-size:11px; line-height:1.45; }
+.dk-setup-state { flex:none; border-radius:999px; background:var(--pastel-yellow-bg); color:var(--pastel-yellow-fg); padding:5px 10px; font-size:10px; font-weight:750; white-space:nowrap; }
+.dk-setup-state.good { background:var(--pastel-mint-bg); color:var(--pastel-mint-fg); }
+.dk-setup-state.pending { background:var(--pastel-pink-bg); color:var(--pastel-pink-fg); }
+.dk-secondary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:20px; }
+.dk-secondary-grid .dk-card { min-width:0; }
+@media (max-width:640px) {
+  .dk-tabs { margin-right:-20px; padding-right:20px; }
+  .dk-warning { border-radius:20px; padding:14px; }
+  .dk-setup { border-radius:18px; padding:9px; }
+  .dk-setup-row { padding:11px 12px; }
+  .dk-secondary-grid { grid-template-columns:minmax(0,1fr); }
 }
