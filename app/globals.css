@@ -625,3 +625,29 @@ kbd { border: 1px solid var(--border); border-radius: 5px; padding: 1px 5px; col
 .order-detail-primary-cta:hover { opacity:.88; text-decoration:none; }
 .order-detail-primary-cta span { font-size:17px; }
 @media (max-width:640px) { .order-detail-primary-cta { min-height:46px; margin-top:13px; font-size:12px; } }
+
+
+/* ===== PR 1: Token pastel dan font aplikasi ===== */
+:root {
+  --pastel-pink-bg: #f8c9d3;   --pastel-pink-fg: #8c2f48;
+  --pastel-mint-bg: #c2ecdd;   --pastel-mint-fg: #256049;
+  --pastel-yellow-bg: #fcebc3; --pastel-yellow-fg: #725310;
+  --rail-bg: #1b1c21;          --rail-fg: #a9acb4;
+  --rail-active-bg: #f8c9d3;   --rail-active-fg: #17181c;
+  --status-good: #17795a;      --status-bad: #c2415d;
+  --text-soft: #617271;
+}
+[data-theme="dark"] {
+  --pastel-pink-bg: #4d2c36;   --pastel-pink-fg: #f08aa2;
+  --pastel-mint-bg: #21443a;   --pastel-mint-fg: #6fd9b0;
+  --pastel-yellow-bg: #4a3f22; --pastel-yellow-fg: #f3c15a;
+  --rail-bg: #0f1012;          --rail-fg: #9ea1a9;
+  --rail-active-bg: #f8c9d3;   --rail-active-fg: #17181c;
+  --status-good: #6fd9b0;      --status-bad: #f08aa2;
+  --text-soft: #a3a6ad;
+}
+body { font-family: var(--font-app-sans), system-ui, sans-serif; }
+.chip-pink, .chip-mint, .chip-yellow { display: inline-flex; align-items: center; padding: 3px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.chip-pink   { background: var(--pastel-pink-bg);   color: var(--pastel-pink-fg); }
+.chip-mint   { background: var(--pastel-mint-bg);   color: var(--pastel-mint-fg); }
+.chip-yellow { background: var(--pastel-yellow-bg); color: var(--pastel-yellow-fg); }
