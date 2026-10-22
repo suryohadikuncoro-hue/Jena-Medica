@@ -199,7 +199,7 @@ Acuan: `design/` (PDF dan HTML Dashboard desktop) dan `design/mockup-hp/` (15 la
 | 5 | Detail / Catat Faktur Supplier | `05-detail-faktur-supplier.html` | Disetujui (tunduk K2, K3) |
 | 6 | Daftar Invoice | `06-daftar-invoice.html` | Disetujui (tunduk K1, K5) |
 | 7 | Tinjau dan Edit Draf Invoice | `07-tinjau-draf-invoice.html` | Disetujui (tunduk K1, K4, K5) |
-| 8 | Invoice Terbit + Kirim WhatsApp | `08-invoice-terbit.html` | Disetujui (tunduk K4, K6) |
+| 8 | Invoice Terbit + Kirim PDF WhatsApp | `08-invoice-terbit.html` | Disetujui (tunduk K4, K6) |
 | 9 | Pembayaran (tab Piutang) | `09-pembayaran.html` | Disetujui |
 | 10 | Catat Pembayaran | `10-catat-pembayaran.html` | Disetujui (lihat pertanyaan 5, bagian 13) |
 | 11 | Lainnya (menu) | `11-lainnya.html` | Disetujui |
@@ -243,7 +243,7 @@ Mockup menampilkan beberapa hal yang tidak sejalan dengan keputusan pemilik atau
 | K3 | Baris "Ongkos kirim dan biaya lain" di faktur supplier dan alokasinya ke modal | Pemilik menyatakan faktur supplier tidak mencatat ongkir atau biaya lain. D-02 dan `ACCOUNTING_POLICY` bagian 5 masih menyebut biaya angkut/biaya lain | **Konflik dokumen.** Jangan membangun baris ini sampai pemilik memutuskan dan `PRODUCT_SPEC.md` diperbarui |
 | K4 | Teks invoice: "…kalau salah, buat nota kredit" | Pemilik menyatakan tidak ada nota kredit: invoice terbit yang salah dibatalkan lalu dibuat ulang. D-07 dan `ACCOUNTING_POLICY` bagian 7 masih menyebut nota kredit | **Konflik dokumen.** Jangan membangun nota kredit atau teks itu sampai diputuskan |
 | K5 | Mockup desktop awal: invoice dibuat manual lewat tombol "Buat invoice dari pesanan ini". Mockup HP: draf dibuat otomatis, ditinjau dan diedit, lalu diterbitkan | D-10 di `PRODUCT_SPEC.md` kini menetapkan draf otomatis setelah SO terkonfirmasi, ditinjau/diedit sebelum diterbitkan | **Keputusan sudah dicatat.** Implementasi database wajib idempoten dan menjaga batas kuantitas/nilai kumulatif invoice; verifikasi migration dan alur penerbitan sebelum Production |
-| K6 | Tombol "Kirim WhatsApp" | D-06: aplikasi tidak mengirim pesan; WhatsApp memakai tautan PDF | Tombol membuka WhatsApp dengan pesan dan tautan PDF; tidak ada pengiriman otomatis |
+| K6 | Tombol "Kirim PDF via WhatsApp" | D-06: aplikasi tidak mengirim pesan otomatis; berkas PDF dibuat aplikasi | Tombol membuat PDF A4 lalu membuka menu bagikan perangkat untuk memilih WhatsApp; fallback mengunduh PDF dan membuka chat untuk lampiran manual |
 
 ## 11. Aturan interaksi dan form
 
@@ -290,9 +290,9 @@ Target lokasi `app/components/ui/` (belum ada; buat saat implementasi): `Field`,
 9. Setelah tombol "Buat/Catat" ditekan, scroll ke form dan fokuskan kolom pertama. Simpan draf otomatis pada form panjang.
 
 ### Alur lintas layar
-- Alur penjualan di ERP: Pesanan → **Draf invoice otomatis** → tinjau dan edit → **Terbitkan** → **Kirim WhatsApp** → Pembayaran → Lunas. Pembelian supplier dicatat terpisah melalui menu Faktur Supplier; PO dibuat manual di luar ERP dan tidak memiliki halaman di aplikasi. Tidak ada layar atau menu Pengiriman (D-09).
+- Alur penjualan di ERP: Pesanan → **Draf invoice otomatis** → tinjau dan edit → **Terbitkan** → **Kirim PDF WhatsApp** → Pembayaran → Lunas. Pembelian supplier dicatat terpisah melalui menu Faktur Supplier; PO dibuat manual di luar ERP dan tidak memiliki halaman di aplikasi. Tidak ada layar atau menu Pengiriman (D-09).
 - Pesanan terkonfirmasi membuat draf invoice pelanggan untuk ditinjau. Draf invoice yang belum ditinjau ditandai dengan banner "menunggu tinjauan" di Daftar Pesanan, Daftar Invoice, dan Dashboard.
-- Invoice terbit: tombol **Kirim WhatsApp**, **Unduh PDF**, **Catat pembayaran**, **Batalkan invoice**. Tombol Kirim WhatsApp **membuka WhatsApp** dengan pesan dan tautan PDF; aplikasi tidak mengirim pesan sendiri (D-06).
+- Invoice terbit: tombol **Kirim PDF via WhatsApp**, **Unduh PDF**, **Catat pembayaran**, **Batalkan invoice**. Tombol **Kirim PDF via WhatsApp** membuat berkas PDF A4 lalu membuka menu bagikan perangkat; aplikasi tidak mengirim pesan sendiri (D-06).
 - Pembayaran mendukung alokasi ke satu atau banyak invoice; sisa dana dicatat sebagai uang muka (`ACCOUNTING_POLICY_AND_CUTOVER.md` bagian 9).
 - Langkah di setiap pesanan ditampilkan sebagai kartu "Langkah Berikutnya".
 - **Catatan:** D-10 menetapkan draf invoice otomatis setelah SO terkonfirmasi; keputusan ini tercatat di `PRODUCT_SPEC.md`. Pastikan implementasi idempoten, draf dapat ditinjau/diedit, dan hanya penerbitan yang mengakui pendapatan/piutang.
@@ -300,7 +300,7 @@ Target lokasi `app/components/ui/` (belum ada; buat saat implementasi): `Field`,
 ### Dokumen cetak untuk pelanggan
 - Area cetak berisi hanya isi invoice: identitas Jena, nomor, tanggal, jatuh tempo, pelanggan, item, total, **rekening dan instruksi pembayaran**.
 - Catatan internal (status draf, piutang, keputusan pajak, model drop-ship) tampil di layar saja dengan kelas `screen-only`.
-- Pesan WhatsApp memuat tautan PDF (D-06).
+- WhatsApp menerima berkas PDF A4, bukan pesan teks (D-06).
 
 ### Data dan kinerja
 - Daftar memakai pagination dan filter dari server; jangan menarik ribuan baris ke browser. Gunakan query count atau view.
@@ -328,7 +328,7 @@ Centang bila selesai. Satu PR = satu tujuan jelas.
 - [ ] U-02 Ganti navigasi hash dengan rute sungguhan; tab memperbarui URL
 - [x] U-05 Dashboard: daftar tindakan, filter periode, pipeline status dengan hitungan dari server
 - [ ] U-06 Faktur supplier: usulan, selisih langsung, modal per barang (D-01, D-02)
-- [ ] U-07 Invoice cetak: pisahkan catatan internal, tambah rekening/instruksi pembayaran, tautan PDF di WhatsApp
+- [ ] U-07 Invoice cetak: pisahkan catatan internal, tambah rekening/instruksi pembayaran, berkas PDF A4 di WhatsApp
 - [ ] U-08 Satu gaya input (kelas `field-input`/`field-label` tidak terdefinisi di Pembayaran dan Buku Besar)
 - [ ] U-09 Validasi per kolom dengan scroll dan fokus ke kesalahan pertama
 - [ ] U-10 Ganti warna Tailwind langsung dengan token; lengkapi mode gelap
