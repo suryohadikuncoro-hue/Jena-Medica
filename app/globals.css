@@ -698,3 +698,49 @@ body { font-family: var(--font-app-sans), system-ui, sans-serif; }
 @media (prefers-reduced-motion: reduce) {
   .nav-rail-btn, .mbar-i, .mbar-c { scroll-behavior: auto; transition: none; }
 }
+
+/* ===== PR 3: Dashboard keuangan ===== */
+.dk-wrap { --dk-card: #f5f5f3; --dk-shell: #ffffff; --dk-ink: #17181c; --dk-on-ink: #ffffff; --dk-muted: #6b6e75; --dk-line: #e4e5e2; --dk-a1: #17181c; --dk-a2: #d9677f; --dk-warn: #9a6a05; --dk-g1: #f8c9d3; --dk-g2: #c2ecdd; color: var(--dk-ink); }
+[data-theme="dark"] .dk-wrap { --dk-card: #1f2024; --dk-shell: #16171a; --dk-ink: #f1f2f3; --dk-on-ink: #121316; --dk-muted: #a3a6ad; --dk-line: #2c2d33; --dk-a1: #f1f2f3; --dk-a2: #f08aa2; --dk-warn: #f3c15a; --dk-g1: #4d2c36; --dk-g2: #21443a; }
+.dk-head { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:22px; }
+.dk-title { margin:0; font-size:clamp(27px,3vw,34px); font-weight:800; letter-spacing:-.04em; }
+.dk-sub { margin:4px 0 0; font-size:12px; line-height:1.55; color:var(--dk-muted); }
+.dk-h2 { margin:0; font-size:18px; font-weight:800; letter-spacing:-.025em; }
+.dk-periods { display:flex; flex-wrap:wrap; gap:6px; }
+.dk-pill { min-height:40px; padding:0 14px; border:0; border-radius:999px; background:var(--dk-card); color:var(--dk-muted); font-size:12px; font-weight:650; cursor:pointer; }
+.dk-pill-on { background:var(--dk-ink); color:var(--dk-on-ink); font-weight:750; }
+.dk-docs { margin-bottom:22px; }
+.dk-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.dk-label { flex:none; border:1px solid var(--dk-line); border-radius:999px; padding:6px 10px; color:var(--dk-muted); font-size:10px; font-weight:700; }
+.dk-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.dk-kpi { display:flex; min-width:0; min-height:124px; flex-direction:column; align-items:flex-start; gap:7px; border-radius:22px; padding:17px; text-decoration:none; }
+.dk-kpi:hover { filter:brightness(.98); text-decoration:none; }
+.dk-kpi span { font-size:12px; font-weight:650; line-height:1.4; }
+.dk-kpi strong { overflow-wrap:anywhere; font-size:clamp(17px,1.7vw,23px); font-weight:850; letter-spacing:-.035em; }
+.dk-kpi small { font-size:10px; line-height:1.4; }
+.dk-empty { display:flex; align-items:flex-start; gap:12px; margin-bottom:18px; border-radius:22px; background:var(--pastel-yellow-bg); padding:18px; color:var(--pastel-yellow-fg); }
+.dk-empty-mark { display:grid; width:28px; height:28px; flex:none; place-items:center; border-radius:50%; background:var(--pastel-yellow-fg); color:var(--pastel-yellow-bg); font-weight:800; }
+.dk-empty p { margin:6px 0 10px; font-size:12px; line-height:1.6; }
+.dk-link { display:inline-flex; align-items:center; min-height:38px; font-size:12px; font-weight:750; text-decoration:underline; }
+.dk-grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.dk-card { min-width:0; border-radius:22px; background:var(--dk-card); padding:18px; }
+.dk-card .dk-sub { min-height:38px; }
+.dk-placeholder { display:flex; min-height:110px; align-items:center; justify-content:center; margin:14px 0 4px; border:1px dashed var(--dk-line); border-radius:17px; padding:16px; color:var(--dk-muted); font-size:12px; line-height:1.5; text-align:center; }
+.dk-note { margin:8px 0 0; color:var(--dk-muted); font-size:11px; line-height:1.6; }
+.dk-foot { margin-top:18px; }
+.dk-message { margin-bottom:18px; }
+@media (max-width:1100px) { .dk-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .dk-grid3 { grid-template-columns:repeat(2,minmax(0,1fr)); } .dk-grid3 .dk-card:last-child { grid-column:1/-1; } }
+@media (max-width:640px) {
+  .dk-head { align-items:flex-start; flex-direction:column; }
+  .dk-periods { width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .dk-pill { padding:0 8px; }
+  .dk-kpis { gap:8px; }
+  .dk-kpi { min-height:118px; border-radius:18px; padding:12px; }
+  .dk-kpi span { font-size:10px; }
+  .dk-kpi strong { font-size:16px; }
+  .dk-kpi small { font-size:9px; }
+  .dk-empty { border-radius:18px; padding:14px; }
+  .dk-grid3 { grid-template-columns:minmax(0,1fr); }
+  .dk-grid3 .dk-card:last-child { grid-column:auto; }
+  .dk-card { border-radius:19px; padding:15px; }
+}
