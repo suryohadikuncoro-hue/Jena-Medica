@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/error-message";
 
 type Supplier = { id: string; code: string; legal_name: string; display_name: string | null; tax_status: "pkp" | "non_pkp" | "unverified"; tax_identifier: string | null; email: string | null; phone: string | null; payment_terms_days: number; is_active: boolean };
 type SupplierDraft = { code: string; legal_name: string; display_name: string; tax_status: Supplier["tax_status"]; tax_identifier: string; email: string; phone: string; payment_terms_days: string };
@@ -63,7 +64,7 @@ export function SupplierManager() {
       const { data, error: queryError, count } = await request.order("legal_name", { ascending: true }).range(from, to);
       if (queryError) throw queryError;
       setRows((data ?? []) as Supplier[]); setTotal(count ?? 0);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat supplier dari Supabase."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat supplier dari Supabase.")); }
     finally { setLoading(false); }
   }, [configured, page, debouncedQuery]);
 
@@ -86,6 +87,11 @@ export function SupplierManager() {
     event.preventDefault(); setError(""); setNotice(""); setSaving(true);
     try {
       if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk mengubah Supplier.");
+      if (!editingId && !draft.code.trim()) throw new Error("Kode supplier wajib diisi.");
+      if (!editingId && !/^[A-Za-z0-9_-]+$/.test(draft.code.trim())) throw new Error("Kode hanya boleh berisi huruf, angka, strip, dan garis bawah.");
+      if (!draft.legal_name.trim()) throw new Error("Nama legal supplier wajib diisi.");
+      if (draft.email.trim() && !/^\S+@\S+\.\S+$/.test(draft.email.trim())) throw new Error("Format email tidak valid.");
+      if (!Number.isFinite(Number(draft.payment_terms_days)) || Number(draft.payment_terms_days) < 0) throw new Error("Termin pembayaran harus berupa angka tidak negatif.");
       const supabase = getSupabaseBrowserClient();
       const payload = {
         legal_name: draft.legal_name.trim(), display_name: draft.display_name.trim() || null,
@@ -100,7 +106,7 @@ export function SupplierManager() {
       const edited = editingId != null;
       cancelForm();
       setNotice(`Supplier ${edited ? "diperbarui" : "tersimpan"} di Supabase.`); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menyimpan supplier."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menyimpan supplier.")); }
     finally { setSaving(false); }
   }
 
@@ -110,7 +116,7 @@ export function SupplierManager() {
       const { error: updateError } = await getSupabaseBrowserClient().from("suppliers").update({ is_active: !supplier.is_active }).eq("id", supplier.id);
       if (updateError) throw updateError;
       setNotice(`${supplier.legal_name} ${supplier.is_active ? "dinonaktifkan" : "diaktifkan"}.`); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memperbarui status supplier."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memperbarui status supplier.")); }
   }
 
   async function openBankAccounts(supplier: Supplier) {
@@ -120,7 +126,7 @@ export function SupplierManager() {
       const { data, error: queryError } = await getSupabaseBrowserClient().from("supplier_bank_accounts").select("id,supplier_id,bank_name,account_number,account_name,note,is_active").eq("supplier_id", supplier.id).order("created_at");
       if (queryError) throw queryError;
       setBankRows((data ?? []) as BankAccount[]);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat rekening supplier."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat rekening supplier.")); }
     finally { setBankLoading(false); }
   }
 
@@ -128,6 +134,8 @@ export function SupplierManager() {
     event.preventDefault(); setError(""); setNotice(""); setSaving(true);
     try {
       if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk menyimpan rekening supplier.");
+      if (!bankName.trim() || !bankNumber.trim() || !bankHolder.trim()) throw new Error("Nama bank, nomor rekening, dan nama pemilik wajib diisi.");
+      if (!/^[0-9-]+$/.test(bankNumber.trim())) throw new Error("Nomor rekening hanya boleh berisi angka dan strip.");
       const supabase = getSupabaseBrowserClient();
       const payload = { bank_name: bankName.trim(), account_number: bankNumber.trim(), account_name: bankHolder.trim(), note: bankNote.trim() || null };
       const { error: writeError } = editingBankId
@@ -137,7 +145,7 @@ export function SupplierManager() {
       setShowBankForm(false); setEditingBankId(null); setBankName(""); setBankNumber(""); setBankHolder(""); setBankNote("");
       setNotice(`Rekening ${editingBankId ? "diperbarui" : "tersimpan"}.`);
       if (bankSupplier) await openBankAccounts(bankSupplier);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menyimpan rekening supplier."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menyimpan rekening supplier.")); }
     finally { setSaving(false); }
   }
 
@@ -147,7 +155,7 @@ export function SupplierManager() {
       const { error: updateError } = await getSupabaseBrowserClient().from("supplier_bank_accounts").update({ is_active: !target.is_active }).eq("id", target.id);
       if (updateError) throw updateError;
       if (bankSupplier) await openBankAccounts(bankSupplier);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memperbarui status rekening."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memperbarui status rekening.")); }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));

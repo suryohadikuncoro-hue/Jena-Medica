@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/error-message";
 type Customer = { id: string; code: string; legal_name: string };
 type Product = { id: string; code: string; name: string; unit: string };
 type Price = { id: string; customer_id: string; product_id: string; unit_price: number; valid_from: string; valid_until: string | null; note: string | null; created_at: string };
@@ -70,7 +71,7 @@ export function CustomerPriceManager() {
       const { data: priceData, error: priceError, count } = await priceRequest.order("valid_from", { ascending: false }).range(from, to);
       if (priceError) throw priceError;
       setPrices((priceData ?? []) as Price[]); setTotal(count ?? 0);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat daftar harga."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat daftar harga.")); }
     finally { setLoading(false); }
   }, [configured, page, debouncedSearch]);
   useEffect(() => { const frame = window.requestAnimationFrame(() => { void load(); }); return () => window.cancelAnimationFrame(frame); }, [load]);
@@ -86,6 +87,9 @@ export function CustomerPriceManager() {
     event.preventDefault(); setError(""); setNotice(""); setSaving(true);
     try {
       if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk menetapkan harga.");
+      if (!editingPrice && (!customerId || !productId)) throw new Error("Pelanggan dan barang wajib dipilih.");
+      if (!validFrom) throw new Error("Tanggal berlaku wajib diisi.");
+      if (!Number.isFinite(Number(unitPrice)) || Number(unitPrice) < 0) throw new Error("Harga satuan harus berupa angka tidak negatif.");
       const supabase = getSupabaseBrowserClient();
       if (editingPrice) {
         const { error: rpcError } = await supabase.rpc("update_scheduled_customer_product_price", {
@@ -103,7 +107,7 @@ export function CustomerPriceManager() {
         setNotice("Versi harga tersimpan. Versi terbuka sebelumnya diakhiri sehari sebelum tanggal berlaku baru; snapshot SO lama tidak berubah.");
       }
       await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menyimpan versi harga."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menyimpan versi harga.")); }
     finally { setSaving(false); }
   }
   async function endPrice(price: Price) {
@@ -115,7 +119,7 @@ export function CustomerPriceManager() {
       if (rpcError) throw rpcError;
       setNotice("Versi harga diakhiri. Harga baru perlu dibuat untuk melanjutkan penjualan dengan harga khusus.");
       await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal mengakhiri versi harga."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal mengakhiri versi harga.")); }
   }
   async function deleteScheduled(price: Price) {
     setError(""); setNotice("");
@@ -125,7 +129,7 @@ export function CustomerPriceManager() {
       if (rpcError) throw rpcError;
       setNotice("Versi harga terjadwal dihapus.");
       await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menghapus versi harga."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menghapus versi harga.")); }
   }
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const today = todayLocal();

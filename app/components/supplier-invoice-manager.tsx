@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/error-message";
 
 const money = (value: number | string) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(Number(value) || 0)}`;
 type TaxStatus = "taxed" | "non_taxed" | "unverified";
@@ -88,7 +89,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       setInvoiceLines((invoiceLineResult.data ?? []) as SupplierInvoiceLine[]);
       // Product lookup is a convenience only; an unavailable catalog must not prevent manual invoice capture.
       setProducts(productResult.error ? [] : (productResult.data ?? []) as Product[]);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat faktur supplier dari Supabase."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat faktur supplier dari Supabase.")); }
     finally { setLoading(false); }
   }, [configured]);
 
@@ -194,7 +195,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       if (rpcError) throw rpcError;
       setShowForm(false); setDraft(blankInvoice()); setNotice("Draft faktur supplier tersimpan. Nominal disimpan sesuai dokumen; belum menjadi hutang, modal/HPP, PPN hitung, atau jurnal.");
       await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menyimpan draft faktur supplier."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menyimpan draft faktur supplier.")); }
     finally { setSaving(false); }
   }
 
@@ -206,7 +207,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       if (rpcError) throw rpcError;
       setNotice(`Draft ${voiding.supplier_invoice_number} dibatalkan; catatan tetap tersimpan untuk jejak audit.`);
       setVoiding(null); setVoidReason(""); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal membatalkan draft faktur."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal membatalkan draft faktur.")); }
     finally { setVoidSaving(false); }
   }
 

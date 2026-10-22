@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/error-message";
 
 type Mode = "customers" | "products";
 type Customer = { id: string; code: string; legal_name: string; display_name: string | null; default_shipping_address: string | null; contact_name: string | null; phone: string | null; email: string | null; payment_terms_days: number; tax_status: "pkp" | "non_pkp" | "unverified"; is_active: boolean };
@@ -84,7 +85,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
         if (queryError) throw queryError;
         setRows((data ?? []) as Product[]); setTotal(count ?? 0);
       }
-    } catch (cause) { setError(cause instanceof Error ? cause.message : `Gagal memuat data ${title.toLowerCase()}.`); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, `Gagal memuat data ${title.toLowerCase()}.`)); }
     finally { setLoading(false); }
   }, [configured, isCustomer, title, page, debouncedQuery]);
 
@@ -112,6 +113,11 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
     event.preventDefault(); setError(""); setNotice(""); setSaving(true);
     try {
       if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk mengubah master data.");
+      if (!editingId && !code.trim()) throw new Error("Kode wajib diisi.");
+      if (!editingId && !/^[A-Za-z0-9_-]+$/.test(code.trim())) throw new Error("Kode hanya boleh berisi huruf, angka, strip, dan garis bawah.");
+      if (!legalName.trim()) throw new Error(isCustomer ? "Nama legal wajib diisi." : "Nama barang wajib diisi.");
+      if (isCustomer && email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) throw new Error("Format email tidak valid.");
+      if (isCustomer && (!Number.isFinite(Number(terms)) || Number(terms) < 0)) throw new Error("Termin pembayaran harus berupa angka tidak negatif.");
       const supabase = getSupabaseBrowserClient();
       if (isCustomer) {
         const payload = {
@@ -125,6 +131,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
           : await supabase.from("customers").insert({ ...payload, code: code.trim() });
         if (writeError) throw writeError;
       } else {
+        if (!unit.trim()) throw new Error("Satuan wajib diisi.");
         const payload = { name: legalName.trim(), category: category.trim() || null, unit: unit.trim() };
         const { error: writeError } = editingId
           ? await supabase.from("products").update(payload).eq("id", editingId)
@@ -133,7 +140,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
       }
       resetFields(); setShowForm(false); const edited = editingId != null; setEditingId(null);
       setNotice(`${title} ${edited ? "diperbarui" : "tersimpan"} di Supabase.`); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : `Gagal menyimpan ${title.toLowerCase()}.`); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, `Gagal menyimpan ${title.toLowerCase()}.`)); }
     finally { setSaving(false); }
   }
 
@@ -148,7 +155,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
         : await supabase.from("products").update({ is_active: !row.is_active }).eq("id", row.id);
       if (updateError) throw updateError;
       setNotice(`${rowName(row, isCustomer)} ${row.is_active ? "dinonaktifkan" : "diaktifkan"}.`); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memperbarui status master data."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memperbarui status master data.")); }
   }
 
   async function openAddresses(customer: Customer) {
@@ -158,7 +165,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
       const { data, error: queryError } = await getSupabaseBrowserClient().from("customer_shipping_addresses").select("id,customer_id,label,address,contact_name,phone,is_active").eq("customer_id", customer.id).order("created_at");
       if (queryError) throw queryError;
       setAddresses((data ?? []) as ShipAddress[]);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat alamat kirim."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat alamat kirim.")); }
     finally { setAddressLoading(false); }
   }
 
@@ -175,7 +182,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
       setShowAddressForm(false); setEditingAddressId(null); setAddressLabel(""); setAddressText(""); setAddressContact(""); setAddressPhone("");
       setNotice(`Alamat kirim ${editingAddressId ? "diperbarui" : "tersimpan"}.`);
       if (addressCustomer) await openAddresses(addressCustomer);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menyimpan alamat kirim."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menyimpan alamat kirim.")); }
     finally { setSaving(false); }
   }
 
@@ -185,7 +192,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
       const { error: updateError } = await getSupabaseBrowserClient().from("customer_shipping_addresses").update({ is_active: !target.is_active }).eq("id", target.id);
       if (updateError) throw updateError;
       if (addressCustomer) await openAddresses(addressCustomer);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memperbarui status alamat."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memperbarui status alamat.")); }
   }
 
   async function deleteAddress(target: ShipAddress) {
@@ -196,7 +203,7 @@ export function ReferenceManager({ mode }: { mode: Mode }) {
       if (deleteError) throw deleteError;
       setNotice("Alamat kirim dihapus.");
       if (addressCustomer) await openAddresses(addressCustomer);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal menghapus alamat kirim."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menghapus alamat kirim.")); }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));

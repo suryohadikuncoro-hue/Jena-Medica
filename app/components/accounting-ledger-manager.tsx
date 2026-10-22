@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/error-message";
 
 type AccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
 type Account = { id: string; account_code: string; account_name: string; account_type: AccountType; is_active: boolean };
@@ -138,7 +139,7 @@ export function AccountingLedgerManager() {
       setSupplierBatches(supplierBatchRows);
       setSchemaReady(true);
     } catch (cause) {
-      const detail = cause instanceof Error ? cause.message : "Gagal memuat accounting setup.";
+      const detail = friendlyErrorMessage(cause, "Gagal memuat accounting setup.");
       setError(/chart_of_accounts|accounting_posting_profile|accounting_periods|journal_entries|schema cache|does not exist/i.test(detail)
         ? "Migration accounting belum diterapkan pada Supabase. UI tidak dapat membaca posting sources; belum ada perubahan yang disimpan."
         : detail);
@@ -174,7 +175,7 @@ export function AccountingLedgerManager() {
       const { error: rpcError } = await getSupabaseBrowserClient().rpc("post_customer_invoice_to_ar", { p_customer_invoice_id: invoiceId, p_issued_invoice_number: number, p_tax_status: taxStatus, p_tax_code: taxCode || null, p_tax_base_amount: taxBase, p_tax_rate: taxRate, p_tax_amount: taxAmount, p_tax_approval_reference: reference });
       if (rpcError) throw rpcError;
       setNotice("Invoice diterbitkan sebagai invoice komersial dan jurnal AR tersimpan. Ini bukan penerbitan e-Faktur; nilai PPN dimasukkan manual dari keputusan yang disetujui."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Posting AR gagal."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Posting AR gagal.")); }
     finally { setSaving(false); }
   }
 
@@ -188,7 +189,7 @@ export function AccountingLedgerManager() {
       const { error: rpcError } = await getSupabaseBrowserClient().rpc("post_supplier_invoice_to_ap", { p_supplier_invoice_id: invoiceId, p_input_tax_treatment: treatment, p_tax_review_reference: reference });
       if (rpcError) throw rpcError;
       setNotice("Faktur supplier diposting ke AP; biaya masuk akun clearing, belum direklasifikasi ke HPP."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Posting AP gagal."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Posting AP gagal.")); }
     finally { setSaving(false); }
   }
 
@@ -198,7 +199,7 @@ export function AccountingLedgerManager() {
       const { error: rpcError } = await getSupabaseBrowserClient().rpc(functionName, functionName.includes("allocation") ? { p_batch_id: id } : { p_payment_id: id });
       if (rpcError) throw rpcError;
       setNotice(successMessage); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Posting jurnal gagal."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Posting jurnal gagal.")); }
     finally { setSaving(false); }
   }
 
@@ -210,7 +211,7 @@ export function AccountingLedgerManager() {
       const { error: rpcError } = await getSupabaseBrowserClient().rpc("reverse_accounting_journal", { p_journal_entry_id: journal.id, p_reason: reason.trim() });
       if (rpcError) throw rpcError;
       setNotice("Jurnal dibalik pada periode yang sedang terbuka dan transaksi pembayaran/alokasi terkait dinonaktifkan."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Jurnal tidak dapat dibalik."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Jurnal tidak dapat dibalik.")); }
     finally { setSaving(false); }
   }
 
@@ -223,7 +224,7 @@ export function AccountingLedgerManager() {
       if (rpcError) throw rpcError;
       setAccountDraft({ code: "", name: "", type: "asset", description: "" });
       setNotice("Akun COA tersimpan. Akun belum dipetakan atau disetujui untuk posting."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Akun tidak dapat disimpan."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Akun tidak dapat disimpan.")); }
     finally { setSaving(false); }
   }
 
@@ -248,7 +249,7 @@ export function AccountingLedgerManager() {
       const { error: rpcError } = await getSupabaseBrowserClient().rpc("approve_accounting_configuration", { p_approval_reference: policy.approval.trim() });
       if (rpcError) throw rpcError;
       setNotice("Konfigurasi akuntansi disetujui. Posting tetap memerlukan periode terbuka dan dokumen yang memenuhi validasi."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Persetujuan tidak dapat disimpan."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Persetujuan tidak dapat disimpan.")); }
     finally { setSaving(false); }
   }
 
@@ -258,7 +259,7 @@ export function AccountingLedgerManager() {
       const { error: rpcError } = await getSupabaseBrowserClient().rpc("create_and_open_accounting_period", { p_period_start: periodDraft.start, p_period_end: periodDraft.end });
       if (rpcError) throw rpcError;
       setPeriodDraft({ start: "", end: "" }); setNotice("Periode dibuka. Hanya tanggal dalam periode ini yang dapat diposting."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Periode tidak dapat dibuka."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Periode tidak dapat dibuka.")); }
     finally { setSaving(false); }
   }
 
@@ -269,7 +270,7 @@ export function AccountingLedgerManager() {
       const { error: rpcError } = await getSupabaseBrowserClient().rpc("close_accounting_period", { p_period_id: closeTarget.id, p_reason: closeReason.trim() });
       if (rpcError) throw rpcError;
       setCloseTarget(null); setCloseReason(""); setNotice("Periode ditutup; tanggalnya tidak lagi menerima posting."); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Periode tidak dapat ditutup."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Periode tidak dapat ditutup.")); }
     finally { setSaving(false); }
   }
 

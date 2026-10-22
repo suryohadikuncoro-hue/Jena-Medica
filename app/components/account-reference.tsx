@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/error-message";
 
 type Account = { id: string; account_code: string; account_name: string; account_type: "asset" | "liability" | "equity" | "revenue" | "expense"; description: string | null; is_active: boolean };
 const typeLabel: Record<Account["account_type"], string> = { asset: "Aset", liability: "Liabilitas", equity: "Ekuitas", revenue: "Pendapatan", expense: "Beban" };
@@ -40,7 +41,7 @@ export function AccountReference() {
       const { data, error: queryError, count } = await request.order("account_code", { ascending: true }).range(from, to);
       if (queryError) throw queryError;
       setRows((data ?? []) as Account[]); setTotal(count ?? 0);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal memuat daftar akun dari Supabase."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat daftar akun dari Supabase.")); }
     finally { setLoading(false); }
   }, [configured, page, debouncedQuery]);
 

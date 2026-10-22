@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { friendlyErrorMessage } from "@/lib/error-message";
 
 type InvoiceStatus = "draft" | "issued" | "void";
 type Customer = { id: string; code: string; legal_name: string; phone: string | null };
@@ -106,7 +107,7 @@ export function CustomerInvoiceManager() {
       setInvoices((results[3].data ?? []) as CustomerInvoice[]);
       setInvoiceLines((results[4].data ?? []) as CustomerInvoiceLine[]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Gagal memuat invoice pelanggan dari Supabase.");
+      setError(friendlyErrorMessage(cause, "Gagal memuat invoice pelanggan dari Supabase."));
     } finally { setLoading(false); }
   }, [configured]);
 
@@ -188,7 +189,7 @@ export function CustomerInvoiceManager() {
       setShowForm(false); setSelectedInvoiceId(String(data ?? editingInvoiceId)); setEditingInvoiceId("");
       setNotice("Draf invoice tersimpan. Belum diterbitkan atau dibukukan.");
       await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal membuat invoice pelanggan."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal membuat invoice pelanggan.")); }
     finally { setSaving(false); }
   }
 
@@ -206,7 +207,7 @@ export function CustomerInvoiceManager() {
       setShowVoidForm(false); setVoidReason("");
       setNotice(`Draft ${selectedInvoice.invoice_number} dibatalkan dan tetap tersimpan untuk jejak audit.`);
       await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Gagal membatalkan draft invoice."); }
+    } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal membatalkan draft invoice.")); }
     finally { setVoidSaving(false); }
   }
 
