@@ -36,8 +36,9 @@ type CustomerInvoiceLine = {
 
 const money = (value: number | string) => `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(Number(value) || 0)}`;
 function localDate() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 function displayDate(value: string | null | undefined) {
   if (!value) return "—";
@@ -267,8 +268,8 @@ export function CustomerInvoiceManager() {
     {selectedInvoice && <div className="screen-only mt-4 flex flex-wrap gap-2">
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="primary-button" onClick={openEditDraft}>Tinjau / edit draf</button>}
       <button type="button" className="primary-button" onClick={() => window.print()}>Cetak / Simpan PDF</button>
-      {selectedInvoice.status !== "void" && phone ? <a className="tab-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Siapkan WhatsApp</a> : <button type="button" className="tab-button" disabled title="Nomor WhatsApp pelanggan yang valid diperlukan">Siapkan WhatsApp</button>}
-      {selectedInvoice.status === "draft" && <Link className="tab-button inline-flex items-center" href="/keuangan#jurnal">Issue &amp; posting AR</Link>}
+      {selectedInvoice.status === "issued" && phone ? <a className="tab-button inline-flex items-center" href={whatsappHref} target="_blank" rel="noreferrer">Siapkan WhatsApp</a> : <button type="button" className="tab-button" disabled title={selectedInvoice.status === "draft" ? "Terbitkan invoice terlebih dahulu" : "Nomor WhatsApp pelanggan yang valid diperlukan"}>Siapkan WhatsApp</button>}
+      {selectedInvoice.status === "draft" && <Link className="primary-button inline-flex items-center" href="/keuangan#jurnal">Buka antrean issue &amp; posting AR →</Link>}
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setShowVoidForm(value => !value); setVoidReason(""); }}>Batalkan draft</button>}
       <p className="basis-full text-xs text-[var(--muted)]">WhatsApp hanya membuka teks siap kirim; tidak mengirim otomatis dan tidak melampirkan PDF. Cetak/Simpan PDF menggunakan dialog browser.</p>
     </div>}
