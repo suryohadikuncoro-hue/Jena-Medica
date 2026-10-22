@@ -38,7 +38,7 @@ Jika dokumen atau instruksi bertentangan, yang di atas menang:
 
 ## 5. UI/UX
 - Acuan tampilan satu-satunya: mockup yang disetujui pemilik (tautan di `UI_UX_GUIDELINES.md`). Jangan membuat gaya sendiri.
-- Navigasi utama: rail kiri 8 ikon (desktop, tanpa flyout) dan bottom bar 3 menu: Home, Dashboard (tengah), Profil (mobile); modul lain lewat Akses cepat di Home. Bukan menu di atas. Daftar menu hanya diubah di `app/components/app-shell.tsx`.
+- Navigasi utama: rail kiri 8 ikon (desktop, tanpa flyout) dan bottom bar 3 menu: Home, Dashboard (tengah), Menu (mobile). Tombol Menu membuka popover di atas bottom bar; Profil menjadi item pertama di dalamnya, diikuti Pembayaran, Master Data, Keuangan, Pengaturan usaha, dan Cari menu. Bukan menu di atas. Daftar menu hanya diubah di `app/components/app-shell.tsx`.
 - Warna hanya lewat token di `app/globals.css` (termasuk `--pastel-*` dan `--rail-*`) dan wajib punya varian gelap. Dilarang warna Tailwind langsung.
 - Font: Plus Jakarta Sans lewat `--font-app-sans`.
 - Komponen bersama dibuat di `app/components/ui/` ketika dipakai kedua kali; jangan menyalin gaya kartu/chip/tombol ke halaman.

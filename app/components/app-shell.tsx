@@ -16,6 +16,13 @@ const NAV = [
   { key: "keuangan", label: "Keuangan", href: "/keuangan", match: "/keuangan", icon: <path d="M5 20v-7M12 20V5M19 20v-10" /> },
 ] as const;
 const quickActions = [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pembayaran"], ["Biaya Operasional", "/keuangan#biaya"]] as const;
+const mobileMenuItems = [
+  { label: "Profil", description: "Akun dan preferensi", href: "/profil", icon: <path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.6-7 8-7s8 3 8 7" /> },
+  { label: "Pembayaran", description: "Piutang, hutang, dan catat pembayaran", href: "/pembayaran", icon: <><path d="M4 7a2 2 0 012-2h12v4" /><rect x="3" y="7" width="18" height="13" rx="3" /><circle cx="16.5" cy="13.5" r="1.2" /></> },
+  { label: "Master Data", description: "Pelanggan, supplier, dan barang", href: "/master-data", icon: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14c2.6 0 4.5 1.8 4.5 4.5" /></> },
+  { label: "Keuangan", description: "Buku besar, biaya, dan laporan", href: "/keuangan", icon: <path d="M5 20v-7M12 20V5M19 20v-10" /> },
+  { label: "Pengaturan usaha", description: "Konfigurasi usaha dan akses modul", href: "/pengaturan-usaha", icon: <><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" /><circle cx="12" cy="12" r="3.5" /></> },
+] as const;
 const searchItems = [
   ...NAV.map(n => ({ label: n.label, href: n.href })),
   ...["Pelanggan:/master-data#customers", "Supplier:/master-data#suppliers", "Barang:/master-data#products", "Harga per Pelanggan:/master-data#prices", "Daftar Akun:/master-data#accounts", "Jurnal Umum:/keuangan#jurnal", "Buku Besar:/keuangan#buku-besar", "Laba Rugi:/keuangan#laba-rugi", "Neraca:/keuangan#neraca", "Tutup Buku:/keuangan#tutup-buku", "PPN:/keuangan#ppn", "Piutang & Hutang:/pembayaran"].map(s => { const i = s.indexOf(":"); return { label: s.slice(0, i), href: s.slice(i + 1) }; }),
@@ -28,14 +35,15 @@ function NavIcon({ children, size = 20 }: { children: ReactNode; size?: number }
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [createOpen, setCreateOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dark, setDark] = useState(false);
   const [notice, setNotice] = useState("");
   const matches = useMemo(() => searchItems.filter(item => item.label.toLowerCase().includes(query.toLowerCase())).slice(0, 8), [query]);
   const dashActive = pathname.startsWith("/dashboard-keuangan");
-  const profilActive = pathname.startsWith("/profil");
-  const homeActive = !dashActive && !profilActive;
+  const menuActive = ["/lainnya", "/profil", "/pembayaran", "/master-data", "/keuangan", "/pengaturan-usaha"].some(route => pathname === route || pathname.startsWith(`${route}/`));
+  const homeActive = !dashActive && !menuActive;
   const isActive = (n: (typeof NAV)[number]) => ("exact" in n && n.exact ? pathname === n.match : pathname === n.match || pathname.startsWith(`${n.match}/`));
 
   useEffect(() => {
@@ -45,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     document.documentElement.dataset.theme = useDark ? "dark" : "light";
     const onKey = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setPaletteOpen(true); }
-      if (event.key === "Escape") { setPaletteOpen(false); setCreateOpen(false); }
+      if (event.key === "Escape") { setPaletteOpen(false); setCreateOpen(false); setMobileMenuOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => { window.cancelAnimationFrame(frame); window.removeEventListener("keydown", onKey); };
@@ -53,6 +61,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setCreateOpen(false));
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setMobileMenuOpen(false));
     return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
@@ -89,10 +102,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div id="konten-utama" tabIndex={-1} className="pb-24 lg:pb-0">{children}</div>
     </div>
 
+    {mobileMenuOpen && <div className="mobile-menu-backdrop lg:hidden" role="presentation" onMouseDown={() => setMobileMenuOpen(false)} />}
+    {mobileMenuOpen && <section id="mobile-menu-panel" className="mobile-menu-panel lg:hidden" role="dialog" aria-label="Menu aplikasi">
+      <div className="mobile-menu-head"><div><p className="mobile-menu-eyebrow">Jena Medica</p><h2>Menu</h2></div><button type="button" className="mobile-menu-close" aria-label="Tutup menu" onClick={() => setMobileMenuOpen(false)}>×</button></div>
+      <div className="mobile-menu-list">
+        {mobileMenuItems.map(item => <Link key={item.href} href={item.href} className={`mobile-menu-row ${pathname === item.href || pathname.startsWith(`${item.href}/`) ? "mobile-menu-row-on" : ""}`} onClick={() => setMobileMenuOpen(false)}><span className="mobile-menu-icon"><NavIcon>{item.icon}</NavIcon></span><span className="mobile-menu-copy"><strong>{item.label}</strong><small>{item.description}</small></span><span className="mobile-menu-chevron" aria-hidden="true">›</span></Link>)}
+        <button type="button" className="mobile-menu-row" onClick={() => { setMobileMenuOpen(false); setPaletteOpen(true); }}><span className="mobile-menu-icon mobile-menu-icon-shell"><NavIcon>{<path d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 110-14.4 7.2 7.2 0 010 14.4z" />}</NavIcon></span><span className="mobile-menu-copy"><strong>Cari menu</strong><small>Temukan halaman dan transaksi</small></span><span className="mobile-menu-chevron" aria-hidden="true">⌕</span></button>
+      </div>
+    </section>}
     <nav className="mbar lg:hidden" aria-label="Menu bawah">
       <Link href="/dashboard" aria-label="Home" aria-current={homeActive ? "page" : undefined} className={`mbar-i ${homeActive ? "mbar-i-on" : ""}`}><NavIcon>{NAV[0].icon}</NavIcon><span>Home</span></Link>
       <Link href="/dashboard-keuangan" aria-label="Dashboard" aria-current={dashActive ? "page" : undefined} className={`mbar-c ${dashActive ? "mbar-c-on" : ""}`}><span className="mbar-ci"><NavIcon size={26}>{NAV[1].icon}</NavIcon></span><span>Dashboard</span></Link>
-      <Link href="/profil" aria-label="Profil" aria-current={profilActive ? "page" : undefined} className={`mbar-i ${profilActive ? "mbar-i-on" : ""}`}><NavIcon><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.6-7 8-7s8 3 8 7" /></NavIcon><span>Profil</span></Link>
+      <button type="button" aria-label="Menu" aria-expanded={mobileMenuOpen} aria-controls="mobile-menu-panel" className={`mbar-i mbar-menu-button ${menuActive || mobileMenuOpen ? "mbar-i-on" : ""}`} onClick={() => setMobileMenuOpen(v => !v)}><NavIcon><path d="M4 6h16M4 12h16M4 18h16" /></NavIcon><span>Menu</span></button>
     </nav>
 
     {paletteOpen && <div className="palette-backdrop" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setPaletteOpen(false); }}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Pencarian global"><div className="flex items-center gap-3 border-b p-4"><span aria-hidden="true">⌕</span><input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Cari menu dan transaksi..." aria-label="Cari menu dan transaksi" className="min-w-0 flex-1 bg-transparent outline-none" /><kbd>ESC</kbd></div><div className="p-2">{matches.length ? matches.map(item => <Link className="command-result" key={`${item.label}-${item.href}`} href={item.href} onClick={() => { setPaletteOpen(false); setQuery(""); }}>{item.label}<span>Buka →</span></Link>) : <p className="p-4 text-sm opacity-60">Tidak ada hasil. Pencarian data transaksi aktif setelah sumber data terhubung.</p>}</div><p className="border-t px-4 py-3 text-xs opacity-60">Gunakan Ctrl/Cmd + K untuk membuka pencarian</p></section></div>}

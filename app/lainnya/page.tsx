@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AuthStatus } from "@/app/components/auth-status";
-import { IconKeuangan, IconMasterData, IconPembayaran, IconSearch } from "@/app/components/icons";
+import { IconKeuangan, IconMasterData, IconPembayaran, IconSearch, IconUser } from "@/app/components/icons";
 import { Card, ListRow, ListStack, SegmentedTabs } from "@/app/components/ui";
 import { applyThemeMode, openGlobalSearch, readThemeMode, type ThemeMode } from "@/lib/theme";
 
@@ -29,6 +29,7 @@ export default function LainnyaPage() {
     <h1 className="page-title">Lainnya</h1>
     <Card className="mt-5" aria-label="Akun"><AuthStatus compact /></Card>
     <ListStack className="mt-4" aria-label="Menu lainnya">
+      <ListRow href="/profil" icon={<IconUser />} tone="pink" title="Profil" subtitle="Akun, tampilan, dan akses" chevron />
       <ListRow href="/pembayaran" icon={<IconPembayaran />} tone="pink" title="Pembayaran" subtitle="Piutang, hutang, dan catat pembayaran" chevron />
       <ListRow href="/master-data" icon={<IconMasterData />} tone="yellow" title="Master Data" subtitle="Pelanggan, supplier, barang, harga khusus" chevron />
       <ListRow href="/keuangan" icon={<IconKeuangan />} tone="mint" title="Keuangan" subtitle="Buku besar, biaya, dan laporan" chevron />

@@ -77,11 +77,11 @@ Halaman (`--page`) berisi satu shell putih: maks 1480 px, rata tengah, padding 2
 - Ikon: SVG garis 24×24, stroke 1.8, ujung bulat, `currentColor`.
 
 ### Mobile (≤ 820 px)
-- Rail hilang; muncul **bottom bar** menempel di bawah layar (referensi pola: aplikasi perbankan; warna: mockup Jena). Latar `#1b1c21`, sudut atas 24, padding 10/8/18 (bawah menyertakan jarak aman gestur HP), 5 slot sama lebar.
-- Slot (tiap ikon **berlabel teks** 11 px/600): **Dashboard, Pesanan, Order, Invoice, Lainnya**.
+- Rail hilang; muncul **bottom bar** menempel di bawah layar (referensi pola: aplikasi perbankan; warna: mockup Jena). Latar `#1b1c21`, sudut atas 24, padding 10/8/18 (bawah menyertakan jarak aman gestur HP), 3 slot sama lebar.
+- Slot (tiap ikon **berlabel teks** 11 px/600): **Home, Dashboard, Menu**. Menu adalah tombol, bukan tautan langsung.
 - Tidak aktif: ikon dan label `#a9acb4`. Aktif: ikon `#17181c` di dalam lingkaran/pil `#f8c9d3` (44×32), label `#f8c9d3`, `aria-current="page"`. Target sentuh minimal 44 px.
 - **Faktur Supplier** adalah menu tersendiri untuk mencatat faktur langsung dari dokumen supplier. PO dibuat manual di luar ERP, sehingga tidak ada tab atau form buat order supplier di aplikasi.
-- **Lainnya** membuka halaman sendiri (rute sungguhan, bukan lembar geser) berisi kartu profil, lalu menu **Pembayaran, Master Data, Keuangan, Pengaturan**, dan Keluar. Saat di halaman Pembayaran, Master Data, atau Keuangan, slot Lainnya yang tampil aktif. Tidak ada ikon pemberitahuan sampai fiturnya ada (prinsip 8).
+- **Menu** membuka popover di atas bottom bar, dapat ditutup dengan tombol `×`, klik di luar, atau Escape. Isi popover berupa **Profil** (item pertama), Pembayaran, Master Data, Keuangan, Pengaturan usaha, dan Cari menu. Saat berada di Profil, Pembayaran, Master Data, Keuangan, Pengaturan usaha, atau rute Lainnya, tombol Menu tampil aktif. Tidak ada ikon pemberitahuan sampai fiturnya ada (prinsip 8). Rute `/lainnya` tetap tersedia sebagai fallback halaman menu.
 - Shell mobile: lebar 390 px, padding halaman 20 px.
 
 ### Pola kepala halaman
