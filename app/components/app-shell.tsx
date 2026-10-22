@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = window.localStorage.getItem("jena-theme");
-    const useDark = saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const useDark = saved ? saved === "dark" : false; // Desain awal terang; tema gelap hanya jika dipilih pengguna.
     const frame = window.requestAnimationFrame(() => setDark(useDark));
     document.documentElement.dataset.theme = useDark ? "dark" : "light";
     const onKey = (event: KeyboardEvent) => {
