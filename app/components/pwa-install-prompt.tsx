@@ -12,10 +12,14 @@ export function PwaInstallPrompt() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    let registerOnLoad: (() => void) | null = null;
     if ("serviceWorker" in navigator) {
       const register = () => navigator.serviceWorker.register("/sw.js").catch(() => undefined);
       if (document.readyState === "complete") void register();
-      else window.addEventListener("load", register, { once: true });
+      else {
+        registerOnLoad = register;
+        window.addEventListener("load", register, { once: true });
+      }
     }
 
     const onBeforeInstall = (event: Event) => {
@@ -44,7 +48,7 @@ export function PwaInstallPrompt() {
 
     return () => {
       window.cancelAnimationFrame(initialStateFrame);
-      window.removeEventListener("load", () => undefined);
+      if (registerOnLoad) window.removeEventListener("load", registerOnLoad);
       window.removeEventListener("beforeinstallprompt", onBeforeInstall);
       window.removeEventListener("appinstalled", onInstalled);
     };
