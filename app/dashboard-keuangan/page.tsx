@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ActionBanner, ButtonLink } from "@/app/components/ui";
 
@@ -95,11 +95,11 @@ export default function FinanceDashboardPage() {
   const periodReady = data.accountingPeriodCount > 0;
   const postingReady = data.postingProfileStatus === "approved";
   const hasCashMapping = data.mappings.some(m=>m.mapping_key==="cash"||m.mapping_key==="bank");
-  const mockCard: React.CSSProperties = {padding:20,borderRadius:24,background:"var(--dk-card)",minWidth:0};
-  const mockSub: React.CSSProperties = {margin:"3px 0 0",fontSize:12,color:"var(--dk-muted)"};
-  const mockTitle: React.CSSProperties = {margin:0,fontSize:20,fontWeight:700,letterSpacing:"-.02em"};
-  const mockPill: React.CSSProperties = {display:"inline-flex",alignItems:"center",minHeight:36,padding:"0 15px",borderRadius:999,fontSize:12,fontWeight:650,whiteSpace:"nowrap",background:"var(--dk-shell)",color:"var(--dk-muted)"};
-  const statusTag = (good:boolean): React.CSSProperties => ({display:"inline-flex",alignItems:"center",padding:"4px 10px",borderRadius:999,fontSize:11,fontWeight:700,background:good?"var(--pastel-mint-bg)":"var(--pastel-yellow-bg)",color:good?"var(--pastel-mint-fg)":"var(--pastel-yellow-fg)"});
+  const mockCard: CSSProperties = {padding:20,borderRadius:24,background:"var(--dk-card)",minWidth:0};
+  const mockSub: CSSProperties = {margin:"3px 0 0",fontSize:12,color:"var(--dk-muted)"};
+  const mockTitle: CSSProperties = {margin:0,fontSize:20,fontWeight:700,letterSpacing:"-.02em"};
+  const mockPill: CSSProperties = {display:"inline-flex",alignItems:"center",minHeight:36,padding:"0 15px",borderRadius:999,fontSize:12,fontWeight:650,whiteSpace:"nowrap",background:"var(--dk-shell)",color:"var(--dk-muted)"};
+  const statusTag = (good:boolean): CSSProperties => ({display:"inline-flex",alignItems:"center",padding:"4px 10px",borderRadius:999,fontSize:11,fontWeight:700,background:good?"var(--pastel-mint-bg)":"var(--pastel-yellow-bg)",color:good?"var(--pastel-mint-fg)":"var(--pastel-yellow-fg)"});
   const navTabs = [
     ["Ikhtisar", "/dashboard-keuangan", true],
     ["Laba rugi", "/keuangan#laba-rugi", false],
