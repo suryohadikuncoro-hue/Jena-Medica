@@ -361,7 +361,7 @@ export function CustomerInvoiceManager() {
       <button type="button" className="primary-button" disabled={pdfSaving || selectedInvoice.status !== "issued"} onClick={() => void sendInvoicePdf("share")} title={selectedInvoice.status === "issued" ? "Buat PDF A4 lalu buka menu bagikan perangkat" : "Terbitkan invoice terlebih dahulu"}>{pdfSaving ? "Menyiapkan PDF…" : "Kirim PDF via WhatsApp →"}</button>
       <button type="button" className="tab-button" disabled={pdfSaving} onClick={() => void sendInvoicePdf("download")}>Unduh PDF A4</button>
       <button type="button" className="tab-button" onClick={() => window.print()}>Cetak</button>
-      {canWrite && selectedInvoice.status === "draft" && <button type="button" className="primary-button" onClick={() => { setShowIssueForm(value => !value); setError(""); setNotice(""); }} disabled={issueSaving}>{showIssueForm ? "Tutup penerbitan" : "Terbitkan &amp; kirim invoice"}</button>}
+      {canWrite && selectedInvoice.status === "draft" && <button type="button" className="primary-button" onClick={() => { setShowIssueForm(value => !value); setError(""); setNotice(""); }} disabled={issueSaving}>{showIssueForm ? "Tutup penerbitan" : "Terbitkan & kirim invoice"}</button>}
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setShowVoidForm(value => !value); setVoidReason(""); }}>Batalkan draft</button>}
       <p className="basis-full text-xs text-[var(--muted)]">Penerbitan dan posting piutang/jurnal dilakukan dari halaman ini. Setelah sukses, menu berbagi perangkat terbuka; pilih WhatsApp dan kirim PDF. Membuka menu berbagi tidak mengirim pesan secara otomatis.</p>
     </div>}
