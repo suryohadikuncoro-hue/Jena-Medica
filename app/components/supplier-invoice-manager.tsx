@@ -54,7 +54,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
    const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
   const [invoiceLines, setInvoiceLines] = useState<SupplierInvoiceLine[]>([]);
   const [attachments, setAttachments] = useState<InvoiceAttachment[]>([]);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);\n  const [postingInvoice, setPostingInvoice] = useState<SupplierInvoice | null>(null);\n  const [postingTreatment, setPostingTreatment] = useState<"recoverable" | "nonrecoverable" | "not_applicable">("not_applicable");\n  const [postingReference, setPostingReference] = useState("");\n  const [postingBusy, setPostingBusy] = useState(false);
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,11 +89,11 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         supabase.from("products").select("id,code,name,unit").eq("is_active", true).order("name").limit(500),
         supabase.from("supplier_invoice_attachments").select("id,supplier_invoice_id,storage_path,original_file_name,content_type,byte_size").order("created_at", { ascending: false }).limit(1000),
       ]);
-      for (const result of [supplierResult, invoiceResult, invoiceLineResult, attachmentResult]) if (result.error) throw result.error;
+      for (const result of [supplierResult, invoiceResult, invoiceLineResult]) if (result.error) throw result.error;
       setSuppliers((supplierResult.data ?? []) as Supplier[]);
       setInvoices((invoiceResult.data ?? []) as SupplierInvoice[]);
       setInvoiceLines((invoiceLineResult.data ?? []) as SupplierInvoiceLine[]);
-      setAttachments((attachmentResult.data ?? []) as InvoiceAttachment[]);
+      setAttachments(attachmentResult.error ? [] : (attachmentResult.data ?? []) as InvoiceAttachment[]);
       // Product lookup is a convenience only; an unavailable catalog must not prevent manual invoice capture.
       setProducts(productResult.error ? [] : (productResult.data ?? []) as Product[]);
     } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat faktur supplier dari Supabase.")); }
@@ -308,6 +308,26 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
     finally { setSaving(false); }
   }
 
+  async function postInvoiceToAP() {
+    if (!postingInvoice) return;
+    setError(""); setNotice(""); setPostingBusy(true);
+    try {
+      if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk posting AP.");
+      if (postingReference.trim().length < 3) throw new Error("Referensi review pajak wajib diisi.");
+      const { error: rpcError } = await getSupabaseBrowserClient().rpc("post_supplier_invoice_to_ap", {
+        p_supplier_invoice_id: postingInvoice.id,
+        p_input_tax_treatment: postingTreatment,
+        p_tax_review_reference: postingReference.trim(),
+      });
+      if (rpcError) throw rpcError;
+      setPostingInvoice(null); setPostingReference("");
+      setNotice("Faktur berhasil diposting ke hutang supplier (AP) dan jurnal. Pembayaran berikutnya dapat dicatat serta dialokasikan dari menu Pembayaran.");
+      await load();
+    } catch (cause) {
+      setError(friendlyErrorMessage(cause, "Posting AP gagal. Periksa rekonsiliasi total, status pajak, referensi review, dan konfigurasi akuntansi."));
+    } finally { setPostingBusy(false); }
+  }
+
   async function openAttachment(invoiceId: string) {
     setError(""); setNotice("");
     try {
@@ -388,17 +408,27 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-[var(--muted)]">Tersimpan sebagai draft; belum dihitung sebagai hutang, modal/HPP, pajak masukan, atau jurnal.</p><button type="submit" className="primary-button" disabled={saving || !canWrite}>{saving ? "Menyimpan…" : "Simpan draft faktur"}</button></div>
     </form>}
 
+    {postingInvoice && <section className="card card-pad mb-5 border border-[var(--border)]">
+      <h2 className="font-semibold">Posting AP · {postingInvoice.supplier_invoice_number}</h2>
+      <p className="mt-1 text-sm text-[var(--muted)]">Posting mengakui hutang dan membuat jurnal. Pastikan total header sudah cocok dengan faktur asli dan keputusan pajak telah direview. Sistem akan menolak posting jika total atau konfigurasi tidak valid.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs text-[var(--muted)]">Perlakuan PPN masukan<select className="field mt-1" value={postingTreatment} onChange={event => setPostingTreatment(event.target.value as "recoverable" | "nonrecoverable" | "not_applicable")}><option value="not_applicable">Tidak berlaku (faktur non-pajak)</option><option value="recoverable">Dapat dikreditkan</option><option value="nonrecoverable">Tidak dapat dikreditkan</option></select></label>
+        <label className="text-xs text-[var(--muted)]">Referensi review / persetujuan pajak<input className="field mt-1" required minLength={3} maxLength={200} value={postingReference} onChange={event => setPostingReference(event.target.value)} placeholder="Contoh: pemeriksaan dokumen faktur tanggal …" /></label>
+      </div>
+      <div className="mt-3 flex flex-wrap justify-end gap-2"><button type="button" className="tab-button" onClick={() => { setPostingInvoice(null); setPostingReference(""); }}>Batal</button><button type="button" className="primary-button" disabled={postingBusy || postingReference.trim().length < 3} onClick={() => void postInvoiceToAP()}>{postingBusy ? "Memposting…" : "Konfirmasi & posting AP"}</button></div>
+    </section>}
+
     {voiding && <section className="card card-pad mb-5 border border-amber-300"><h2 className="font-semibold">Batalkan draft {voiding.supplier_invoice_number}</h2><p className="mt-1 text-sm text-[var(--muted)]">Data tidak dihapus. Nomor faktur dapat dicatat ulang setelah draft ini dibatalkan.</p><label className="mt-3 block text-xs text-[var(--muted)]">Alasan pembatalan<textarea className="field mt-1 min-h-20 py-2" value={voidReason} onChange={event => setVoidReason(event.target.value)} minLength={3} maxLength={500} required /></label><div className="mt-3 flex justify-end gap-2"><button type="button" className="tab-button" onClick={() => { setVoiding(null); setVoidReason(""); }}>Kembali</button><button type="button" className="primary-button" disabled={voidSaving || voidReason.trim().length < 3} onClick={() => void voidInvoice()}>{voidSaving ? "Membatalkan…" : "Batalkan draft"}</button></div></section>}
 
     <section className="card card-pad supplier-invoice-list">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Daftar faktur supplier</h2><p className="text-xs text-[var(--muted)]">Semua nominal adalah nilai yang dilaporkan supplier; draft/void belum membentuk hutang atau arus kas.</p></div><div className="flex gap-2"><input className="field sm:w-64" value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari nomor faktur atau supplier" aria-label="Cari faktur supplier"/><button className="tab-button" onClick={() => void load()} disabled={loading}>Muat ulang</button></div></div>
       <div className="hidden overflow-x-auto md:block"><table className="w-full"><thead><tr className="table-head">{["Nomor faktur", "Supplier", "Tanggal / tempo", "Jumlah item", "Total dilaporkan", "Status", "Aksi"].map(item => <th key={item} className="py-3 pr-3">{item}</th>)}</tr></thead><tbody>{visibleInvoices.map(invoice => {
         const lines = linesByInvoice.get(invoice.id) ?? [];
-        return <tr className="table-row" key={invoice.id}><td className="py-4 pr-3"><span className="font-mono text-xs text-[var(--accent)]">{invoice.supplier_invoice_number}</span><span className="mt-1 block text-xs text-[var(--muted)]">{invoice.tax_status === "taxed" ? "Berpajak" : invoice.tax_status === "non_taxed" ? "Non-pajak" : "Pajak belum diverifikasi"}</span></td><td className="py-4 pr-3">{supplierById.get(invoice.supplier_id)?.legal_name ?? "Supplier"}</td><td className="py-4 pr-3 text-sm">{invoice.invoice_date}<span className="block text-xs text-[var(--muted)]">Tempo: {invoice.due_date ?? "—"}</span></td><td className="py-4 pr-3 text-xs">{lines.length} item</td><td className="py-4 pr-3 text-right tabular-nums">{money(invoice.invoice_total_reported)}</td><td className="py-4 pr-3"><span className="status-pill">{invoice.status === "draft" ? "Draft · belum posting" : invoice.status === "posted" ? "AP posted" : "Void"}</span>{invoice.void_reason && <span className="mt-1 block max-w-40 text-xs text-[var(--muted)]">{invoice.void_reason}</span>}</td><td className="py-4 text-right"><div className="flex flex-wrap justify-end gap-2">{attachments.some(item => item.supplier_invoice_id === invoice.id) && <button type="button" className="tab-button" onClick={() => void openAttachment(invoice.id)}>Buka lampiran</button>}{canWrite && invoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setVoiding(invoice); setVoidReason(""); setError(""); }}>Batalkan draft</button>}</div></td></tr>;
+        return <tr className="table-row" key={invoice.id}><td className="py-4 pr-3"><span className="font-mono text-xs text-[var(--accent)]">{invoice.supplier_invoice_number}</span><span className="mt-1 block text-xs text-[var(--muted)]">{invoice.tax_status === "taxed" ? "Berpajak" : invoice.tax_status === "non_taxed" ? "Non-pajak" : "Pajak belum diverifikasi"}</span></td><td className="py-4 pr-3">{supplierById.get(invoice.supplier_id)?.legal_name ?? "Supplier"}</td><td className="py-4 pr-3 text-sm">{invoice.invoice_date}<span className="block text-xs text-[var(--muted)]">Tempo: {invoice.due_date ?? "—"}</span></td><td className="py-4 pr-3 text-xs">{lines.length} item</td><td className="py-4 pr-3 text-right tabular-nums">{money(invoice.invoice_total_reported)}</td><td className="py-4 pr-3"><span className="status-pill">{invoice.status === "draft" ? "Draft · belum posting" : invoice.status === "posted" ? "AP posted" : "Void"}</span>{invoice.void_reason && <span className="mt-1 block max-w-40 text-xs text-[var(--muted)]">{invoice.void_reason}</span>}</td><td className="py-4 text-right"><div className="flex flex-wrap justify-end gap-2">{attachments.some(item => item.supplier_invoice_id === invoice.id) && <button type="button" className="tab-button" onClick={() => void openAttachment(invoice.id)}>Buka lampiran</button>}{canWrite && invoice.status === "draft" && <button type="button" className="primary-button" onClick={() => { setPostingInvoice(invoice); setPostingTreatment(invoice.tax_status === "non_taxed" ? "not_applicable" : "recoverable"); setPostingReference(""); setError(""); }}>Review &amp; posting AP</button>}{canWrite && invoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setVoiding(invoice); setVoidReason(""); setError(""); }}>Batalkan draft</button>}</div></td></tr>;
       })}</tbody></table></div>
       <div className="space-y-3 md:hidden">{visibleInvoices.map(invoice => {
         const lines = linesByInvoice.get(invoice.id) ?? [];
-        return <article key={invoice.id} className="rounded-xl border border-[var(--border)] p-3"><div className="flex items-start justify-between gap-2"><div><p className="font-mono text-xs text-[var(--accent)]">{invoice.supplier_invoice_number}</p><h3 className="mt-1 text-sm font-semibold">{supplierById.get(invoice.supplier_id)?.legal_name ?? "Supplier"}</h3><p className="mt-1 text-xs text-[var(--muted)]">{invoice.invoice_date} · tempo {invoice.due_date ?? "—"}</p></div><span className="status-pill">{invoice.status === "draft" ? "Draft" : invoice.status === "posted" ? "AP posted" : "Void"}</span></div><div className="mt-3 flex items-end justify-between gap-2"><p className="text-xs text-[var(--muted)]">{lines.length} item</p><strong className="tabular-nums">{money(invoice.invoice_total_reported)}</strong></div>{attachments.some(item => item.supplier_invoice_id === invoice.id) && <button type="button" className="tab-button mt-3 w-full" onClick={() => void openAttachment(invoice.id)}>Buka lampiran dokumen asli</button>}{invoice.status === "draft" && canWrite && <button type="button" className="tab-button mt-3 w-full" onClick={() => { setVoiding(invoice); setVoidReason(""); setError(""); }}>Batalkan draft</button>}{invoice.void_reason && <p className="mt-2 text-xs text-[var(--muted)]">Alasan: {invoice.void_reason}</p>}</article>;
+        return <article key={invoice.id} className="rounded-xl border border-[var(--border)] p-3"><div className="flex items-start justify-between gap-2"><div><p className="font-mono text-xs text-[var(--accent)]">{invoice.supplier_invoice_number}</p><h3 className="mt-1 text-sm font-semibold">{supplierById.get(invoice.supplier_id)?.legal_name ?? "Supplier"}</h3><p className="mt-1 text-xs text-[var(--muted)]">{invoice.invoice_date} · tempo {invoice.due_date ?? "—"}</p></div><span className="status-pill">{invoice.status === "draft" ? "Draft" : invoice.status === "posted" ? "AP posted" : "Void"}</span></div><div className="mt-3 flex items-end justify-between gap-2"><p className="text-xs text-[var(--muted)]">{lines.length} item</p><strong className="tabular-nums">{money(invoice.invoice_total_reported)}</strong></div>{attachments.some(item => item.supplier_invoice_id === invoice.id) && <button type="button" className="tab-button mt-3 w-full" onClick={() => void openAttachment(invoice.id)}>Buka lampiran dokumen asli</button>}{invoice.status === "draft" && canWrite && <button type="button" className="primary-button mt-3 w-full" onClick={() => { setPostingInvoice(invoice); setPostingTreatment(invoice.tax_status === "non_taxed" ? "not_applicable" : "recoverable"); setPostingReference(""); setError(""); }}>Review &amp; posting AP</button>}{invoice.status === "draft" && canWrite && <button type="button" className="tab-button mt-3 w-full" onClick={() => { setVoiding(invoice); setVoidReason(""); setError(""); }}>Batalkan draft</button>}{invoice.void_reason && <p className="mt-2 text-xs text-[var(--muted)]">Alasan: {invoice.void_reason}</p>}</article>;
       })}</div>
       {!loading && !visibleInvoices.length && !error && <p className="py-10 text-center text-sm text-[var(--muted)]">Belum ada faktur supplier untuk filter ini.</p>}
       {loading && <p className="py-6 text-center text-sm text-[var(--muted)]">Memuat faktur supplier dari Supabase…</p>}
