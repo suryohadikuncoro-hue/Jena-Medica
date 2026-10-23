@@ -15,7 +15,9 @@ Aplikasi ERP web B2B untuk Jena Medical Center dengan model **drop-ship**. Suppl
 ## D-09/D-10: keputusan dan status implementasi
 
 - **D-09:** tidak ada menu, halaman, komponen, RPC, tabel, atau record pengiriman di sistem. Objek shipment legacy dan record shipment sudah dihapus dari Production oleh migration `20261017185346` sesuai instruksi pemilik. Record pembayaran pelanggan/supplier tidak termasuk scope dan tetap dipertahankan.
-- **D-10:** invoice pelanggan dibuat manual dari SO terkonfirmasi. Satu SO dapat memiliki beberapa invoice; batas kumulatif kuantitas dan nilai dijaga oleh database. Invoice tidak memiliki `shipment_id`.
+- **D-10:** setelah SO dikonfirmasi, draf invoice pelanggan dibuat otomatis dan idempoten. Satu SO dapat memiliki beberapa invoice; batas kumulatif kuantitas dan nilai dijaga oleh database. Invoice tidak memiliki `shipment_id`.
+- **D-12/D-13:** pesanan dibagikan ke supplier melalui WhatsApp; pengguna mencatat persetujuan supplier sebelum konfirmasi SO. Pengguna meninjau draf invoice, lalu menerbitkan dan membagikan PDF melalui satu alur. Posting akuntansi rutin berjalan otomatis setelah konfigurasi valid; tidak ada verifikasi penyerahan barang di aplikasi.
+- **D-14:** faktur supplier direncanakan mendukung unggah foto/PDF untuk ekstraksi otomatis ke form yang tetap bisa diedit. OCR belum boleh dianggap aktif sebelum implementasi dan pengujian selesai.
 - Pembayaran dan alokasi tetap tersedia di route mandiri `/pembayaran`.
 
 Migration `20261017185346_d10_invoice_from_sales_order_drop_shipment_module.sql` (sebelumnya disiapkan dengan nama `20261017150000_...`) telah diterapkan ke Supabase Production: objek shipment dihapus, RPC invoice diganti agar menerima SO dan kuantitas per baris. Arsip `supabase/migrations/` disinkronkan 24/24 dengan history remote per 23 Oktober 2026 (D-11). Seluruh migration D-10 dan master data sudah aktif di Production.
@@ -31,12 +33,12 @@ Data yang teramati: 2 customer, 1 supplier, 2 produk, 1 harga pelanggan/barang, 
 - `/login` dan `/set-password` — autentikasi Supabase.
 - `/` — buat dan kelola SO; harga khusus diambil berdasarkan tanggal transaksi.
 - `/master-data` — master pelanggan, supplier, barang, dan harga.
-- `/operasional` — PO supplier dan capture draft Faktur Supplier.
-- `/invoice-pelanggan` — buat invoice manual dari SO terkonfirmasi; kuantitas parsial dapat ditagih bertahap sesuai sisa SO.
+- `/operasional` — pencatatan faktur supplier; rencana OCR foto/PDF dicatat dalam D-14 dan status aktif harus diverifikasi.
+- `/invoice-pelanggan` — tinjau draf invoice otomatis dari SO terkonfirmasi; kuantitas parsial dapat ditagih bertahap sesuai sisa SO. Penerbitan dan posting otomatis merupakan target D-13 yang harus diuji sebelum Production.
 - `/pembayaran` — penerimaan pelanggan, pembayaran supplier, dan alokasi.
 - `/keuangan` — status dokumen dan kerangka akuntansi; bukan bukti bahwa posting sudah final tanpa UAT/rekonsiliasi.
 
-Catatan pembayaran operasional bukan otomatis jurnal kas/bank, dan draft invoice bukan pendapatan/piutang. Posting sudah tidak dikunci secara konfigurasi (profile `approved`, mapping 10, periode 1), tetapi angka laporan tetap harus diverifikasi melalui UAT dan rekonsiliasi sebelum cutover.
+Catatan pembayaran operasional saat ini masih perlu dipastikan apakah alokasi dan jurnalnya sudah otomatis di seluruh alur. Draf invoice bukan pendapatan/piutang. Angka laporan harus diverifikasi melalui UAT dan rekonsiliasi sebelum cutover.
 
 ## Supabase, otorisasi, dan validasi
 
