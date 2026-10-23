@@ -54,7 +54,8 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
    const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
   const [invoiceLines, setInvoiceLines] = useState<SupplierInvoiceLine[]>([]);
   const [attachments, setAttachments] = useState<InvoiceAttachment[]>([]);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);\n  const [postingInvoice, setPostingInvoice] = useState<SupplierInvoice | null>(null);\n  const [postingTreatment, setPostingTreatment] = useState<"recoverable" | "nonrecoverable" | "not_applicable">("not_applicable");\n  const [postingReference, setPostingReference] = useState("");\n  const [postingBusy, setPostingBusy] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [postingInvoice, setPostingInvoice] = useState<SupplierInvoice | null>(null);\n  const [postingTreatment, setPostingTreatment] = useState<"recoverable" | "nonrecoverable" | "not_applicable">("not_applicable");\n  const [postingReference, setPostingReference] = useState("");\n  const [postingBusy, setPostingBusy] = useState(false);
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
