@@ -3,7 +3,7 @@
 -- coverage and acknowledgment of every active supplier PO.
 begin;
 
-create function public.create_purchase_order(
+create or replace function public.create_purchase_order(
   p_supplier_id uuid,
   p_sales_order_id uuid,
   p_expected_delivery_date date,
@@ -108,7 +108,7 @@ $$;
 revoke all on function public.create_purchase_order(uuid, uuid, date, text, jsonb) from public, anon, authenticated;
 grant execute on function public.create_purchase_order(uuid, uuid, date, text, jsonb) to authenticated;
 
-create function public.confirm_sales_order(p_sales_order_id uuid)
+create or replace function public.confirm_sales_order(p_sales_order_id uuid)
 returns void
 language plpgsql
 security definer
