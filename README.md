@@ -56,3 +56,12 @@ npm run dev
 ```
 
 Buka `http://localhost:3000`. Konfigurasi Cloudflare Workers/OpenNext ada pada `wrangler.jsonc` dan `open-next.config.ts`. Jangan commit credential.
+
+
+## Ekstraksi faktur supplier (D-14)
+
+Endpoint `/api/ocr/supplier-invoice` memakai Gemini API untuk membaca foto/PDF faktur. Atur `GEMINI_API_KEY` sebagai secret server-side di Cloudflare Workers (atau environment server lokal); jangan gunakan prefix `NEXT_PUBLIC_` dan jangan commit nilainya. Contoh lokal ada di `.env.example`.
+
+Batasan branch implementasi: file yang diunggah saat ini hanya diproses untuk ekstraksi dan **belum disimpan sebagai lampiran permanen**. Sebelum fitur dianggap siap produksi, tambahkan penyimpanan dokumen asli dengan akses terbatas, uji OCR pada foto/PDF nyata, dan jalankan lint/build/build:worker. Bila secret belum diatur, form tetap bisa diisi manual dan endpoint mengembalikan pesan konfigurasi.
+
+Penerbitan invoice pelanggan kini dipanggil dari halaman Invoice melalui RPC posting yang sudah ada; nilai pajak/referensi keputusan tetap harus mengikuti konfigurasi dan persetujuan resmi. Aksi berbagi PDF dilakukan setelah posting sukses, dan pembatalan menu berbagi tidak membatalkan invoice yang sudah diterbitkan.
