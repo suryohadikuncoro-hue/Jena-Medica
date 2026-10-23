@@ -99,6 +99,7 @@ Target cutover awal tahun buku adalah **1 Januari 2027**, tetapi hanya berlaku j
 Addendum ini merupakan keputusan terbaru pemilik dan mengesampingkan alur lama yang bertentangan. Kebijakan akuntansi/pajak dan kontrol audit tetap berlaku.
 
 ### D-12 — Persetujuan supplier melalui WhatsApp
+- Status implementasi branch per 23 Oktober 2026: halaman `/pesanan-supplier` sudah menyediakan bagikan rincian PO melalui WhatsApp, penandaan “sudah dikirim”, dan pencatatan persetujuan melalui RPC `set_purchase_order_status`. Pengguna tetap harus menandai status berdasarkan tindakan/konfirmasi nyata; aplikasi tidak membaca balasan WhatsApp otomatis. UAT diperlukan.
 - Setelah pesanan pelanggan dibuat, pengguna menyiapkan dan membagikan rincian pesanan ke supplier melalui WhatsApp.
 - Status pesanan menunggu balasan supplier. Aplikasi tidak mengklaim dapat membaca atau mendeteksi balasan WhatsApp secara otomatis.
 - Setelah pengguna menerima balasan/persetujuan supplier, pengguna mencatat persetujuan tersebut di Jena. Konfirmasi bukan tombol administratif yang boleh ditekan tanpa persetujuan.
@@ -106,6 +107,7 @@ Addendum ini merupakan keputusan terbaru pemilik dan mengesampingkan alur lama y
 - Konfirmasi SO membuat draf invoice pelanggan secara otomatis dan idempoten. Pengguna tidak membuat invoice secara manual.
 
 ### D-13 — Review, penerbitan invoice, berbagi WhatsApp, dan posting otomatis
+- Status implementasi branch per 23 Oktober 2026: invoice supplier memiliki aksi review dan posting AP dengan keputusan perlakuan pajak serta referensi review wajib; pembayaran supplier dan alokasinya mencoba membuat jurnal otomatis setelah transaksi tercatat. Bila konfigurasi akuntansi/periode/metode pembayaran belum siap, transaksi kas tetap tersimpan dan UI memberi peringatan bahwa jurnal perlu diselesaikan. Ini belum menjadikan cutover siap.
 - Pengguna meninjau/mengoreksi draf invoice yang dibuat otomatis dari SO terkonfirmasi.
 - Tidak ada langkah verifikasi penyerahan barang di aplikasi dan tidak ada status pengiriman. Ini sesuai model drop-ship D-09 dan instruksi pemilik terbaru.
 - Satu aksi utama **Terbitkan & Bagikan Invoice** menjalankan penerbitan invoice melalui mekanisme posting akuntansi yang aman, lalu membuka menu berbagi perangkat untuk PDF A4 dan WhatsApp.
@@ -120,4 +122,4 @@ Addendum ini merupakan keputusan terbaru pemilik dan mengesampingkan alur lama y
 - Dokumen asli tetap tersedia sebagai referensi. Teks/angka yang tidak terbaca dibiarkan kosong dan ditandai untuk pemeriksaan; sistem tidak boleh mengarang nilai.
 - Angka tercetak pada faktur asli tetap menjadi sumber kebenaran (D-01). Tampilkan nilai hasil hitungan sistem, nilai tercetak, dan selisih. Draft boleh disimpan dengan selisih, tetapi posting diblokir sampai selisih akhir memenuhi kebijakan D-01.
 - Terapkan validasi format/ukuran file, pemeriksaan kemungkinan faktur duplikat, akses dokumen berbasis role, dan pencatatan koreksi/approval. Rahasia OCR tidak boleh berada di browser atau Git.
-- Status implementasi D-14: keputusan produk disetujui; implementasi OCR, penyimpanan dokumen, dan pengujian masih harus diverifikasi/dikerjakan sebelum dinyatakan aktif.
+- Status implementasi branch per 23 Oktober 2026: endpoint OCR Gemini, form editable, upload dokumen asli ke bucket Supabase privat, metadata lampiran dengan RLS, dan akses melalui signed URL sudah ditambahkan. Masih perlu konfigurasi secret `GEMINI_API_KEY`, penerapan migration lampiran ke environment target, uji foto/PDF nyata, dan UAT role/retensi sebelum dinyatakan siap Production.
