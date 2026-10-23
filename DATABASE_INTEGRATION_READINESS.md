@@ -1,6 +1,6 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
-**Status Production — pemeriksaan baca-saja diperbarui 24 Oktober 2026:** Supabase remote terakhir mencatat **28 migration**; direktori `supabase/migrations/` di `main` juga berisi **28 file**. Seluruh objek shipment legacy sudah tidak ada. Migration D-10 aktif pada pemeriksaan RPC sebelumnya, termasuk draf otomatis, edit draf, lock order, batas nilai kumulatif, dan tanggal invoice masa depan. **Sinkronisasi isi SQL/hash 28/28 belum dibuktikan ulang**; versi/nama beberapa migration perlu direkonsiliasi sebelum klaim D-11 dianggap tuntas. Commit `main` terakhir yang diperiksa adalah `e99fb3e6f4cc97c9d5d9ba8360ea1d64ab49d422`; Quality Checks run #129 lulus untuk lint, build Next.js, dan build Cloudflare Worker. Deployment Cloudflare terbaru teramati pada 23 Oktober, tetapi pemetaan deployment ke commit tersebut belum terverifikasi.
+**Status Production — pemeriksaan baca-saja diperbarui 24 Oktober 2026:** Supabase remote terakhir mencatat **28 migration**; direktori `supabase/migrations/` di `main` juga berisi **28 file**. Seluruh objek shipment legacy sudah tidak ada. Migration D-10 aktif pada pemeriksaan RPC sebelumnya, termasuk draf otomatis, edit draf, lock order, batas nilai kumulatif, dan tanggal invoice masa depan. **Sinkronisasi isi SQL/hash 28/28 belum dibuktikan ulang**; satu ketidaksesuaian version ID ditemukan dan nama file arsipnya sudah dikoreksi pada branch PR ini; verifikasi hash/isi SQL seluruh migration masih diperlukan sebelum D-11 dianggap tuntas. Commit `main` terakhir yang diperiksa adalah `e99fb3e6f4cc97c9d5d9ba8360ea1d64ab49d422`; Quality Checks run #129 lulus untuk lint, build Next.js, dan build Cloudflare Worker. Deployment Cloudflare terbaru teramati pada 23 Oktober, tetapi pemetaan deployment ke commit tersebut belum terverifikasi.
 
 **Belum dianggap selesai untuk cutover:** perlindungan kata sandi bocor Supabase Auth masih nonaktif; 2 SO `confirmed` belum memiliki invoice dan belum diklasifikasi data uji vs riil (D-05); UAT guard nilai kumulatif jalur create, concurrency, pembulatan lintas invoice; UAT UI ber-role Owner/Admin/Viewer; backup/restore teruji; dan UAT end-to-end aplikasi live. Bagian bertanda *snapshot historis* adalah catatan lama dan tidak menggantikan status ini.
 
@@ -10,7 +10,7 @@
 
 ## 1. Status skema dan migration remote
 
-Supabase mencatat **28 migration remote** pada pemeriksaan 24 Oktober 2026. Jumlah tabel publik 27 adalah snapshot audit 23 Oktober dan belum dihitung ulang pada pemeriksaan ini. Semua tabel publik memiliki RLS aktif dan policy; audit tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`. Jumlah file arsip dan entri remote sama-sama 28, tetapi kesamaan isi SQL/hash per file belum diverifikasi ulang. D-11 belum boleh ditandai tuntas sampai version ID, nama, dan isi SQL seluruhnya dibandingkan.
+Supabase mencatat **28 migration remote** pada pemeriksaan 24 Oktober 2026. Jumlah tabel publik 27 adalah snapshot audit 23 Oktober dan belum dihitung ulang pada pemeriksaan ini. Semua tabel publik memiliki RLS aktif dan policy; audit tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`. Jumlah file arsip dan entri remote sama-sama 28. Ketidaksesuaian version ID pada migration tanggal bisnis Jakarta telah dikoreksi pada branch PR ini; kesamaan isi SQL/hash per file belum diverifikasi ulang. D-11 belum boleh ditandai tuntas sampai isi SQL seluruhnya dibandingkan.
 
 | Version | Name | Status remote |
 |---|---|---|
@@ -38,7 +38,7 @@ Supabase mencatat **28 migration remote** pada pemeriksaan 24 Oktober 2026. Juml
 | `20261022013524` | `20261022080000_masterdata_generate_code_rpc` | Diterapkan |
 | `20261022013530` | `20261022090000_masterdata_price_update_lock` | Diterapkan |
 | `20261022013534` | `20261022100000_masterdata_audit_trail` | Diterapkan |
-| `20261022182537` | `d10_jakarta_transaction_dates` | Tercatat di Production; versi file arsip di repo adalah `20261023011500` sehingga version ID tidak cocok dan perlu direkonsiliasi tanpa mengubah history remote |
+| `20261022182537` | `d10_jakarta_transaction_dates` | Tercatat di Production; file arsip dikoreksi di branch PR menjadi `20261022182537_d10_jakarta_transaction_dates.sql`; isi SQL/hash tetap perlu diverifikasi |
 | `20261023071935` | `supplier_invoice_attachments` | Tercatat; perlu UAT bucket/RLS/unggah/OCR |
 | `20261023071956` | `supplier_approval_before_sales_order_confirmation` | Tercatat; nama/versi berbeda dari catatan lama yang menyebut `20261023104500` |
 | `20261023072030` | `supplier_ap_reconciliation_gate` | Tercatat; pastikan ACL RPC lama dan baru diverifikasi terpisah |
