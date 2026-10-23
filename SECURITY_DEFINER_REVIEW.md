@@ -1,7 +1,7 @@
 # Review Fungsi SECURITY DEFINER — Jena Medical Center
 
-**Tanggal review:** 23 Oktober 2026 (audit baca-saja; tidak ada DDL/permintaan yang dijalankan)  
-**Sumber:** arsip `supabase/migrations/` (24 file, sinkron dengan `supabase_migrations.schema_migrations` remote — md5 identik) dan Supabase Security Advisor project `Jena Medical Center` (`sjiezdyxylwvqessyvml`).
+**Tanggal review:** diperbarui 24 Oktober 2026 (audit baca-saja; tidak ada DDL/permintaan yang dijalankan)  
+**Sumber:** arsip `supabase/migrations/` (28 file) dan Supabase Security/Performance Advisor project `Jena Medical Center` (`sjiezdyxylwvqessyvml`). Sinkronisasi isi SQL/hash seluruh migration belum dibuktikan ulang; lihat `DATABASE_INTEGRATION_READINESS.md`.
 
 ## 1. Ringkasan hasil
 
@@ -11,12 +11,12 @@ Security Advisor melaporkan **36 fungsi `SECURITY DEFINER` di schema `public` ya
 |---|---|
 | Jumlah definisi fungsi `public` dalam arsip | 38 nama berbeda (termasuk definisi ulang) |
 | Fungsi yang sudah dihapus dari Production | 2 — `create_shipment`, `transition_shipment` (dihapus migration `20261017185346`, D-09) |
-| Fungsi live | 36 — **cocok persis dengan jumlah peringatan Advisor** |
+| Fungsi live | 36 — cocok dengan jumlah peringatan Advisor pada pemeriksaan terakhir |
 | `set search_path = ''` | 36/36 fungsi live |
 | Gate role `app_private.has_business_role(array['owner','admin'])` | 36/36 fungsi live |
 | SQL dinamis (`EXECUTE`, `EXECUTE FORMAT`, `format()` untuk identitas) | Tidak ditemukan di seluruh arsip |
 | `grant execute` ke role `anon` | Tidak ada |
-| `revoke all ... from public, anon, authenticated` + `grant execute ... to authenticated` | Ada pada seluruh definisi awal fungsi; satu definisi ulang tidak mengulang pola ini (lihat temuan R-2) |
+| ACL live untuk RPC yang diperiksa | Fungsi 3-arg `post_supplier_invoice_to_ap` tidak dapat dieksekusi `authenticated`; overload 4-arg dapat dieksekusi `authenticated`. ACL fungsi lain tidak diaudit satu per satu pada sesi ini |
 
 Kesimpulan: **tidak ditemukan fungsi `SECURITY DEFINER` publik yang kehilangan gate role, kehilangan `search_path`, atau dapat dipanggil `anon`.** Peringatan Advisor adalah konsekuensi dari arsitektur aplikasi yang memanggil RPC langsung dari browser, bukan indikasi celah yang ditemukan. Namun pola ini membuat setiap fungsi menjadi satu-satunya titik otorisasi — lihat risiko sisanya di bagian 4.
 
@@ -59,7 +59,7 @@ Fungsi yang sudah dihapus dan tidak boleh dikembalikan: `create_shipment`, `tran
 | ID | Temuan | Tingkat | Rekomendasi |
 |---|---|---|---|
 | R-1 | 36 fungsi `SECURITY DEFINER` berjalan sebagai owner dan melewati RLS; gate role + validasi di dalam fungsi adalah satu-satunya pengaman | Informasi (by design) | Pertahankan disiplin: setiap fungsi baru wajib diawali gate role, validasi input, dan `set search_path = ''`. Tambahkan integrasi test per role (viewer ditolak menulis) pada jalur RPC utama |
-| R-2 | `20261021203053` mendefinisikan ulang `save_accounting_configuration` tanpa mengulang baris `revoke`/`grant`; ACL dari definisi awal (`20261016225329`) tetap berlaku karena `CREATE OR REPLACE` mempertahankan privilege | Rendah | Ulangi pola `revoke`/`grant` pada setiap definisi ulang agar audit ACL tetap konsisten dan tidak bergantung pada riwayat |
+| R-2 | `20261021203053` mendefinisikan ulang `save_accounting_configuration` tanpa mengulang baris `revoke`/`grant`; ACL dari definisi awal (`20261016225329`) tetap berlaku karena `CREATE OR REPLACE` mempertahankan privilege | Rendah, belum ditindaklanjuti | Tambahkan `revoke`/`grant` eksplisit pada migration baru saat perubahan berikutnya; jangan mengedit migration yang sudah diterapkan dan jangan menjalankan DDL Production tanpa prosedur cutover yang disetujui |
 | R-3 | `generate_master_data_code` membangun regex dari `p_prefix` tanpa escaping karakter metacharacter regex | Rendah (hanya owner/admin; dampak: saran kode keliru, bukan eskalasi hak) | Batasi `p_prefix` ke charset aman (`^[A-Za-z0-9_-]+$`) atau bangun pola dengan escaping |
 | R-4 | Gate role membaca `app_metadata`; perubahan role baru berlaku setelah refresh token/login ulang | Informasi | Dokumentasikan ke operator; pertimbangkan force-refresh setelah perubahan role |
 | R-5 | Grant eksekusi diberikan ke seluruh role `authenticated`, bukan role aplikasi khusus | Informasi | Pertimbangkan role `app_user` khusus aplikasi agar grant lebih sempit dan mudah diaudit |
@@ -68,6 +68,6 @@ Fungsi yang sudah dihapus dan tidak boleh dikembalikan: `create_shipment`, `tran
 
 ## 5. Batas review
 
-- Review dilakukan terhadap isi arsip migration yang terbukti identik dengan yang diterapkan di remote (md5), ditambah pembacaan Security/Performance Advisor pada 23 Oktober 2026.
+- Review terdahulu menyatakan hash migration identik, tetapi klaim itu tidak diulang pada pemeriksaan 24 Oktober dan tidak boleh dianggap terbukti sampai dibandingkan ulang. Security Advisor pada 24 Oktober masih melaporkan 36 fungsi `SECURITY DEFINER` yang dapat dieksekusi `authenticated`; pola ini tidak otomatis berarti kerentanan karena grant tersebut perlu dinilai bersama gate role di dalam fungsi.
 - Tidak dilakukan: uji penetrasi runtime, uji beban, perubahan DDL, atau modifikasi grant di Production.
 - Jalankan ulang review ini setelah setiap perubahan schema; peringatan Advisor harus ditinjau, bukan diabaikan otomatis.
