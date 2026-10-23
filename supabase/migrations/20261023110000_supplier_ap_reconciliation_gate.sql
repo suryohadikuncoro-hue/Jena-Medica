@@ -2,7 +2,7 @@
 -- the invoice lines against printed subtotal and total before recognizing AP.
 begin;
 
-drop function if exists public.post_supplier_invoice_to_ap(uuid, text, text);
+revoke all on function public.post_supplier_invoice_to_ap(uuid, text, text) from public, anon, authenticated;
 
 create function public.post_supplier_invoice_to_ap(
   p_supplier_invoice_id uuid,
