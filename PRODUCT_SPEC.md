@@ -99,7 +99,7 @@ Target cutover awal tahun buku adalah **1 Januari 2027**, tetapi hanya berlaku j
 Addendum ini merupakan keputusan terbaru pemilik dan mengesampingkan alur lama yang bertentangan. Kebijakan akuntansi/pajak dan kontrol audit tetap berlaku.
 
 ### D-12 — Persetujuan supplier melalui WhatsApp
-- Status implementasi branch per 23 Oktober 2026: halaman `/pesanan-supplier` sudah menyediakan bagikan rincian PO melalui WhatsApp, penandaan “sudah dikirim”, dan pencatatan persetujuan melalui RPC `set_purchase_order_status`. Pengguna tetap harus menandai status berdasarkan tindakan/konfirmasi nyata; aplikasi tidak membaca balasan WhatsApp otomatis. UAT diperlukan.
+- Status implementasi branch per 23 Oktober 2026: halaman `/pesanan-supplier` membuat PO dari SO draft/terkonfirmasi, membagikan rincian PO melalui WhatsApp, menandai setelah benar-benar dikirim, dan mencatat persetujuan melalui RPC `set_purchase_order_status`. Migration `20261023104500_supplier_approval_before_sales_order_confirmation.sql` mengizinkan PO untuk SO draft dan memblokir konfirmasi SO sampai seluruh kuantitas tercakup oleh PO aktif dan semua PO aktif berstatus acknowledged. Pengguna tetap harus menandai status berdasarkan tindakan/konfirmasi nyata; aplikasi tidak membaca balasan WhatsApp otomatis. Migration ini belum diterapkan ke Production; UAT diperlukan.
 - Setelah pesanan pelanggan dibuat, pengguna menyiapkan dan membagikan rincian pesanan ke supplier melalui WhatsApp.
 - Status pesanan menunggu balasan supplier. Aplikasi tidak mengklaim dapat membaca atau mendeteksi balasan WhatsApp secara otomatis.
 - Setelah pengguna menerima balasan/persetujuan supplier, pengguna mencatat persetujuan tersebut di Jena. Konfirmasi bukan tombol administratif yang boleh ditekan tanpa persetujuan.
