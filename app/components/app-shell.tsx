@@ -19,6 +19,7 @@ const NAV = [
 const quickActions = [["Pesanan Pelanggan", "/"], ["Order ke Supplier", "/operasional"], ["Persetujuan Supplier", "/pesanan-supplier"], ["Faktur Supplier", "/operasional#invoices"], ["Invoice Pelanggan", "/invoice-pelanggan"], ["Pembayaran", "/pembayaran"], ["Biaya Operasional", "/keuangan#biaya"]] as const;
 const mobileMenuItems = [
   { label: "Profil", description: "Akun dan preferensi", href: "/profil", icon: <path d="M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 3.6-7 8-7s8 3 8 7" /> },
+  { label: "Persetujuan Supplier", description: "Buat PO, kirim WhatsApp, catat persetujuan", href: "/pesanan-supplier", icon: <><path d="M4 5h16v14H4z" /><path d="m8 12 2.5 2.5L16 9" /></> },
   { label: "Pembayaran", description: "Piutang, hutang, dan catat pembayaran", href: "/pembayaran", icon: <><path d="M4 7a2 2 0 012-2h12v4" /><rect x="3" y="7" width="18" height="13" rx="3" /><circle cx="16.5" cy="13.5" r="1.2" /></> },
   { label: "Master Data", description: "Pelanggan, supplier, dan barang", href: "/master-data", icon: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6" /><circle cx="17" cy="9" r="2.5" /><path d="M17 14c2.6 0 4.5 1.8 4.5 4.5" /></> },
   { label: "Keuangan", description: "Buku besar, biaya, dan laporan", href: "/keuangan", icon: <path d="M5 20v-7M12 20V5M19 20v-10" /> },
@@ -43,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState("");
   const matches = useMemo(() => searchItems.filter(item => item.label.toLowerCase().includes(query.toLowerCase())).slice(0, 8), [query]);
   const dashActive = pathname.startsWith("/dashboard-keuangan");
-  const menuActive = ["/lainnya", "/profil", "/pembayaran", "/master-data", "/keuangan", "/pengaturan-usaha"].some(route => pathname === route || pathname.startsWith(`${route}/`));
+  const menuActive = ["/lainnya", "/profil", "/pembayaran", "/pesanan-supplier", "/master-data", "/keuangan", "/pengaturan-usaha"].some(route => pathname === route || pathname.startsWith(`${route}/`));
   const homeActive = !dashActive && !menuActive;
   const isActive = (n: (typeof NAV)[number]) => ("exact" in n && n.exact ? pathname === n.match : pathname === n.match || pathname.startsWith(`${n.match}/`));
 
