@@ -55,6 +55,8 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [uploadedFileName, setUploadedFileName] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
@@ -151,6 +153,76 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       .slice(0, 6);
   }
 
+
+  async function extractInvoiceFile(file: File) {
+    setError(""); setNotice("");
+    if (!["application/pdf", "image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Pilih PDF, JPG, PNG, atau WEBP.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Ukuran file maksimal 10 MB.");
+      return;
+    }
+    setOcrBusy(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Masuk kembali sebelum membaca faktur.");
+      const body = new FormData();
+      body.append("file", file);
+      const response = await fetch("/api/ocr/supplier-invoice", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body,
+      });
+      const result = await response.json() as { error?: string; extracted?: Record<string, unknown> };
+      if (!response.ok || !result.extracted) throw new Error(result.error ?? "Faktur gagal dibaca.");
+      const data = result.extracted;
+      const asText = (value: unknown) => value === null || value === undefined ? "" : String(value);
+      const asAmount = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? String(value) : "";
+      const supplierName = asText(data.supplier_name).trim().toLowerCase();
+      const matchedSupplier = suppliers.find(item => {
+        const name = item.legal_name.trim().toLowerCase();
+        return supplierName && (name === supplierName || name.includes(supplierName) || supplierName.includes(name));
+      });
+      const rawLines = Array.isArray(data.lines) ? data.lines as Array<Record<string, unknown>> : [];
+      const lines: InvoiceLineDraft[] = rawLines.map(line => ({
+        product_code: asText(line.product_code),
+        product_name: asText(line.product_name),
+        unit: asText(line.unit),
+        quantity: asAmount(line.quantity),
+        unit_price_reported: asAmount(line.unit_price_reported),
+        line_discount_reported: asAmount(line.line_discount_reported) || "0",
+        line_total_reported: asAmount(line.line_total_reported),
+      })).filter(line => line.product_name || line.quantity || line.unit_price_reported);
+      setDraft(current => ({
+        ...current,
+        supplier_id: matchedSupplier?.id ?? current.supplier_id,
+        number: asText(data.supplier_invoice_number) || current.number,
+        invoice_date: asText(data.invoice_date) || current.invoice_date,
+        due_date: asText(data.due_date) || current.due_date,
+        tax_status: data.tax_status === "taxed" || data.tax_status === "non_taxed" ? data.tax_status : "unverified",
+        tax_rate: asAmount(data.tax_rate_reported),
+        subtotal: asAmount(data.subtotal_reported) || current.subtotal,
+        discount_amount: asAmount(data.discount_amount_reported) || current.discount_amount,
+        tax_amount: asAmount(data.tax_amount_reported) || current.tax_amount,
+        other_charges: asAmount(data.other_charges_reported) || current.other_charges,
+        total: asAmount(data.invoice_total_reported) || current.total,
+        notes: asText(data.notes) || current.notes,
+        lines: lines.length ? lines : current.lines,
+      }));
+      setUploadedFileName(file.name);
+      setNotice(matchedSupplier
+        ? "Faktur berhasil dibaca. Periksa dan koreksi semua field serta cocokkan angka dengan dokumen asli sebelum menyimpan."
+        : `Faktur dibaca, tetapi supplier "${asText(data.supplier_name) || "tidak terbaca"}" belum cocok dengan master. Pilih supplier secara manual dan periksa seluruh hasil.`);
+    } catch (cause) {
+      setError(friendlyErrorMessage(cause, "Faktur tidak dapat dibaca. Semua kolom tetap dapat diisi manual."));
+    } finally {
+      setOcrBusy(false);
+    }
+  }
+
   async function submitInvoice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(""); setNotice(""); setSaving(true);
     try {
@@ -172,7 +244,12 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         line_total_reported: Number(line.quantity) * Number(line.unit_price_reported) - Number(line.line_discount_reported || 0),
       }));
       if (reportedLines.some(line => line.quantity <= 0 || !line.product_name || !line.unit)) throw new Error("Nama barang, satuan, dan kuantitas faktur wajib diisi.");
-      const rate = null;
+      const rate = draft.tax_status === "taxed" ? nonNegative(draft.tax_rate, "Tarif pajak", false) : null;
+      const calculatedSubtotal = reportedLines.reduce((sum, line) => sum + line.line_total_reported, 0);
+      const reportedSubtotal = nonNegative(draft.subtotal, "Subtotal tercetak", false) ?? calculatedSubtotal;
+      const reportedDiscount = nonNegative(draft.discount_amount, "Diskon total", false) ?? 0;
+      const reportedOtherCharges = nonNegative(draft.other_charges, "Biaya tambahan", false) ?? 0;
+      const reportedTotal = nonNegative(draft.total, "Total tercetak", false) ?? (reportedSubtotal - reportedDiscount + taxAmount + reportedOtherCharges);
       const payload = {
         p_supplier_id: draft.supplier_id,
         p_supplier_invoice_number: draft.number.trim(),
@@ -181,19 +258,19 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         p_tax_status: draft.tax_status,
         p_price_mode: draft.tax_status === "taxed" ? "unknown" : draft.tax_status === "non_taxed" ? "not_applicable" : "unknown",
         p_tax_rate_reported: rate,
-        p_discount_mode: "none",
-        p_discount_value_reported: 0,
-        p_subtotal_reported: reportedLines.reduce((sum, line) => sum + line.line_total_reported, 0),
-        p_discount_amount_reported: 0,
+        p_discount_mode: reportedDiscount > 0 ? "amount" : "none",
+        p_discount_value_reported: reportedDiscount,
+        p_subtotal_reported: reportedSubtotal,
+        p_discount_amount_reported: reportedDiscount,
         p_tax_amount_reported: taxAmount,
-        p_other_charges_reported: 0,
-        p_invoice_total_reported: reportedLines.reduce((sum, line) => sum + line.line_total_reported, 0) + taxAmount,
+        p_other_charges_reported: reportedOtherCharges,
+        p_invoice_total_reported: reportedTotal,
         p_notes: draft.notes,
         p_lines: reportedLines,
       };
       const { error: rpcError } = await getSupabaseBrowserClient().rpc("create_supplier_invoice", payload);
       if (rpcError) throw rpcError;
-      setShowForm(false); setDraft(blankInvoice()); setNotice("Draft faktur supplier tersimpan. Nominal disimpan sesuai dokumen; belum menjadi hutang, modal/HPP, PPN hitung, atau jurnal.");
+      setShowForm(false); setDraft(blankInvoice()); setUploadedFileName(""); setNotice("Draft faktur supplier tersimpan. Nominal disimpan sesuai dokumen; belum menjadi hutang, modal/HPP, PPN hitung, atau jurnal.");
       await load();
     } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menyimpan draft faktur supplier.")); }
     finally { setSaving(false); }
@@ -231,7 +308,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
 
     {showForm && <form className="card card-pad mb-5 supplier-invoice-form" onSubmit={submitInvoice}>
       <div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">Draft faktur dari dokumen supplier</h2><p className="mt-1 text-xs text-[var(--muted)]">Salin data sesuai faktur supplier. PO manual di luar sistem tidak perlu dimasukkan. Angka diverifikasi terhadap dokumen sumber.</p></div><button type="button" className="tab-button" onClick={() => setShowForm(false)}>Tutup</button></div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-4 rounded-xl border border-[var(--border)] p-3"><label className="block text-xs font-semibold">Unggah foto atau PDF faktur<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="field mt-2 w-full" disabled={ocrBusy || !canWrite} onChange={event => { const file = event.target.files?.[0]; if (file) void extractInvoiceFile(file); event.currentTarget.value = ""; }} /></label><p className="mt-2 text-xs text-[var(--muted)]">{ocrBusy ? "Membaca dokumen dan mengisi field…" : uploadedFileName ? `Dokumen dibaca: ${uploadedFileName}. Periksa semua hasil sebelum menyimpan.` : "PDF/JPG/PNG/WEBP, maksimal 10 MB. Jika OCR tidak tersedia atau gagal, isi kolom secara manual."}</p></div>\n      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs text-[var(--muted)] sm:col-span-2">Supplier<select required className="field mt-1" value={draft.supplier_id} onChange={event => chooseSupplier(event.target.value)}><option value="">Pilih supplier…</option>{suppliers.filter(item => item.tax_status !== undefined).map(item => <option key={item.id} value={item.id}>{item.code} · {item.legal_name}</option>)}</select></label>
         <label className="text-xs text-[var(--muted)] sm:col-span-2">Nomor faktur supplier<input required className="field mt-1" maxLength={120} value={draft.number} onChange={event => updateDraft("number", event.target.value)} placeholder="Nomor persis pada faktur" /></label>
         <label className="text-xs text-[var(--muted)]">Tanggal faktur<input required className="field mt-1" type="date" value={draft.invoice_date} onChange={event => updateDraft("invoice_date", event.target.value)} /></label>
@@ -241,7 +318,7 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
           setDraft(current => ({ ...current, tax_status: value, tax_rate: value === "taxed" ? current.tax_rate : "", tax_amount: value === "non_taxed" ? "0" : current.tax_amount }));
         }}><option value="taxed">Berpajak</option><option value="non_taxed">Non-pajak</option><option value="unverified">Belum diverifikasi</option></select></label>
       </div>
-      <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">Pilih status pajak dan salin nominal sesuai faktur asli. Sistem tidak menebak tarif atau menghitung pajak otomatis.</div>
+      <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950">Hasil OCR adalah usulan, bukan bukti kebenaran. Cocokkan angka dengan dokumen asli; nilai yang tidak terbaca harus diisi atau diperiksa manual. Sistem tidak boleh menebak tarif pajak.</div>\n      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><label className="text-xs text-[var(--muted)]">Subtotal tercetak (Rp)<input className="field mt-1" type="number" min="0" step="0.01" value={draft.subtotal} onChange={event => updateDraft("subtotal", event.target.value)} /></label><label className="text-xs text-[var(--muted)]">Diskon total (Rp)<input className="field mt-1" type="number" min="0" step="0.01" value={draft.discount_amount} onChange={event => updateDraft("discount_amount", event.target.value)} /></label><label className="text-xs text-[var(--muted)]">Tarif tercetak (%)<input className="field mt-1" type="number" min="0" max="100" step="0.0001" value={draft.tax_rate} onChange={event => updateDraft("tax_rate", event.target.value)} /></label><label className="text-xs text-[var(--muted)]">Biaya lain (Rp)<input className="field mt-1" type="number" min="0" step="0.01" value={draft.other_charges} onChange={event => updateDraft("other_charges", event.target.value)} /></label><label className="text-xs text-[var(--muted)]">Total faktur tercetak (Rp)<input className="field mt-1" type="number" min="0" step="0.01" value={draft.total} onChange={event => updateDraft("total", event.target.value)} /></label></div>
 
       <div className="mt-5"><div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-semibold">Item pada faktur supplier</h3><button type="button" className="tab-button" onClick={() => updateDraft("lines", [...draft.lines, blankLine()])}>＋ Tambah item</button></div>
         <p className="mt-1 text-xs text-[var(--muted)]">Catat item sesuai faktur asli. Referensi PO tidak diperlukan karena pemesanan dilakukan di luar sistem.</p>
