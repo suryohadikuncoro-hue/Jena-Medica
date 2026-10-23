@@ -24,6 +24,7 @@ type SupplierInvoiceLine = {
   quantity: number | string; unit_price_reported: number | string; line_discount_reported: number | string; line_total_reported: number | string;
 };
 type InvoiceLineDraft = { product_code: string; product_name: string; unit: string; quantity: string; unit_price_reported: string; line_discount_reported: string; line_total_reported: string };
+type InvoiceAttachment = { id: string; supplier_invoice_id: string; storage_path: string; original_file_name: string; content_type: string; byte_size: number };
 type InvoiceDraft = {
   supplier_id: string; number: string; invoice_date: string; due_date: string; tax_status: TaxStatus;
   tax_rate: string; discount_mode: DiscountMode; discount_value: string; subtotal: string; discount_amount: string;
@@ -52,6 +53,8 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
   const [products, setProducts] = useState<Product[]>([]);
    const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
   const [invoiceLines, setInvoiceLines] = useState<SupplierInvoiceLine[]>([]);
+  const [attachments, setAttachments] = useState<InvoiceAttachment[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -74,21 +77,23 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       const supabase = getSupabaseBrowserClient();
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        setRole(""); setSuppliers([]); setInvoices([]); setInvoiceLines([]);
+        setRole(""); setSuppliers([]); setInvoices([]); setInvoiceLines([]); setAttachments([]);
         setError("Masuk untuk melihat faktur supplier."); setLoading(false); return;
       }
       const businessRole = String(session.user.app_metadata?.business_role ?? ""); setRole(businessRole);
       if (!["owner", "admin", "viewer"].includes(businessRole)) { setError("Akun belum memiliki role business_role pada Supabase Auth app_metadata."); setLoading(false); return; }
-      const [supplierResult, invoiceResult, invoiceLineResult, productResult] = await Promise.all([
+      const [supplierResult, invoiceResult, invoiceLineResult, productResult, attachmentResult] = await Promise.all([
         supabase.from("suppliers").select("id,code,legal_name,tax_status").order("legal_name").limit(500),
         supabase.from("supplier_invoices").select("id,supplier_id,supplier_invoice_number,invoice_date,due_date,tax_status,price_mode,tax_rate_reported,discount_mode,discount_value_reported,subtotal_reported,discount_amount_reported,tax_amount_reported,other_charges_reported,invoice_total_reported,status,void_reason,input_tax_treatment,input_tax_review_reference,posted_at,created_at").order("invoice_date", { ascending: false }).limit(500),
         supabase.from("supplier_invoice_lines").select("id,supplier_invoice_id,line_number,purchase_order_line_id,product_code_snapshot,product_name_snapshot,unit_snapshot,quantity,unit_price_reported,line_discount_reported,line_total_reported").limit(3000),
         supabase.from("products").select("id,code,name,unit").eq("is_active", true).order("name").limit(500),
+        supabase.from("supplier_invoice_attachments").select("id,supplier_invoice_id,storage_path,original_file_name,content_type,byte_size").order("created_at", { ascending: false }).limit(1000),
       ]);
-      for (const result of [supplierResult, invoiceResult, invoiceLineResult]) if (result.error) throw result.error;
+      for (const result of [supplierResult, invoiceResult, invoiceLineResult, attachmentResult]) if (result.error) throw result.error;
       setSuppliers((supplierResult.data ?? []) as Supplier[]);
       setInvoices((invoiceResult.data ?? []) as SupplierInvoice[]);
       setInvoiceLines((invoiceLineResult.data ?? []) as SupplierInvoiceLine[]);
+      setAttachments((attachmentResult.data ?? []) as InvoiceAttachment[]);
       // Product lookup is a convenience only; an unavailable catalog must not prevent manual invoice capture.
       setProducts(productResult.error ? [] : (productResult.data ?? []) as Product[]);
     } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal memuat faktur supplier dari Supabase.")); }
@@ -164,6 +169,8 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
       setError("Ukuran file maksimal 10 MB.");
       return;
     }
+    setUploadedFile(file);
+    setUploadedFileName(file.name);
     setOcrBusy(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -212,7 +219,6 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         notes: asText(data.notes) || current.notes,
         lines: lines.length ? lines : current.lines,
       }));
-      setUploadedFileName(file.name);
       setNotice(matchedSupplier
         ? "Faktur berhasil dibaca. Periksa dan koreksi semua field serta cocokkan angka dengan dokumen asli sebelum menyimpan."
         : `Faktur dibaca, tetapi supplier "${asText(data.supplier_name) || "tidak terbaca"}" belum cocok dengan master. Pilih supplier secara manual dan periksa seluruh hasil.`);
@@ -268,9 +274,35 @@ export function SupplierInvoiceManager({ embedded = false }: { embedded?: boolea
         p_notes: draft.notes,
         p_lines: reportedLines,
       };
-      const { error: rpcError } = await getSupabaseBrowserClient().rpc("create_supplier_invoice", payload);
+      const { data: createdInvoiceId, error: rpcError } = await getSupabaseBrowserClient().rpc("create_supplier_invoice", payload);
       if (rpcError) throw rpcError;
-      setShowForm(false); setDraft(blankInvoice()); setUploadedFileName(""); setNotice("Draft faktur supplier tersimpan. Nominal disimpan sesuai dokumen; belum menjadi hutang, modal/HPP, PPN hitung, atau jurnal.");
+      let attachmentWarning = "";
+      if (uploadedFile) {
+        try {
+          const supabase = getSupabaseBrowserClient();
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.user.id || !createdInvoiceId) throw new Error("Sesi atau ID faktur tidak tersedia untuk menyimpan lampiran.");
+          const safeName = uploadedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "faktur";
+          const storagePath = `${session.user.id}/${createdInvoiceId}/${crypto.randomUUID()}-${safeName}`;
+          const { error: uploadError } = await supabase.storage.from("supplier-invoices").upload(storagePath, uploadedFile, { contentType: uploadedFile.type, upsert: false });
+          if (uploadError) throw uploadError;
+          const { error: metadataError } = await supabase.from("supplier_invoice_attachments").insert({
+            supplier_invoice_id: createdInvoiceId,
+            storage_path: storagePath,
+            original_file_name: uploadedFile.name,
+            content_type: uploadedFile.type,
+            byte_size: uploadedFile.size,
+          });
+          if (metadataError) {
+            await supabase.storage.from("supplier-invoices").remove([storagePath]);
+            throw metadataError;
+          }
+        } catch {
+          attachmentWarning = " Draft faktur tersimpan, tetapi lampiran gagal disimpan. Periksa migration/storage policy lalu unggah ulang dokumen.";
+        }
+      }
+      setShowForm(false); setDraft(blankInvoice()); setUploadedFileName(""); setUploadedFile(null);
+      setNotice(`Draft faktur supplier tersimpan. Nominal belum menjadi hutang, modal/HPP, pajak masukan, atau jurnal.${attachmentWarning}`);
       await load();
     } catch (cause) { setError(friendlyErrorMessage(cause, "Gagal menyimpan draft faktur supplier.")); }
     finally { setSaving(false); }
