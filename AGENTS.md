@@ -6,7 +6,7 @@ Aplikasi web ERP distribusi B2B untuk Jena Medical Center, dipakai pemilik bisni
 
 ## 1. Konteks singkat
 - **Bisnis:** distributor alat/barang medis, model **drop-ship** (supplier kirim langsung ke pelanggan). 5 pelanggan tetap, 2 supplier tetap, desain tetap harus bisa bertambah.
-- **Alur target:** Pesanan Pelanggan → Order ke Supplier (bisa split) → Faktur Supplier → Invoice Pelanggan manual dari SO terkonfirmasi → Pembayaran/alokasi → Jurnal → Laporan dan Dashboard.
+- **Alur target terbaru:** Buat pesanan → bagikan pesanan ke supplier via WhatsApp → pengguna mencatat persetujuan supplier → konfirmasi SO (draf invoice otomatis) → review invoice → terbitkan & bagikan PDF via WhatsApp (posting akuntansi otomatis) → pembayaran/alokasi → laporan dan Dashboard. Faktur supplier dapat diunggah sebagai foto/PDF untuk ekstraksi otomatis; semua kolom tetap dapat diedit.
 - **Stack:** Next.js (App Router, TypeScript, Tailwind), Supabase (Auth, Postgres, RLS, RPC), deploy Cloudflare Workers lewat OpenNext.
 - **Database:** sesuai D-11, satu proyek Supabase adalah sumber kebenaran schema. Dokumen status harus merujuk kondisi remote terverifikasi, bukan menganggap file migration sama dengan status penerapan.
 - **Pengguna:** pemilik bukan akuntan. Tampilan harus mudah, terutama di HP.
@@ -25,7 +25,7 @@ Jika dokumen atau instruksi bertentangan, yang di atas menang:
 - Hitungan sistem pada faktur supplier hanya **usulan**. Angka tercetak di faktur asli tetap sumber kebenaran, dan selisih harus nol sebelum dicatat ke pembukuan (D-01).
 - Tidak ada stok, gudang, batch, FEFO, atau persediaan fisik. Jangan ditambahkan.
 - **Tidak ada pencatatan pengiriman** (D-09, sudah disetujui): jangan menambahkan resi, surat jalan, kurir, status kirim, atau penerimaan barang. Hapus langsung modul/tabel/RPC/trigger dan record shipment legacy sesuai instruksi pemilik; penghapusan tidak menunggu backup sebagai prasyarat. Pertahankan tabel dan record pembayaran pelanggan/supplier.
-- **Invoice pelanggan** (D-10, sudah disetujui): setelah SO terkonfirmasi, sistem membuat draf invoice otomatis untuk ditinjau/diedit Owner/Admin sebelum diterbitkan. Draf tidak mengakui pendapatan/piutang; penerbitan yang mengakuinya. Invoice dapat parsial, batas kuantitas/nilai kumulatif dijaga database, pembuatan draf harus idempoten, dan tidak ada `shipment_id`. Invoice dikirim ke pelanggan sebagai berkas PDF A4 yang dibuat aplikasi dan dibagikan lewat menu bagikan perangkat (WhatsApp); aplikasi tidak mengirim pesan otomatis, dan bila berbagi berkas tidak didukung PDF diunduh untuk dilampirkan manual. Jangan mengklaim siap dipakai terhadap Production sebelum kode dan migration dirilis bersama.
+- **Invoice pelanggan** (D-10 + D-13): setelah SO dikonfirmasi, sistem membuat draf invoice otomatis dan idempoten untuk ditinjau/diedit Owner/Admin. Tidak ada langkah verifikasi penyerahan barang atau modul pengiriman. Aksi `Terbitkan & Bagikan Invoice` menjalankan posting piutang/jurnal otomatis dengan kontrol yang ada, lalu membuka menu bagikan perangkat (WhatsApp). Berbagi ulang tidak boleh membuat invoice/jurnal ganda. Draf tidak mengakui pendapatan/piutang; penerbitan yang mengakuinya. Invoice dapat parsial dan batas kuantitas/nilai kumulatif dijaga database. Jika konfigurasi akuntansi/pajak tidak valid, jangan melewati gate.
 - Harga jual berbeda per pelanggan dengan riwayat tanggal berlaku. Simpan salinan harga di baris transaksi; transaksi lama tidak boleh berubah.
 - Tidak ada hapus permanen pada transaksi. Gunakan batalkan (void) dengan alasan, jurnal balik, dan periode tutup.
 - Jangan menambahkan kontrol palsu atau yang belum berfungsi di UI.
@@ -68,3 +68,10 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+
+## Keputusan tambahan pemilik (23 Oktober 2026)
+- Pesanan harus dibagikan ke supplier melalui WhatsApp sebelum pengguna mencatat persetujuan supplier dan mengonfirmasi SO. Aplikasi tidak membaca balasan WhatsApp otomatis.
+- Konfirmasi SO membuat draf invoice otomatis; pengguna meninjau, lalu menerbitkan dan membagikan invoice dari alur yang sama. Posting akuntansi transaksi rutin harus otomatis, bukan pekerjaan manual di menu Keuangan.
+- Faktur supplier mendukung unggah foto/PDF dan ekstraksi otomatis ke kolom form yang tetap bisa diedit. Nilai yang tidak terbaca tidak boleh ditebak; nilai tercetak adalah sumber kebenaran, selisih harus ditinjau sebelum posting.
+- Jangan menyatakan OCR aktif sampai implementasi, penyimpanan dokumen, konfigurasi provider, dan pengujian benar-benar selesai.

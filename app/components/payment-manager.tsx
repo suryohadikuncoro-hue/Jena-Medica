@@ -219,12 +219,22 @@ export function PaymentManager() {
         p_external_reference: paymentDraft.external_reference.trim() || null,
         p_notes: paymentDraft.notes.trim() || null,
       };
-      const { error: rpcError } = await getSupabaseBrowserClient().rpc(functionName, payload);
+      const { data: paymentId, error: rpcError } = await getSupabaseBrowserClient().rpc(functionName, payload);
       if (rpcError) { setPaymentAttempted(false); setPaymentKey(itemId()); throw rpcError; }
+      let journalWarning = "";
+      if (direction === "supplier") {
+        try {
+          if (!paymentId) throw new Error("ID pembayaran tidak dikembalikan database.");
+          const { error: journalError } = await getSupabaseBrowserClient().rpc("post_supplier_payment_journal", { p_payment_id: paymentId });
+          if (journalError) throw journalError;
+        } catch {
+          journalWarning = " Pembayaran sudah tercatat, tetapi jurnal belum terbentuk karena konfigurasi akuntansi/periode/metode pembayaran belum siap. Buka Keuangan untuk menyelesaikan posting.";
+        }
+      }
       closePaymentForm();
       setNotice(direction === "customer"
-        ? "Penerimaan tersimpan sebagai kas/uang muka pelanggan. Dana belum dialokasikan ke invoice draft."
-        : "Pembayaran tersimpan sebagai pengeluaran/uang muka supplier. Belum dialokasikan ke faktur draft.");
+        ? "Penerimaan tersimpan sebagai kas/uang muka pelanggan. Jurnal penerimaan pelanggan tetap mengikuti alur posting Keuangan."
+        : `Pembayaran supplier tersimpan.${journalWarning || " Jurnal pembayaran berhasil dibuat otomatis."}`);
       await load();
     } catch (cause) { setError(errorMessage(cause, "Pembayaran tidak dapat disimpan.")); }
     finally { setSaving(false); }
@@ -265,10 +275,22 @@ export function PaymentManager() {
         p_idempotency_key: allocationKey,
         p_allocations: allocationRows.map(row => ({ invoice_id: row.invoice_id, amount: Number(row.amount) })),
       };
-      const { error: rpcError } = await getSupabaseBrowserClient().rpc(functionName, payload);
+      const { data: batchId, error: rpcError } = await getSupabaseBrowserClient().rpc(functionName, payload);
       if (rpcError) { setAllocationAttempted(false); setAllocationKey(itemId()); throw rpcError; }
+      let journalWarning = "";
+      if (direction === "supplier") {
+        try {
+          if (!batchId) throw new Error("ID batch alokasi tidak dikembalikan database.");
+          const { error: journalError } = await getSupabaseBrowserClient().rpc("post_supplier_allocation_journal", { p_batch_id: batchId });
+          if (journalError) throw journalError;
+        } catch {
+          journalWarning = " Alokasi tersimpan, tetapi jurnal pelunasan belum terbentuk karena konfigurasi akuntansi/periode belum siap. Buka Keuangan untuk menyelesaikan posting.";
+        }
+      }
       closeAllocation();
-      setNotice("Alokasi pembayaran tersimpan. Perubahan ini belum membuat jurnal atau merekonsiliasi rekening bank.");
+      setNotice(direction === "supplier"
+        ? `Alokasi pembayaran supplier tersimpan.${journalWarning || " Jurnal alokasi berhasil dibuat otomatis."}`
+        : "Alokasi pembayaran pelanggan tersimpan. Jurnal alokasi tetap mengikuti alur posting Keuangan.");
       await load();
     } catch (cause) { setError(errorMessage(cause, "Alokasi tidak dapat disimpan.")); }
     finally { setSaving(false); }
