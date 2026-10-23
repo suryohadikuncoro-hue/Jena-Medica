@@ -41,7 +41,7 @@ begin
      or nullif(pg_catalog.btrim(p_tax_review_reference), '') is null then
     raise exception using errcode = '22023', message = 'Supplier tax status, input-tax treatment and approval reference must be verified';
   end if;
-  if (v_invoice.tax_status = 'taxed' and p_price_mode not in ('exclusive', 'inclusive'))
+  if p_price_mode is null or (v_invoice.tax_status = 'taxed' and p_price_mode not in ('exclusive', 'inclusive'))
      or (v_invoice.tax_status = 'non_taxed' and p_price_mode <> 'not_applicable') then
     raise exception using errcode = '22023', message = 'Explicit inclusive/exclusive price mode must match the supplier invoice tax status';
   end if;
