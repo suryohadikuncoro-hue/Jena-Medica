@@ -38,7 +38,7 @@ Supabase mencatat **28 migration remote** pada pemeriksaan 24 Oktober 2026. Juml
 | `20261022013524` | `20261022080000_masterdata_generate_code_rpc` | Diterapkan |
 | `20261022013530` | `20261022090000_masterdata_price_update_lock` | Diterapkan |
 | `20261022013534` | `20261022100000_masterdata_audit_trail` | Diterapkan |
-| `20261023011500` | `d10_jakarta_transaction_dates` | Tercatat; file arsip ada |
+| `20261022182537` | `d10_jakarta_transaction_dates` | Tercatat di Production; versi file arsip di repo adalah `20261023011500` sehingga version ID tidak cocok dan perlu direkonsiliasi tanpa mengubah history remote |
 | `20261023071935` | `supplier_invoice_attachments` | Tercatat; perlu UAT bucket/RLS/unggah/OCR |
 | `20261023071956` | `supplier_approval_before_sales_order_confirmation` | Tercatat; nama/versi berbeda dari catatan lama yang menyebut `20261023104500` |
 | `20261023072030` | `supplier_ap_reconciliation_gate` | Tercatat; pastikan ACL RPC lama dan baru diverifikasi terpisah |
