@@ -57,6 +57,8 @@ export function CustomerInvoiceManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pdfSaving, setPdfSaving] = useState(false);
+  const [issueSaving, setIssueSaving] = useState(false);
+  const [showIssueForm, setShowIssueForm] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | InvoiceStatus>("all");
@@ -250,12 +252,62 @@ export function CustomerInvoiceManager() {
     } finally { setPdfSaving(false); }
   }
 
+
+  async function issueAndShareInvoice(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedInvoice || selectedInvoice.status !== "draft") return;
+    setError(""); setNotice(""); setIssueSaving(true);
+    let issued = false;
+    try {
+      if (!canWrite) throw new Error("Role Owner/Admin diperlukan untuk menerbitkan invoice.");
+      const form = new FormData(event.currentTarget);
+      const number = String(form.get("issued_invoice_number") ?? "").trim();
+      const taxStatus = String(form.get("tax_status") ?? "");
+      const taxCode = String(form.get("tax_code") ?? "").trim();
+      const taxBase = Number(form.get("tax_base_amount"));
+      const taxRate = Number(form.get("tax_rate"));
+      const taxAmount = Number(form.get("tax_amount"));
+      const reference = String(form.get("tax_reference") ?? "").trim();
+      if (!number || !reference || !["taxed", "non_taxed", "exempt", "zero_rated"].includes(taxStatus) ||
+          ![taxBase, taxRate, taxAmount].every(Number.isFinite) || taxBase < 0 || taxRate < 0 || taxRate > 100 || taxAmount < 0) {
+        throw new Error("Lengkapi nomor invoice dan keputusan pajak yang valid. Referensi keputusan pajak wajib diisi.");
+      }
+      const supabase = getSupabaseBrowserClient();
+      const { error: rpcError } = await supabase.rpc("post_customer_invoice_to_ar", {
+        p_customer_invoice_id: selectedInvoice.id,
+        p_issued_invoice_number: number,
+        p_tax_status: taxStatus,
+        p_tax_code: taxCode || null,
+        p_tax_base_amount: taxBase,
+        p_tax_rate: taxRate,
+        p_tax_amount: taxAmount,
+        p_tax_approval_reference: reference,
+      });
+      if (rpcError) throw rpcError;
+      issued = true;
+      await load();
+      const { data: freshInvoice, error: readError } = await supabase.from("sales_invoices")
+        .select("id,invoice_number,sales_order_id,customer_id,invoice_date,due_date,currency_code,customer_code_snapshot,customer_name_snapshot,customer_phone_snapshot,ship_to_address_snapshot,subtotal_amount,total_amount,tax_amount,tax_status,issued_invoice_number,status,notes,void_reason,created_at")
+        .eq("id", selectedInvoice.id).single();
+      if (readError || !freshInvoice) throw new Error("Invoice sudah diterbitkan dan dibukukan, tetapi data untuk PDF belum berhasil dimuat. Gunakan Kirim PDF via WhatsApp untuk mencoba lagi.");
+      setShowIssueForm(false);
+      const result = await shareInvoicePdf(invoicePdfPayload(freshInvoice as CustomerInvoice), freshInvoice.customer_phone_snapshot);
+      if (result.cancelled) setNotice("Invoice berhasil diterbitkan dan dibukukan. Berbagi PDF dibatalkan; gunakan Kirim PDF via WhatsApp untuk mengirimnya nanti.");
+      else if (result.shared) setNotice("Invoice berhasil diterbitkan dan jurnal tersimpan. Pilih WhatsApp pada menu berbagi untuk mengirim PDF ke pelanggan.");
+      else setNotice("Invoice berhasil diterbitkan dan jurnal tersimpan. PDF diunduh; lampirkan manual pada chat WhatsApp pelanggan.");
+    } catch (cause) {
+      setError(friendlyErrorMessage(cause, issued
+        ? "Invoice sudah terbit, tetapi PDF belum berhasil dibagikan. Coba Kirim PDF via WhatsApp."
+        : "Penerbitan invoice gagal. Periksa konfigurasi akuntansi/pajak dan periode posting."));
+    } finally { setIssueSaving(false); }
+  }
+
   return <main className="page-wrap customer-invoice-screen">
     <div className="screen-only mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Draf dibuat otomatis saat SO dikonfirmasi. Tinjau kuantitas dan detail sebelum menerbitkan; satu SO dapat ditagih beberapa kali.</p></div>
-      {canWrite && <button className="primary-button" type="button" onClick={openCreateForm}>＋ Buat invoice</button>}
+      <div><p className="page-kicker">Transaksi · Penagihan</p><h1 className="page-title">Invoice pelanggan</h1><p className="page-description">Draf dibuat otomatis saat SO dikonfirmasi. Tinjau draf, lalu terbitkan dan bagikan invoice dari sini; jurnal dicatat otomatis. Tidak perlu mem-posting dari menu Keuangan.</p></div>
+      {canWrite && <button className="primary-button" type="button" onClick={openCreateForm}>＋ Buat invoice tambahan</button>}
     </div>
-    <div className="screen-only demo-banner mb-5"><strong>Aturan penagihan:</strong> draf dibuat otomatis saat SO dikonfirmasi. Draf bukan invoice final, Faktur Pajak/e-Faktur, atau jurnal. Pendapatan dan piutang baru diakui saat invoice diterbitkan melalui workflow akuntansi yang disetujui.</div>
+    <div className="screen-only demo-banner mb-5"><strong>Alur invoice:</strong> draf dibuat otomatis saat SO dikonfirmasi. Setelah ditinjau, terbitkan dari halaman ini; posting piutang dan jurnal berjalan otomatis sesuai konfigurasi akuntansi/pajak. Tidak ada verifikasi penyerahan barang di aplikasi. Dokumen ini invoice komersial, bukan Faktur Pajak/e-Faktur.</div>
     {error && <p role="alert" className="screen-only mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{error}{error.includes("Masuk") && <Link className="ml-2 underline" href="/login">Masuk</Link>}</p>}
     {notice && <p role="status" className="screen-only mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p>}
     <div className="transaction-stepper screen-only" aria-label="Tahapan transaksi"><span className="is-done">1. SO</span><span className="is-done">2. Konfirmasi</span><span className={selectedInvoice?.status === "issued" ? "is-done" : "is-current"}>3. Invoice</span><span className={selectedInvoice?.status === "issued" ? "is-current" : ""}>4. Kirim</span></div>
@@ -309,10 +361,11 @@ export function CustomerInvoiceManager() {
       <button type="button" className="primary-button" disabled={pdfSaving || selectedInvoice.status !== "issued"} onClick={() => void sendInvoicePdf("share")} title={selectedInvoice.status === "issued" ? "Buat PDF A4 lalu buka menu bagikan perangkat" : "Terbitkan invoice terlebih dahulu"}>{pdfSaving ? "Menyiapkan PDF…" : "Kirim PDF via WhatsApp →"}</button>
       <button type="button" className="tab-button" disabled={pdfSaving} onClick={() => void sendInvoicePdf("download")}>Unduh PDF A4</button>
       <button type="button" className="tab-button" onClick={() => window.print()}>Cetak</button>
-      {selectedInvoice.status === "draft" && <Link className="primary-button inline-flex items-center" href="/keuangan#jurnal">Buka antrean issue &amp; posting AR →</Link>}
+      {canWrite && selectedInvoice.status === "draft" && <button type="button" className="primary-button" onClick={() => { setShowIssueForm(value => !value); setError(""); setNotice(""); }} disabled={issueSaving}>{showIssueForm ? "Tutup penerbitan" : "Terbitkan &amp; kirim invoice"}</button>}
       {canWrite && selectedInvoice.status === "draft" && <button type="button" className="tab-button" onClick={() => { setShowVoidForm(value => !value); setVoidReason(""); }}>Batalkan draft</button>}
-      <p className="basis-full text-xs text-[var(--muted)]">Tombol Kirim PDF membuat dokumen A4 resmi dari data invoice, lalu membuka menu bagikan perangkat agar Anda memilih WhatsApp dan mengirim berkas PDF-nya. Bila perangkat tidak mendukung berbagi berkas, PDF otomatis diunduh dan chat WhatsApp pelanggan dibuka untuk lampiran manual.</p>
+      <p className="basis-full text-xs text-[var(--muted)]">Penerbitan dan posting piutang/jurnal dilakukan dari halaman ini. Setelah sukses, menu berbagi perangkat terbuka; pilih WhatsApp dan kirim PDF. Membuka menu berbagi tidak mengirim pesan secara otomatis.</p>
     </div>}
+    {showIssueForm && selectedInvoice?.status === "draft" && canWrite && <form className="screen-only card card-pad mt-3 grid gap-3 sm:grid-cols-2" onSubmit={issueAndShareInvoice}><div className="sm:col-span-2"><h3 className="font-semibold">Terbitkan & bagikan invoice</h3><p className="mt-1 text-xs text-[var(--muted)]">Saat disetujui, sistem menerbitkan invoice serta mencatat piutang dan jurnal. Isian pajak di bawah harus mengikuti keputusan pajak yang disetujui; sistem tidak menebak status PKP atau tarif.</p></div><label className="text-xs text-[var(--muted)]">Nomor invoice terbit<input required maxLength={120} name="issued_invoice_number" className="field mt-1" defaultValue={selectedInvoice.issued_invoice_number ?? selectedInvoice.invoice_number} /></label><label className="text-xs text-[var(--muted)]">Perlakuan pajak<select required name="tax_status" className="field mt-1"><option value="">Pilih keputusan…</option><option value="taxed">Kena pajak</option><option value="non_taxed">Tidak dikenai</option><option value="exempt">Dikecualikan</option><option value="zero_rated">Tarif 0%</option></select></label><label className="text-xs text-[var(--muted)]">Kode pajak (opsional)<input name="tax_code" maxLength={80} className="field mt-1" /></label><label className="text-xs text-[var(--muted)]">DPP sesuai keputusan (Rp)<input required name="tax_base_amount" type="number" min="0" step="0.01" className="field mt-1" defaultValue={selectedInvoice.subtotal_amount} /></label><label className="text-xs text-[var(--muted)]">Tarif pajak (%)<input required name="tax_rate" type="number" min="0" max="100" step="0.0001" className="field mt-1" defaultValue="0" /></label><label className="text-xs text-[var(--muted)]">Nominal PPN disetujui (Rp)<input required name="tax_amount" type="number" min="0" step="0.01" className="field mt-1" defaultValue="0" /></label><label className="text-xs text-[var(--muted)] sm:col-span-2">Referensi keputusan pajak<input required name="tax_reference" minLength={3} maxLength={500} className="field mt-1" placeholder="Referensi konfigurasi / persetujuan pajak" /></label><div className="sm:col-span-2 flex flex-wrap justify-end gap-2"><button type="button" className="tab-button" onClick={() => setShowIssueForm(false)}>Batal</button><button type="submit" className="primary-button" disabled={issueSaving}>{issueSaving ? "Menerbitkan & menyiapkan PDF…" : "Konfirmasi terbitkan & bagikan"}</button></div></form>}
     {showVoidForm && selectedInvoice?.status === "draft" && <form className="screen-only card card-pad mt-3" onSubmit={voidInvoice}><h3 className="font-semibold">Batalkan draft invoice</h3><label className="mt-3 block text-xs text-[var(--muted)]">Alasan<input required minLength={3} className="field mt-1" value={voidReason} onChange={event => setVoidReason(event.target.value)} /></label><div className="mt-3 flex justify-end gap-2"><button type="button" className="tab-button" onClick={() => setShowVoidForm(false)}>Kembali</button><button type="submit" className="tab-button" disabled={voidSaving}>{voidSaving ? "Menyimpan…" : "Konfirmasi pembatalan"}</button></div></form>}
   </main>;
 }
