@@ -1,6 +1,6 @@
 # Kesiapan Integrasi Database — Jena Medical Center
 
-**Status Production terverifikasi — 23 Oktober 2026 (audit baca-saja):** Supabase remote mencatat **24 migration** dan **27 tabel publik**; seluruh tabel publik memiliki RLS aktif. Objek shipment legacy sudah dihapus (D-09 selesai di schema). Seluruh migration D-10 aktif (draf otomatis, edit draf, lock order, batas nilai kumulatif, tanggal invoice masa depan), begitu pula migration master data dan audit trail. Arsip `supabase/migrations/` sinkron 24/24 dengan history remote (version, name, dan md5 SQL identik). Deployment live `https://jena-medica.fa-mitra.my.id` terverifikasi menjalankan commit `main` terkini (build Cloudflare `3a8ecc7e`, commit `ea42494`). CI `main` lulus untuk lint, build Next.js, dan build Cloudflare Worker.
+**Status Production — pemeriksaan baca-saja diperbarui 24 Oktober 2026:** Supabase remote terakhir mencatat **28 migration**; direktori `supabase/migrations/` di `main` juga berisi **28 file**. Seluruh objek shipment legacy sudah tidak ada. Migration D-10 aktif pada pemeriksaan RPC sebelumnya, termasuk draf otomatis, edit draf, lock order, batas nilai kumulatif, dan tanggal invoice masa depan. **Sinkronisasi isi SQL/hash 28/28 belum dibuktikan ulang**; satu ketidaksesuaian version ID ditemukan dan nama file arsipnya sudah dikoreksi pada branch PR ini; verifikasi hash/isi SQL seluruh migration masih diperlukan sebelum D-11 dianggap tuntas. Commit `main` terakhir yang diperiksa adalah `e99fb3e6f4cc97c9d5d9ba8360ea1d64ab49d422`; Quality Checks run #129 lulus untuk lint, build Next.js, dan build Cloudflare Worker. Deployment Cloudflare terbaru teramati pada 23 Oktober, tetapi pemetaan deployment ke commit tersebut belum terverifikasi.
 
 **Belum dianggap selesai untuk cutover:** perlindungan kata sandi bocor Supabase Auth masih nonaktif; 2 SO `confirmed` belum memiliki invoice dan belum diklasifikasi data uji vs riil (D-05); UAT guard nilai kumulatif jalur create, concurrency, pembulatan lintas invoice; UAT UI ber-role Owner/Admin/Viewer; backup/restore teruji; dan UAT end-to-end aplikasi live. Bagian bertanda *snapshot historis* adalah catatan lama dan tidak menggantikan status ini.
 
@@ -10,7 +10,7 @@
 
 ## 1. Status skema dan migration remote
 
-Supabase mencatat **24 migration remote** dan **27 tabel publik**. Semua tabel publik memiliki RLS aktif dan policy; audit tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`. Arsip lokal memakai version ID dan isi SQL yang sama dengan remote (D-11) — terverifikasi per file melalui md5 `supabase_migrations.schema_migrations.statements`.
+Supabase mencatat **28 migration remote** pada pemeriksaan 24 Oktober 2026. Jumlah tabel publik 27 adalah snapshot audit 23 Oktober dan belum dihitung ulang pada pemeriksaan ini. Semua tabel publik memiliki RLS aktif dan policy; audit tidak menemukan grant `SELECT` pada tabel publik untuk role `anon`. Jumlah file arsip dan entri remote sama-sama 28. Ketidaksesuaian version ID pada migration tanggal bisnis Jakarta telah dikoreksi pada branch PR ini; kesamaan isi SQL/hash per file belum diverifikasi ulang. D-11 belum boleh ditandai tuntas sampai isi SQL seluruhnya dibandingkan.
 
 | Version | Name | Status remote |
 |---|---|---|
@@ -38,6 +38,10 @@ Supabase mencatat **24 migration remote** dan **27 tabel publik**. Semua tabel p
 | `20261022013524` | `20261022080000_masterdata_generate_code_rpc` | Diterapkan |
 | `20261022013530` | `20261022090000_masterdata_price_update_lock` | Diterapkan |
 | `20261022013534` | `20261022100000_masterdata_audit_trail` | Diterapkan |
+| `20261022182537` | `d10_jakarta_transaction_dates` | Tercatat di Production; file arsip dikoreksi di branch PR menjadi `20261022182537_d10_jakarta_transaction_dates.sql`; isi SQL/hash tetap perlu diverifikasi |
+| `20261023071935` | `supplier_invoice_attachments` | Tercatat; perlu UAT bucket/RLS/unggah/OCR |
+| `20261023071956` | `supplier_approval_before_sales_order_confirmation` | Tercatat; nama/versi berbeda dari catatan lama yang menyebut `20261023104500` |
+| `20261023072030` | `supplier_ap_reconciliation_gate` | Tercatat; pastikan ACL RPC lama dan baru diverifikasi terpisah |
 
 Nama arsip = `<version>_<name>.sql`; empat entri terakhir memakai `name` yang sudah mengandung timestamp sehingga nama filenya berprefix ganda secara sengaja. Perubahan nama arsip bukan migration database dan tidak mengubah schema/data remote.
 
