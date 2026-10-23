@@ -41,7 +41,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [dark, setDark] = useState(false);
-  const [notice, setNotice] = useState("");
   const matches = useMemo(() => searchItems.filter(item => item.label.toLowerCase().includes(query.toLowerCase())).slice(0, 8), [query]);
   const dashActive = pathname.startsWith("/dashboard-keuangan");
   const menuActive = ["/lainnya", "/profil", "/pembayaran", "/pesanan-supplier", "/master-data", "/keuangan", "/pengaturan-usaha"].some(route => pathname === route || pathname.startsWith(`${route}/`));
@@ -96,11 +95,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button type="button" className="pill-button pill-button-solid" onClick={() => setCreateOpen(v => !v)} aria-expanded={createOpen}>＋ <span className="hidden sm:inline">Buat Baru</span></button>
             {createOpen && <div className="action-popover">{quickActions.map(([label, href]) => <Link key={label} href={href} onClick={() => setCreateOpen(false)}>{label}</Link>)}</div>}
           </div>
-          <button type="button" className="icon-button relative" aria-label="Notifikasi" onClick={() => setNotice("Notifikasi akan menampilkan tindakan yang perlu ditinjau.")}>♧<span className="notification-dot" /></button>
           <AuthStatus />
         </div>
       </header>
-      {notice && <div role="status" className="notice-banner mx-auto mt-3 max-w-[1500px] px-4 lg:px-8">{notice}<button className="ml-3 font-semibold" onClick={() => setNotice("")}>Tutup</button></div>}
       <div id="konten-utama" tabIndex={-1} className="pb-24 lg:pb-0">{children}</div>
     </div>
 
